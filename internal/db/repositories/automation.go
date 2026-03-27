@@ -173,17 +173,17 @@ func (r *AutomationRepository) GetActiveByTrigger(ctx context.Context, tenantID 
 
 func mapAutomationRowToDomain(row *generated.Automation) *automation.Automation {
 	return &automation.Automation{
-		ID:            row.ID,
-		TenantID:      row.TenantID,
+		ID:            pgUUIDToUUID(row.ID),
+		TenantID:      pgUUIDToUUID(row.TenantID),
 		Name:          row.Name,
-		Description:   row.Description,
+		Description:   pgTextToStr(row.Description),
 		IsActive:      row.IsActive,
-		TriggerType:   row.TriggerType,
+		TriggerType:   automation.TriggerType(row.TriggerType),
 		TriggerConfig: row.TriggerConfig,
 		Conditions:    row.Conditions,
-		CreatedBy:     row.CreatedBy,
-		CreatedAt:     row.CreatedAt,
-		UpdatedAt:     row.UpdatedAt,
+		CreatedBy:     pgUUIDToPtr(row.CreatedBy),
+		CreatedAt:     row.CreatedAt.Time,
+		UpdatedAt:     row.UpdatedAt.Time,
 	}
 }
 
@@ -280,13 +280,13 @@ func (r *AutomationActionRepository) DeleteByAutomation(ctx context.Context, aut
 
 func mapAutomationActionRowToDomain(row *generated.AutomationAction) *automation.AutomationAction {
 	return &automation.AutomationAction{
-		ID:           row.ID,
-		AutomationID: row.AutomationID,
+		ID:           pgUUIDToUUID(row.ID),
+		AutomationID: pgUUIDToUUID(row.AutomationID),
 		Position:     int(row.Position),
-		ActionType:   row.ActionType,
+		ActionType:   automation.ActionType(row.ActionType),
 		ActionConfig: row.ActionConfig,
-		CreatedAt:    row.CreatedAt,
-		UpdatedAt:    row.UpdatedAt,
+		CreatedAt:   row.CreatedAt.Time,
+		UpdatedAt:   row.UpdatedAt.Time,
 	}
 }
 
@@ -476,29 +476,33 @@ func (r *AutomationRunRepository) UpdateRunAction(ctx context.Context, id uuid.U
 }
 
 func mapAutomationRunRowToDomain(row *generated.AutomationRun) *automation.AutomationRun {
+	entityType := ""
+	if row.TriggerEntityType.Valid {
+		entityType = string(row.TriggerEntityType.EntityType)
+	}
 	return &automation.AutomationRun{
-		ID:                row.ID,
-		AutomationID:      row.AutomationID,
-		TenantID:          row.TenantID,
-		TriggerEntityType: row.TriggerEntityType,
-		TriggerEntityID:   row.TriggerEntityID,
-		Status:             row.Status,
-		StartedAt:          row.StartedAt,
-		CompletedAt:        row.CompletedAt,
-		Error:              row.Error,
-		CreatedAt:          row.CreatedAt,
+		ID:                 pgUUIDToUUID(row.ID),
+		AutomationID:       pgUUIDToUUID(row.AutomationID),
+		TenantID:           pgUUIDToUUID(row.TenantID),
+		TriggerEntityType: &entityType,
+		TriggerEntityID:    pgUUIDToPtr(row.TriggerEntityID),
+		Status:             automation.RunStatus(row.Status),
+		StartedAt:          pgTimestamptzToTime(row.StartedAt),
+		CompletedAt:        pgTimestamptzToTime(row.CompletedAt),
+		Error:              pgTextToStr(row.Error),
+		CreatedAt:          row.CreatedAt.Time,
 	}
 }
 
 func mapAutomationRunActionRowToDomain(row *generated.AutomationRunAction) *automation.AutomationRunAction {
 	return &automation.AutomationRunAction{
-		ID:         row.ID,
-		RunID:      row.RunID,
-		ActionID:   row.ActionID,
-		Status:     row.Status,
+		ID:         pgUUIDToUUID(row.ID),
+		RunID:      pgUUIDToUUID(row.RunID),
+		ActionID:   pgUUIDToUUID(row.ActionID),
+		Status:     automation.RunStatus(row.Status),
 		Result:     row.Result,
-		ExecutedAt: row.ExecutedAt,
-		Error:      row.Error,
-		CreatedAt:  row.CreatedAt,
+		ExecutedAt: pgTimestamptzToTime(row.ExecutedAt),
+		Error:      pgTextToStr(row.Error),
+		CreatedAt:  row.CreatedAt.Time,
 	}
 }
