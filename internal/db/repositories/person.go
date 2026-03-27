@@ -23,8 +23,8 @@ func NewPersonRepository(pool *pgxpool.Pool) *PersonRepository {
 
 func (r *PersonRepository) Create(ctx context.Context, tenantID uuid.UUID, req *person.CreatePersonRequest) (*person.Person, error) {
 	query := `
-		INSERT INTO persons (tenant_id, type, status, first_name, last_name, email, phone, avatar_url, company_id, owner_id, source, score, tags, custom_fields)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		INSERT INTO persons (tenant_id, type, status, first_name, last_name, email, phone, avatar_url, company_id, owner_id, source, tags, custom_fields)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING *
 	`
 
@@ -37,10 +37,10 @@ func (r *PersonRepository) Create(ctx context.Context, tenantID uuid.UUID, req *
 	err := r.pool.QueryRow(ctx, query,
 		tenantID, req.Type, status, req.FirstName, req.LastName,
 		req.Email, req.Phone, req.AvatarURL, req.CompanyID, req.OwnerID,
-		req.Source, req.Score, req.Tags, req.CustomFields,
+		req.Source, req.Tags, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -57,7 +57,7 @@ func (r *PersonRepository) GetByID(ctx context.Context, id uuid.UUID) (*person.P
 	row := &generated.Person{}
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -98,7 +98,7 @@ func (r *PersonRepository) Update(ctx context.Context, id uuid.UUID, req *person
 		req.Source, req.Score, req.Tags, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -115,7 +115,7 @@ func (r *PersonRepository) SoftDelete(ctx context.Context, id uuid.UUID) (*perso
 	row := &generated.Person{}
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -137,7 +137,7 @@ func (r *PersonRepository) Convert(ctx context.Context, id uuid.UUID, toType per
 	row := &generated.Person{}
 	err := r.pool.QueryRow(ctx, query, id, toType, status).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -217,7 +217,7 @@ func (r *PersonRepository) List(ctx context.Context, tenantID uuid.UUID, filter 
 		row := &generated.Person{}
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-			&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+			&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 			&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 			&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 		)
@@ -265,7 +265,7 @@ func (r *PersonRepository) Search(ctx context.Context, tenantID uuid.UUID, query
 		row := &generated.Person{}
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-			&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+			&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 			&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 			&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 		)
@@ -313,7 +313,7 @@ func (r *PersonRepository) AddTag(ctx context.Context, id uuid.UUID, tag string)
 	row := &generated.Person{}
 	err := r.pool.QueryRow(ctx, query, id, tag).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -335,7 +335,7 @@ func (r *PersonRepository) RemoveTag(ctx context.Context, id uuid.UUID, tag stri
 	row := &generated.Person{}
 	err := r.pool.QueryRow(ctx, query, id, tag).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -357,7 +357,7 @@ func (r *PersonRepository) UpdateScore(ctx context.Context, id uuid.UUID, score 
 	row := &generated.Person{}
 	err := r.pool.QueryRow(ctx, query, id, score).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
-		&row.Email, &row.Phone, &row.AvatarURL, &row.CompanyID, &row.OwnerID,
+		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
 		&row.Source, &row.Score, &row.Tags, &row.CustomFields, &row.ConvertedAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
@@ -369,25 +369,30 @@ func (r *PersonRepository) UpdateScore(ctx context.Context, id uuid.UUID, score 
 }
 
 func mapPersonRowToDomain(row *generated.Person) *person.Person {
+	var source *person.PersonSource
+	if row.Source.Valid {
+		s := person.PersonSource(row.Source.PersonSource)
+		source = &s
+	}
 	return &person.Person{
-		ID:          row.ID,
-		TenantID:    row.TenantID,
-		Type:        row.Type,
-		Status:      row.Status,
+		ID:          pgUUIDToUUID(row.ID),
+		TenantID:    pgUUIDToUUID(row.TenantID),
+		Type:        person.PersonType(row.Type),
+		Status:      person.PersonStatus(row.Status),
 		FirstName:   row.FirstName,
 		LastName:    row.LastName,
 		Email:       row.Email,
 		Phone:       row.Phone,
-		AvatarURL:   row.AvatarURL,
-		CompanyID:   row.CompanyID,
-		OwnerID:     row.OwnerID,
-		Source:      row.Source,
-		Score:       int(row.Score),
+		AvatarURL:   pgTextToStr(row.AvatarUrl),
+		CompanyID:   pgUUIDToPtr(row.CompanyID),
+		OwnerID:     pgUUIDToPtr(row.OwnerID),
+		Source:      source,
+		Score:       pgInt4ToInt(row.Score),
 		Tags:        row.Tags,
 		CustomFields: row.CustomFields,
-		ConvertedAt: row.ConvertedAt,
-		CreatedAt:   row.CreatedAt,
-		UpdatedAt:   row.UpdatedAt,
-		DeletedAt:   row.DeletedAt,
+		ConvertedAt: pgTimestamptzToTime(row.ConvertedAt),
+		CreatedAt:   row.CreatedAt.Time,
+		UpdatedAt:   row.UpdatedAt.Time,
+		DeletedAt:   pgTimestamptzToTime(row.DeletedAt),
 	}
 }
