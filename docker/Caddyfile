@@ -1,0 +1,10 @@
+:80 {
+    reverse_proxy /api/* app:8080
+    reverse_proxy /* app:8080
+
+    encode gzip
+
+    log {
+        output file /data/access.log
+    }
+}
