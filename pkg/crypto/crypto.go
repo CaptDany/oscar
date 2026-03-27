@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/o1egl/paseto"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -18,14 +17,10 @@ const (
 	Argon2KeyLen  = 32
 )
 
-type Crypto struct {
-	paseto *paseto.PASETO
-}
+type Crypto struct{}
 
-func New(secret []byte) *Crypto {
-	return &Crypto{
-		paseto: paseto.NewV2(),
-	}
+func New() *Crypto {
+	return &Crypto{}
 }
 
 func (c *Crypto) HashPassword(password string) (string, error) {

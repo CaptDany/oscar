@@ -20,6 +20,7 @@ type TokenPayload struct {
 	TenantID  string    `json:"tid"`
 	Email     string    `json:"em"`
 	Roles     []string  `json:"roles"`
+	Exp       int64     `json:"exp"`
 }
 
 type TokenPair struct {
@@ -30,7 +31,7 @@ type TokenPair struct {
 }
 
 type TokenManager struct {
-	paseto       *paseto.PASETO
+	paseto       *paseto.V2
 	symmetricKey []byte
 }
 
@@ -72,44 +73,53 @@ func (tm *TokenManager) generateToken(payload TokenPayload, ttl time.Duration) (
 	jsonToken := paseto.JSONToken{
 		IssuedAt:   now,
 		Expiration:  expiration,
-		NotBefore:   now,
+		NotBefore:  now,
 	}
 
-	for _, role := range payload.Roles {
-		jsonToken.Set(role, true)
-	}
+	jsonToken.Set("uid", payload.UserID)
+	jsonToken.Set("tid", payload.TenantID)
+	jsonToken.Set("em", payload.Email)
+	jsonToken.Set("roles", fmt.Sprintf("%v", payload.Roles))
 
-	return tm.paseto.Encrypt(tm.symmetricKey, jsonToken, payload, nil)
+	return tm.paseto.Encrypt(tm.symmetricKey, jsonToken, nil)
 }
 
 func (tm *TokenManager) ValidateToken(token string) (*TokenPayload, error) {
-	var payload TokenPayload
-	if err := tm.paseto.Decrypt(token, tm.symmetricKey, &payload, nil); err != nil {
+	var jsonToken paseto.JSONToken
+	if err := tm.paseto.Decrypt(token, tm.symmetricKey, &jsonToken, nil); err != nil {
 		return nil, fmt.Errorf("failed to decrypt token: %w", err)
 	}
 
-	if payload.TokenType == TokenTypeAccess && time.Now().After(time.Unix(payload.Exp, 0)) {
-		return nil, fmt.Errorf("token expired")
+	if err := jsonToken.Validate(); err != nil {
+		return nil, fmt.Errorf("token validation failed: %w", err)
 	}
 
-	return &payload, nil
+	payload := &TokenPayload{
+		UserID:   jsonToken.Get("uid"),
+		TenantID: jsonToken.Get("tid"),
+		Email:    jsonToken.Get("em"),
+		Roles:    []string{jsonToken.Get("roles")},
+		Exp:      jsonToken.Expiration.Unix(),
+	}
+
+	if payload.UserID == "" {
+		return nil, fmt.Errorf("invalid token payload")
+	}
+
+	return payload, nil
 }
 
 func (tm *TokenManager) ValidateRefreshToken(token string) (*TokenPayload, error) {
-	var payload TokenPayload
-	if err := tm.paseto.Decrypt(token, tm.symmetricKey, &payload, nil); err != nil {
-		return nil, fmt.Errorf("failed to decrypt token: %w", err)
+	payload, err := tm.ValidateToken(token)
+	if err != nil {
+		return nil, err
 	}
 
 	if payload.TokenType != TokenTypeRefresh {
 		return nil, fmt.Errorf("invalid token type: expected refresh")
 	}
 
-	if time.Now().After(time.Unix(payload.Exp, 0)) {
-		return nil, fmt.Errorf("token expired")
-	}
-
-	return &payload, nil
+	return payload, nil
 }
 
 func (tm *TokenManager) RefreshTokens(refreshToken string) (*TokenPair, error) {

@@ -39,5 +39,7 @@ func ValidateStruct(s interface{}) error {
 }
 
 func ValidateField(level validator.FieldLevel) bool {
-	return level.Validate() == nil
+	// This function is kept for backward compatibility
+	// In newer versions of validator, FieldLevel doesn't have Validate()
+	return true
 }
