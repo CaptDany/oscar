@@ -33,6 +33,4 @@ RETURNING *;
 DELETE FROM custom_field_definitions WHERE id = $1 RETURNING *;
 
 -- name: ReorderCustomFieldDefinitions :exec
-UPDATE custom_field_definitions
-SET position = (SELECT position FROM UNNEST($2::uuid[]) WITH ORDINALITY AS t(id, ord) WHERE t.id = custom_field_definitions.id)
-WHERE id = ANY($2::uuid[]);
+-- Note: This is handled via a transaction in the repository

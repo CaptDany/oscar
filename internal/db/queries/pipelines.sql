@@ -47,9 +47,7 @@ WHERE id = $1
 RETURNING *;
 
 -- name: ReorderPipelineStages :exec
-UPDATE pipeline_stages
-SET position = (SELECT position FROM UNNEST($2::uuid[]) WITH ORDINALITY AS t(id, ord) WHERE t.id = pipeline_stages.id)
-WHERE id = ANY($2::uuid[]);
+-- Note: This is handled via a transaction in the repository
 
 -- name: DeletePipelineStage :one
 DELETE FROM pipeline_stages WHERE id = $1 RETURNING *;

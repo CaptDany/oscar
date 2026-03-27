@@ -40,7 +40,7 @@ func (db *DB) Close() {
 }
 
 func (db *DB) SetTenantContext(ctx context.Context, tenantID string) context.Context {
-	return pgx.WithPoolParam(ctx, "app.current_tenant", tenantID)
+	return context.WithValue(ctx, "tenant_id", tenantID)
 }
 
 func (db *DB) Health(ctx context.Context) error {
