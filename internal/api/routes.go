@@ -5,7 +5,6 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/oscar/oscar/internal/api/handlers"
-	"github.com/oscar/oscar/internal/api/middleware"
 )
 
 type Handlers struct {
