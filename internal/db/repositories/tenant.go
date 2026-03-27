@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,15 +24,10 @@ func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
 
 func (r *TenantRepository) Create(ctx context.Context, req *tenant.CreateTenantRequest) (*tenant.Tenant, error) {
 	query := `
-		INSERT INTO tenants (slug, name, status, subscription_tier, settings)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO tenants (slug, name, status, subscription_tier)
+		VALUES ($1, $2, $3, $4)
 		RETURNING *
 	`
-
-	settings := []byte("{}")
-	if req.Settings != nil {
-		settings = req.Settings
-	}
 
 	status := "active"
 	tier := string(req.SubscriptionTier)
@@ -41,7 +37,7 @@ func (r *TenantRepository) Create(ctx context.Context, req *tenant.CreateTenantR
 
 	var row generated.Tenant
 	err := r.pool.QueryRow(ctx, query,
-		req.Slug, req.Name, status, tier, settings,
+		req.Slug, req.Name, status, tier,
 	).Scan(
 		&row.ID, &row.Slug, &row.Name, &row.Status, &row.SubscriptionTier, &row.Settings,
 		&row.CreatedAt, &row.UpdatedAt,
@@ -55,15 +51,10 @@ func (r *TenantRepository) Create(ctx context.Context, req *tenant.CreateTenantR
 
 func (r *TenantRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *tenant.CreateTenantRequest) (*tenant.Tenant, error) {
 	query := `
-		INSERT INTO tenants (slug, name, status, subscription_tier, settings)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO tenants (slug, name, status, subscription_tier)
+		VALUES ($1, $2, $3, $4)
 		RETURNING *
 	`
-
-	settings := []byte("{}")
-	if req.Settings != nil {
-		settings = req.Settings
-	}
 
 	status := "active"
 	tier := string(req.SubscriptionTier)
@@ -73,7 +64,7 @@ func (r *TenantRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *tenant.
 
 	var row generated.Tenant
 	err := tx.QueryRow(ctx, query,
-		req.Slug, req.Name, status, tier, settings,
+		req.Slug, req.Name, status, tier,
 	).Scan(
 		&row.ID, &row.Slug, &row.Name, &row.Status, &row.SubscriptionTier, &row.Settings,
 		&row.CreatedAt, &row.UpdatedAt,
@@ -174,16 +165,26 @@ func mapTenantRowToDomain(row *generated.Tenant) *tenant.Tenant {
 	if row.Settings != nil {
 		settings = row.Settings
 	}
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	updatedAt := pgTimestamptzToTime(row.UpdatedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
+	if updatedAt == nil {
+		t := time.Time{}
+		updatedAt = &t
+	}
 
 	return &tenant.Tenant{
-		ID:               row.ID,
+		ID:               pgUUIDToUUID(row.ID),
 		Slug:             row.Slug,
 		Name:             row.Name,
 		Status:           tenant.Status(row.Status),
 		SubscriptionTier: tenant.SubscriptionTier(row.SubscriptionTier),
 		Settings:         settings,
-		CreatedAt:        row.CreatedAt,
-		UpdatedAt:        row.UpdatedAt,
+		CreatedAt:        *createdAt,
+		UpdatedAt:        *updatedAt,
 	}
 }
 
@@ -204,9 +205,9 @@ func (r *BrandingRepository) Create(ctx context.Context, tenantID uuid.UUID) (*t
 
 	var row generated.TenantBranding
 	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
-		&row.TenantID, &row.LogoLightURL, &row.LogoDarkURL, &row.FaviconURL,
+		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCSS, &row.EmailHeaderHTML,
+		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -225,9 +226,9 @@ func (r *BrandingRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID u
 
 	var row generated.TenantBranding
 	err := tx.QueryRow(ctx, query, tenantID).Scan(
-		&row.TenantID, &row.LogoLightURL, &row.LogoDarkURL, &row.FaviconURL,
+		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCSS, &row.EmailHeaderHTML,
+		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -242,9 +243,9 @@ func (r *BrandingRepository) Get(ctx context.Context, tenantID uuid.UUID) (*tena
 
 	var row generated.TenantBranding
 	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
-		&row.TenantID, &row.LogoLightURL, &row.LogoDarkURL, &row.FaviconURL,
+		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCSS, &row.EmailHeaderHTML,
+		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -280,9 +281,9 @@ func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req
 		req.PrimaryColor, req.SecondaryColor, req.AccentColor,
 		req.FontFamily, req.AppName, req.CustomCSS, req.EmailHeaderHTML,
 	).Scan(
-		&row.TenantID, &row.LogoLightURL, &row.LogoDarkURL, &row.FaviconURL,
+		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCSS, &row.EmailHeaderHTML,
+		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -293,19 +294,29 @@ func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req
 }
 
 func mapBrandingRowToDomain(row *generated.TenantBranding) *tenant.TenantBranding {
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	updatedAt := pgTimestamptzToTime(row.UpdatedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
+	if updatedAt == nil {
+		t := time.Time{}
+		updatedAt = &t
+	}
 	return &tenant.TenantBranding{
-		TenantID:        row.TenantID,
-		LogoLightURL:    row.LogoLightURL,
-		LogoDarkURL:     row.LogoDarkURL,
-		FaviconURL:      row.FaviconURL,
-		PrimaryColor:    row.PrimaryColor,
-		SecondaryColor:  row.SecondaryColor,
-		AccentColor:     row.AccentColor,
-		FontFamily:      row.FontFamily,
-		AppName:         row.AppName,
-		CustomCSS:       row.CustomCSS,
-		EmailHeaderHTML: row.EmailHeaderHTML,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
+		TenantID:        pgUUIDToUUID(row.TenantID),
+		LogoLightURL:    pgTextToStr(row.LogoLightUrl),
+		LogoDarkURL:     pgTextToStr(row.LogoDarkUrl),
+		FaviconURL:      pgTextToStr(row.FaviconUrl),
+		PrimaryColor:    pgTextToStrStr(row.PrimaryColor),
+		SecondaryColor:  pgTextToStrStr(row.SecondaryColor),
+		AccentColor:     pgTextToStrStr(row.AccentColor),
+		FontFamily:      pgTextToStrStr(row.FontFamily),
+		AppName:         pgTextToStrStr(row.AppName),
+		CustomCSS:       pgTextToStr(row.CustomCss),
+		EmailHeaderHTML: pgTextToStr(row.EmailHeaderHtml),
+		CreatedAt:      *createdAt,
+		UpdatedAt:      *updatedAt,
 	}
 }
