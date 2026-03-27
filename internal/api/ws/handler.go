@@ -2,7 +2,6 @@ package ws
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -20,8 +19,8 @@ var upgrader = websocket.Upgrader{
 }
 
 type HubHandler struct {
-	hub           *Hub
-	tokenManager  *crypto.TokenManager
+	hub          *Hub
+	tokenManager *crypto.TokenManager
 }
 
 func NewHubHandler(hub *Hub, tokenManager *crypto.TokenManager) *HubHandler {
@@ -70,7 +69,7 @@ func (h *HubHandler) BroadcastToTenant(tenantID string, event string, payload in
 }
 
 func (h *HubHandler) SendToUser(userID string, event string, payload interface{}) {
-	h.hub.SendToUser(userID, event, event, payload)
+	h.hub.SendToUser(userID, event, payload)
 }
 
 func (h *HubHandler) NotifyNewNotification(tenantID, userID, title, body string) {
@@ -83,9 +82,9 @@ func (h *HubHandler) NotifyNewNotification(tenantID, userID, title, body string)
 
 func (h *HubHandler) NotifyDealMoved(tenantID string, dealID, fromStage, toStage string) {
 	h.hub.BroadcastToTenant(tenantID, "deal.moved", map[string]interface{}{
-		"deal_id":     dealID,
-		"from_stage":  fromStage,
-		"to_stage":    toStage,
+		"deal_id":    dealID,
+		"from_stage": fromStage,
+		"to_stage":   toStage,
 	})
 }
 
@@ -98,14 +97,11 @@ func (h *HubHandler) NotifyLeadAssigned(tenantID string, personID, ownerID strin
 func (h *HubHandler) NotifyAutomationFired(tenantID string, automationID, entityID string) {
 	h.hub.BroadcastToTenant(tenantID, "automation.fired", map[string]interface{}{
 		"automation_id": automationID,
-		"entity_id":    entityID,
+		"entity_id":     entityID,
 	})
 }
 
 func init() {
-	upgrader.ReadDeadline = 60 * time.Second
-	upgrader.WriteDeadline = 60 * time.Second
-	upgrader.PongHandler = func(appData string) error {
-		return nil
-	}
+	upgrader.ReadBufferSize = 1024
+	upgrader.WriteBufferSize = 1024
 }
