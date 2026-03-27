@@ -1,0 +1,13 @@
+node_modules/
+.env
+bin/
+coverage.out
+coverage.html
+*.log
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+dist/
+web/dist/
