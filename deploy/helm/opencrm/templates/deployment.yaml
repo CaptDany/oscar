@@ -1,0 +1,122 @@
+{{- template "common.yaml" . }}
+{{- define "common.yaml" }}
+{{- $fullName := include "opencrm.fullname" . -}}
+{{- $releaseName := .Release.Name -}}
+{{- $chartName := .Chart.Name -}}
+{{- $imageRepository := .Values.image.repository -}}
+{{- $imageTag := .Values.image.tag | default .Chart.AppVersion -}}
+{{- $imagePullPolicy := .Values.image.pullPolicy -}}
+{{- $servicePort := .Values.service.port -}}
+{{- $replicaCount := .Values.replicaCount -}}
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opencrm.fullname" . }}
+  labels:
+    {{- include "opencrm.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "opencrm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+      labels:
+        {{- include "opencrm.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "opencrm.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: APP_ENV
+              value: {{ .Values.env.APP_ENV | quote }}
+            - name: APP_PORT
+              value: {{ .Values.env.APP_PORT | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "opencrm.fullname" . }}-secret
+                  key: database-url
+                  optional: true
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "opencrm.fullname" . }}-secret
+                  key: redis-url
+                  optional: true
+            - name: MINIO_ENDPOINT
+              value: {{ .Values.env.MINIO_ENDPOINT | quote }}
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "opencrm.fullname" . }}-secret
+                  key: minio-access-key
+                  optional: true
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "opencrm.fullname" . }}-secret
+                  key: minio-secret-key
+                  optional: true
+            - name: MINIO_BUCKET
+              value: {{ .Values.env.MINIO_BUCKET | quote }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "opencrm.fullname" . }}
+  labels:
+    {{- include "opencrm.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "opencrm.selectorLabels" . | nindent 4 }}
+---
+{{- if .Values.secret.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "opencrm.fullname" . }}-secret
+  labels:
+    {{- include "opencrm.labels" . | nindent 4 }}
+type: Opaque
+data:
+  {{- range $key, $value := .Values.secret.data }}
+  {{ $key }}: {{ $value | b64enc }}
+  {{- end }}
+{{- end }}
