@@ -1,0 +1,136 @@
+replicaCount: 1
+
+image:
+  repository: opencrm/opencrm
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  hosts:
+    - host: crm.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: opencrm-tls
+      hosts:
+        - crm.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - opencrm
+          topologyKey: kubernetes.io/hostname
+
+env:
+  APP_ENV: production
+  APP_PORT: "8080"
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  MINIO_ENDPOINT: ""
+  MINIO_ACCESS_KEY: ""
+  MINIO_SECRET_KEY: ""
+  MINIO_BUCKET: opencrm
+
+secret:
+  enabled: true
+  annotations: {}
+  data: {}
+  # Example:
+  # data:
+  #   APP_SECRET: ZW5jb2RlZC1zZWNyZXQtaGVyZS1tdXN0LWJlLWF0LWxlYXN0LTI1Ni1iaXRz
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+postgresql:
+  enabled: false
+  # Set to true if you want to deploy PostgreSQL as part of this chart
+  # external database recommended for production
+  externalHost: ""
+  externalPort: 5432
+  database: opencrm
+  username: oscar
+
+redis:
+  enabled: false
+  # Set to true if you want to deploy Redis as part of this chart
+  # external redis recommended for production
+  externalHost: ""
+  externalPort: 6379
