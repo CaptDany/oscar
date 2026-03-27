@@ -3,11 +3,11 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: opencrm-postgres
+    container_name: oscar-postgres
     environment:
       POSTGRES_USER: oscar
       POSTGRES_PASSWORD: oscar
-      POSTGRES_DB: opencrm
+      POSTGRES_DB: oscar
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -39,9 +39,9 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:latest
-    container_name: opencrm-pgbouncer
+    container_name: oscar-pgbouncer
     environment:
-      DATABASE_URL: "postgres://oscar:oscar@postgres:5432/opencrm"
+      DATABASE_URL: "postgres://oscar:oscar@postgres:5432/oscar"
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 200
       DEFAULT_POOL_SIZE: 20
@@ -62,7 +62,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: opencrm-redis
+    container_name: oscar-redis
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
@@ -82,7 +82,7 @@ services:
 
   redis-sentinel:
     image: redis:7-alpine
-    container_name: opencrm-redis-sentinel
+    container_name: oscar-redis-sentinel
     command: >
       redis-sentinel
       --sentinel monitor mymaster redis 6379 2
@@ -97,7 +97,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: opencrm-minio
+    container_name: oscar-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -127,8 +127,8 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      mc mb myminio/opencrm --ignore-existing;
-      mc anonymous set download myminio/opencrm;
+      mc mb myminio/oscar --ignore-existing;
+      mc anonymous set download myminio/oscar;
       exit 0;
       "
 
@@ -136,19 +136,19 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: opencrm:latest
-    container_name: opencrm-api-1
+    image: oscar:latest
+    container_name: oscar-api-1
     environment:
       APP_ENV: production
       APP_PORT: 8080
       APP_SECRET: ${APP_SECRET}
       APP_BASE_URL: ${APP_BASE_URL}
-      DATABASE_URL: postgres://oscar:oscar@pgbouncer:5432/opencrm?sslmode=disable
+      DATABASE_URL: postgres://oscar:oscar@pgbouncer:5432/oscar?sslmode=disable
       REDIS_URL: redis://redis:6379
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: opencrm
+      MINIO_BUCKET: oscar
       MINIO_USE_SSL: "false"
     deploy:
       replicas: 2
@@ -174,7 +174,7 @@ services:
 
   caddy:
     image: caddy:2-alpine
-    container_name: opencrm-proxy
+    container_name: oscar-proxy
     ports:
       - "80:80"
       - "443:443"

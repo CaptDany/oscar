@@ -1,6 +1,6 @@
 {{- template "common.yaml" . }}
 {{- define "common.yaml" }}
-{{- $fullName := include "opencrm.fullname" . -}}
+{{- $fullName := include "oscar.fullname" . -}}
 {{- $releaseName := .Release.Name -}}
 {{- $chartName := .Chart.Name -}}
 {{- $imageRepository := .Values.image.repository -}}
@@ -13,26 +13,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "opencrm.fullname" . }}
+  name: {{ include "oscar.fullname" . }}
   labels:
-    {{- include "opencrm.labels" . | nindent 4 }}
+    {{- include "oscar.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "opencrm.selectorLabels" . | nindent 6 }}
+      {{- include "oscar.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
         {{- toYaml .Values.podAnnotations | nindent 8 }}
       labels:
-        {{- include "opencrm.selectorLabels" . | nindent 8 }}
+        {{- include "oscar.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "opencrm.serviceAccountName" . }}
+      serviceAccountName: {{ include "oscar.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -59,13 +59,13 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "opencrm.fullname" . }}-secret
+                  name: {{ include "oscar.fullname" . }}-secret
                   key: database-url
                   optional: true
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "opencrm.fullname" . }}-secret
+                  name: {{ include "oscar.fullname" . }}-secret
                   key: redis-url
                   optional: true
             - name: MINIO_ENDPOINT
@@ -73,13 +73,13 @@ spec:
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "opencrm.fullname" . }}-secret
+                  name: {{ include "oscar.fullname" . }}-secret
                   key: minio-access-key
                   optional: true
             - name: MINIO_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "opencrm.fullname" . }}-secret
+                  name: {{ include "oscar.fullname" . }}-secret
                   key: minio-secret-key
                   optional: true
             - name: MINIO_BUCKET
@@ -94,9 +94,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "opencrm.fullname" . }}
+  name: {{ include "oscar.fullname" . }}
   labels:
-    {{- include "opencrm.labels" . | nindent 4 }}
+    {{- include "oscar.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -105,15 +105,15 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "opencrm.selectorLabels" . | nindent 4 }}
+    {{- include "oscar.selectorLabels" . | nindent 4 }}
 ---
 {{- if .Values.secret.enabled }}
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ include "opencrm.fullname" . }}-secret
+  name: {{ include "oscar.fullname" . }}-secret
   labels:
-    {{- include "opencrm.labels" . | nindent 4 }}
+    {{- include "oscar.labels" . | nindent 4 }}
 type: Opaque
 data:
   {{- range $key, $value := .Values.secret.data }}

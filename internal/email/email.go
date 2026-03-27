@@ -6,7 +6,7 @@ import (
 	"html/template"
 	"net/smtp"
 
-	"github.com/opencrm/opencrm/internal/config"
+	"github.com/oscar/oscar/internal/config"
 )
 
 type EmailClient struct {
@@ -61,19 +61,19 @@ func (c *EmailClient) SendTemplate(to, subject, templateName string, data interf
 }
 
 func (c *EmailClient) SendWelcome(to, firstName string) error {
-	subject := "Welcome to OpenCRM"
+	subject := "Welcome to Oscar"
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Welcome to OpenCRM</title>
+    <title>Welcome to Oscar</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #6366f1;">Welcome to OpenCRM, %s!</h1>
-        <p>Thank you for joining OpenCRM. We're excited to have you on board!</p>
-        <p>With OpenCRM, you can:</p>
+        <h1 style="color: #6366f1;">Welcome to Oscar, %s!</h1>
+        <p>Thank you for joining Oscar. We're excited to have you on board!</p>
+        <p>With Oscar, you can:</p>
         <ul>
             <li>Manage your leads, contacts, and customers</li>
             <li>Track deals through customizable pipelines</li>
@@ -82,7 +82,7 @@ func (c *EmailClient) SendWelcome(to, firstName string) error {
         </ul>
         <p><a href="#" style="background-color: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Get Started</a></p>
         <p>If you have any questions, feel free to reply to this email.</p>
-        <p>Best regards,<br>The OpenCRM Team</p>
+        <p>Best regards,<br>The Oscar Team</p>
     </div>
 </body>
 </html>
@@ -118,7 +118,7 @@ func (c *EmailClient) SendPasswordReset(to, resetURL string) error {
 }
 
 func (c *EmailClient) SendInvitation(to, inviterName, roleName, inviteURL string) error {
-	subject := fmt.Sprintf("You've been invited to join OpenCRM by %s", inviterName)
+	subject := fmt.Sprintf("You've been invited to join Oscar by %s", inviterName)
 	body := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
@@ -129,7 +129,7 @@ func (c *EmailClient) SendInvitation(to, inviterName, roleName, inviteURL string
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #6366f1;">You've Been Invited!</h1>
-        <p>%s has invited you to join OpenCRM as a <strong>%s</strong>.</p>
+        <p>%s has invited you to join Oscar as a <strong>%s</strong>.</p>
         <p style="text-align: center; margin: 30px 0;">
             <a href="%s" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Accept Invitation</a>
         </p>

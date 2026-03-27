@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 
-	"github.com/opencrm/opencrm/pkg/crypto"
+	"github.com/oscar/oscar/pkg/crypto"
 )
 
 var upgrader = websocket.Upgrader{

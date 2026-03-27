@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/opencrm/opencrm/internal/domain/deal"
-	"github.com/opencrm/opencrm/pkg/errs"
+	"github.com/oscar/oscar/internal/domain/deal"
+	"github.com/oscar/oscar/pkg/errs"
 )
 
 type DealHandler struct {

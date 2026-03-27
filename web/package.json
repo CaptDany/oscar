@@ -1,5 +1,5 @@
 {
-  "name": "opencrm-frontend",
+  "name": "oscar-frontend",
   "type": "module",
   "version": "0.0.1",
   "scripts": {

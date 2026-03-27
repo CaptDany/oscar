@@ -1,4 +1,4 @@
-# OpenCRM
+# Oscar
 
 A production-grade, open-source CRM backend built in Go.
 
@@ -24,8 +24,8 @@ A production-grade, open-source CRM backend built in Go.
 
 ```bash
 # Clone the repository
-git clone https://github.com/opencrm/opencrm.git
-cd opencrm
+git clone https://github.com/oscar OscarsCRM/oscar.git
+cd oscar
 
 # Copy environment file
 cp .env.example .env
@@ -84,7 +84,7 @@ make docker-down
 ## Project Structure
 
 ```
-opencrm/
+oscar/
 ├── cmd/server/          # Entry point
 ├── internal/
 │   ├── api/            # HTTP handlers and middleware
@@ -112,6 +112,4 @@ make generate
 make migrate/create name=add_new_table
 ```
 
-## License
-
-MIT
+Oscar is a powerful, open-source CRM that helps you manage leads, deals, and customers with an intuitive interface and powerful automation.

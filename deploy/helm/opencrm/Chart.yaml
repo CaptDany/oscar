@@ -1,6 +1,6 @@
 apiVersion: v2
-name: opencrm
-description: A Helm chart for OpenCRM - Open Source CRM
+name: oscar
+description: A Helm chart for Oscar - Open Source CRM
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
@@ -9,9 +9,9 @@ keywords:
   - sales
   - lead-management
   - deal-tracking
-home: https://github.com/opencrm/opencrm
+home: https://github.com/oscar/oscar
 sources:
-  - https://github.com/opencrm/opencrm
+  - https://github.com/oscar/oscar
 maintainers:
-  - name: OpenCRM Team
-    email: hello@opencrm.dev
+  - name: Oscar Team
+    email: hello@danytellez.cc

@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/opencrm/opencrm/internal/domain/person"
-	"github.com/opencrm/openccar/pkg/errs"
+	"github.com/oscar/oscar/internal/domain/person"
+	"github.com/oscar/oscar/pkg/errs"
 )
 
 type PersonHandler struct {

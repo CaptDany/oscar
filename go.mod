@@ -1,4 +1,4 @@
-module github.com/opencrm/opencrm
+module github.com/oscar/oscar
 
 go 1.23
 

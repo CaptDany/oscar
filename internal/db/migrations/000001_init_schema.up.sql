@@ -61,7 +61,7 @@ CREATE TABLE tenant_branding (
     secondary_color VARCHAR(7) DEFAULT '#8b5cf6',
     accent_color VARCHAR(7) DEFAULT '#06b6d4',
     font_family VARCHAR(255) DEFAULT 'Inter, system-ui, sans-serif',
-    app_name VARCHAR(255) DEFAULT 'OpenCRM',
+    app_name VARCHAR(255) DEFAULT 'Oscar',
     custom_css TEXT,
     email_header_html TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

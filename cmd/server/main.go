@@ -13,11 +13,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/opencrm/opencrm/internal/api"
-	"github.com/opencrm/opencrm/internal/api/handlers"
-	"github.com/opencrm/opencrm/internal/api/middleware"
-	"github.com/opencrm/opencrm/internal/config"
-	"github.com/opencrm/opencrm/pkg/crypto"
+	"github.com/oscar/oscar/internal/api"
+	"github.com/oscar/oscar/internal/api/handlers"
+	"github.com/oscar/oscar/internal/api/middleware"
+	"github.com/oscar/oscar/internal/config"
+	"github.com/oscar/oscar/pkg/crypto"
 )
 
 func main() {

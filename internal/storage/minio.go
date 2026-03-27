@@ -9,7 +9,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/opencrm/opencrm/internal/config"
+	"github.com/oscar/oscar/internal/config"
 )
 
 type MinIOClient struct {

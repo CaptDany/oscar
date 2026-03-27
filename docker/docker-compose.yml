@@ -3,11 +3,11 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: opencrm-postgres
+    container_name: oscar-postgres
     environment:
       POSTGRES_USER: oscar
       POSTGRES_PASSWORD: oscar
-      POSTGRES_DB: opencrm
+      POSTGRES_DB: oscar
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -21,7 +21,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: opencrm-redis
+    container_name: oscar-redis
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -36,7 +36,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: opencrm-minio
+    container_name: oscar-minio
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -61,8 +61,8 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      mc mb myminio/opencrm --ignore-existing;
-      mc anonymous set download myminio/opencrm;
+      mc mb myminio/oscar --ignore-existing;
+      mc anonymous set download myminio/oscar;
       exit 0;
       "
 
@@ -70,22 +70,22 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: opencrm-api
+    container_name: oscar-api
     environment:
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${APP_PORT:-8080}
       APP_SECRET: ${APP_SECRET:-change-me-in-production-32bytes!!}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
-      DATABASE_URL: postgres://oscar:oscar@postgres:5432/opencrm?sslmode=disable
+      DATABASE_URL: postgres://oscar:oscar@postgres:5432/oscar?sslmode=disable
       REDIS_URL: redis://redis:6379
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
-      MINIO_BUCKET: opencrm
+      MINIO_BUCKET: oscar
       MINIO_USE_SSL: "false"
       SMTP_HOST: ${SMTP_HOST:-mailhog}
       SMTP_PORT: ${SMTP_PORT:-1025}
-      SMTP_FROM: ${SMTP_FROM:-noreply@opencrm.local}
+      SMTP_FROM: ${SMTP_FROM:-noreply@oscar.local}
     ports:
       - "8080:8080"
     depends_on:
@@ -106,7 +106,7 @@ services:
 
   caddy:
     image: caddy:2-alpine
-    container_name: opencrm-proxy
+    container_name: oscar-proxy
     ports:
       - "80:80"
       - "443:443"
@@ -119,7 +119,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: opencrm-mailhog
+    container_name: oscar-mailhog
     ports:
       - "1025:1025"
       - "8025:8025"

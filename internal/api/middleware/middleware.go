@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/opencrm/opencrm/pkg/crypto"
+	"github.com/oscar/oscar/pkg/crypto"
 )
 
 type contextKey string

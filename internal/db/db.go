@@ -7,7 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/opencrm/opencrm/internal/config"
+	"github.com/oscar/oscar/internal/config"
 )
 
 type DB struct {

@@ -6,8 +6,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/opencrm/opencrm/internal/domain/company"
-	"github.com/opencrm/opencrm/pkg/errs"
+	"github.com/oscar/oscar/internal/domain/company"
+	"github.com/oscar/oscar/pkg/errs"
 )
 
 type CompanyHandler struct {

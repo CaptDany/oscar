@@ -4,8 +4,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/opencrm/opencrm/internal/api/handlers"
-	"github.com/opencrm/opencrm/internal/api/middleware"
+	"github.com/oscar/oscar/internal/api/handlers"
+	"github.com/oscar/oscar/internal/api/middleware"
 )
 
 type Handlers struct {

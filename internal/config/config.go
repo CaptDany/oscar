@@ -120,7 +120,7 @@ func Load() (*Config, error) {
 			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
 			AccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
 			SecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
-			Bucket:    getEnv("MINIO_BUCKET", "opencrm"),
+			Bucket:    getEnv("MINIO_BUCKET", "oscar"),
 			UseSSL:    getEnvBool("MINIO_USE_SSL", false),
 			Region:    getEnv("MINIO_REGION", "us-east-1"),
 		},
@@ -129,7 +129,7 @@ func Load() (*Config, error) {
 			Port: getEnvInt("SMTP_PORT", 587),
 			User: getEnv("SMTP_USER", ""),
 			Pass: getEnv("SMTP_PASS", ""),
-			From: getEnv("SMTP_FROM", "noreply@opencrm.local"),
+			From: getEnv("SMTP_FROM", "noreply@oscar.local"),
 		},
 		SMS: SMSConfig{
 			AccountSID: getEnv("TWILIO_ACCOUNT_SID", ""),

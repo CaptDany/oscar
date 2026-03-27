@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: opencrm/opencrm
+  repository: oscar/oscar
   pullPolicy: IfNotPresent
   tag: "latest"
 
@@ -47,7 +47,7 @@ ingress:
         - path: /
           pathType: Prefix
   tls:
-    - secretName: opencrm-tls
+    - secretName: oscar-tls
       hosts:
         - crm.example.com
 
@@ -80,7 +80,7 @@ affinity:
               - key: app
                 operator: In
                 values:
-                  - opencrm
+                  - oscar
           topologyKey: kubernetes.io/hostname
 
 env:
@@ -91,7 +91,7 @@ env:
   MINIO_ENDPOINT: ""
   MINIO_ACCESS_KEY: ""
   MINIO_SECRET_KEY: ""
-  MINIO_BUCKET: opencrm
+  MINIO_BUCKET: oscar
 
 secret:
   enabled: true
@@ -125,7 +125,7 @@ postgresql:
   # external database recommended for production
   externalHost: ""
   externalPort: 5432
-  database: opencrm
+  database: oscar
   username: oscar
 
 redis:

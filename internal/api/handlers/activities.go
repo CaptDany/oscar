@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
-	"github.com/opencrm/opencrm/internal/domain/activity"
-	"github.com/opencrm/opencrm/pkg/errs"
+	"github.com/oscar/oscar/internal/domain/activity"
+	"github.com/oscar/oscar/pkg/errs"
 )
 
 type ActivityHandler struct {

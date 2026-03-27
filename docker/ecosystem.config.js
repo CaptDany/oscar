@@ -1,8 +1,8 @@
 {
   "apps": [
     {
-      "name": "opencrm",
-      "script": "./opencrm",
+      "name": "oscar",
+      "script": "./oscar",
       "instances": "max",
       "exec_mode": "cluster",
       "env": {

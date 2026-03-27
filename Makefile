@@ -63,10 +63,9 @@ docker-down: ## Stop all Docker Compose services
 	docker compose -f docker/docker-compose.yml down
 
 docker/build: ## Build Docker image
-	docker build -f docker/Dockerfile -t opencrm:latest .
-
+	docker build -f docker/Dockerfile -t oscar:latest .
 docker/push: ## Push Docker image to registry
-	docker push opencrm:latest
+	docker push oscar:latest
 
 ## Cleanup
 clean: ## Clean build artifacts
