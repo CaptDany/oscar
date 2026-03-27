@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/oscar/oscar/internal/db/generated"
@@ -35,7 +36,7 @@ func (r *ActivityRepository) Create(ctx context.Context, tenantID uuid.UUID, req
 	row := &generated.Activity{}
 	err := r.pool.QueryRow(ctx, query,
 		tenantID, req.Type, req.Subject, req.Body, req.Outcome, req.Direction,
-		status, req.DueAt, req.DurationSeconds, req.OwnerID, req.CreatedBy, req.CustomFields,
+		status, req.DueAt, req.DurationSeconds, req.OwnerID, req.OwnerID, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Subject, &row.Body, &row.Outcome,
 		&row.Direction, &row.Status, &row.DueAt, &row.CompletedAt, &row.DurationSeconds,
@@ -290,24 +291,25 @@ func (r *ActivityRepository) CountByType(ctx context.Context, tenantID uuid.UUID
 }
 
 func mapActivityRowToDomain(row *generated.Activity) *activity.Activity {
+	dir := activity.ActivityDirection(row.Direction.ActivityDirection)
 	return &activity.Activity{
-		ID:              row.ID,
-		TenantID:        row.TenantID,
-		Type:            row.Type,
+		ID:              pgUUIDToUUID(row.ID),
+		TenantID:        pgUUIDToUUID(row.TenantID),
+		Type:            activity.ActivityType(row.Type),
 		Subject:         row.Subject,
-		Body:            row.Body,
-		Outcome:         row.Outcome,
-		Direction:       row.Direction,
-		Status:          row.Status,
-		DueAt:           row.DueAt,
-		CompletedAt:     row.CompletedAt,
-		DurationSeconds: row.DurationSeconds,
-		OwnerID:         row.OwnerID,
-		CreatedBy:       row.CreatedBy,
+		Body:            pgTextToStr(row.Body),
+		Outcome:         pgTextToStr(row.Outcome),
+		Direction:       &dir,
+		Status:          activity.ActivityStatus(row.Status),
+		DueAt:           pgTimestamptzToTime(row.DueAt),
+		CompletedAt:     pgTimestamptzToTime(row.CompletedAt),
+		DurationSeconds: pgInt4ToPtr(row.DurationSeconds),
+		OwnerID:         pgUUIDToPtr(row.OwnerID),
+		CreatedBy:       pgUUIDToPtr(row.CreatedBy),
 		CustomFields:    row.CustomFields,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-		DeletedAt:       row.DeletedAt,
+		CreatedAt:       row.CreatedAt.Time,
+		UpdatedAt:       row.UpdatedAt.Time,
+		DeletedAt:       pgTimestamptzToTime(row.DeletedAt),
 	}
 }
 
@@ -367,8 +369,10 @@ func (r *ActivityAssociationRepository) ListTimeline(ctx context.Context, entity
 	}
 
 	query := `
-		SELECT a.*, 
-			COALESCE(
+		SELECT a.id, a.tenant_id, a.type, a.subject, a.body, a.outcome, a.direction, a.status, 
+		       a.due_at, a.completed_at, a.duration_seconds, a.owner_id, a.created_by, a.custom_fields,
+		       a.created_at, a.updated_at, a.deleted_at,
+		       COALESCE(
 				(SELECT jsonb_agg(jsonb_build_object('entity_type', aa.entity_type, 'entity_id', aa.entity_id))
 				FROM activity_associations aa WHERE aa.activity_id = a.id),
 				'[]'::jsonb
@@ -390,15 +394,35 @@ func (r *ActivityAssociationRepository) ListTimeline(ctx context.Context, entity
 	var entries []*activity.TimelineEntry
 	for rows.Next() {
 		var entry activity.TimelineEntry
+		var direction generated.NullActivityDirection
+		var body, outcome pgtype.Text
+		var dueAt, completedAt, createdAt, updatedAt, deletedAt pgtype.Timestamptz
+		var durationSeconds pgtype.Int4
+		var ownerID, createdBy pgtype.UUID
+		var customFields []byte
+
 		err := rows.Scan(
-			&entry.ID, &entry.TenantID, &entry.Type, &entry.Subject, &entry.Body, &entry.Outcome,
-			&entry.Direction, &entry.Status, &entry.DueAt, &entry.CompletedAt, &entry.DurationSeconds,
-			&entry.OwnerID, &entry.CreatedBy, &entry.CustomFields,
-			&entry.CreatedAt, &entry.UpdatedAt, &entry.DeletedAt,
+			&entry.ID, &entry.TenantID, &entry.Type, &entry.Subject, &body, &outcome,
+			&direction, &entry.Status, &dueAt, &completedAt, &durationSeconds,
+			&ownerID, &createdBy, &customFields,
+			&createdAt, &updatedAt, &deletedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("activityAssociation.ListTimeline scan: %w", err)
 		}
+
+		entry.Body = pgTextToStr(body)
+		entry.Outcome = pgTextToStr(outcome)
+		entry.DueAt = pgTimestamptzToTime(dueAt)
+		entry.CompletedAt = pgTimestamptzToTime(completedAt)
+		entry.DurationSeconds = pgInt4ToPtr(durationSeconds)
+		entry.OwnerID = pgUUIDToPtr(ownerID)
+		entry.CreatedBy = pgUUIDToPtr(createdBy)
+		entry.CustomFields = customFields
+		entry.CreatedAt = createdAt.Time
+		entry.UpdatedAt = updatedAt.Time
+		entry.DeletedAt = pgTimestamptzToTime(deletedAt)
+
 		entries = append(entries, &entry)
 	}
 
@@ -416,10 +440,10 @@ func (r *ActivityAssociationRepository) DeleteByActivity(ctx context.Context, ac
 
 func mapActivityAssociationRowToDomain(row *generated.ActivityAssociation) *activity.ActivityAssociation {
 	return &activity.ActivityAssociation{
-		ID:         row.ID,
-		ActivityID: row.ActivityID,
-		EntityType: row.EntityType,
-		EntityID:   row.EntityID,
-		CreatedAt:  row.CreatedAt,
+		ID:         pgUUIDToUUID(row.ID),
+		ActivityID: pgUUIDToUUID(row.ActivityID),
+		EntityType: activity.EntityType(row.EntityType),
+		EntityID:   pgUUIDToUUID(row.EntityID),
+		CreatedAt:  row.CreatedAt.Time,
 	}
 }
