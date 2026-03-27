@@ -244,22 +244,27 @@ func (r *CompanyRepository) Count(ctx context.Context, tenantID uuid.UUID, filte
 }
 
 func mapCompanyRowToDomain(row *generated.Company) *company.Company {
+	var size *company.CompanySize
+	if row.Size.Valid {
+		s := company.CompanySize(row.Size.CompanySize)
+		size = &s
+	}
 	return &company.Company{
-		ID:              row.ID,
-		TenantID:        row.TenantID,
+		ID:              pgUUIDToUUID(row.ID),
+		TenantID:        pgUUIDToUUID(row.TenantID),
 		Name:            row.Name,
-		Domain:          row.Domain,
-		Industry:        row.Industry,
-		Size:            row.Size,
-		AnnualRevenue:   row.AnnualRevenue,
-		Website:         row.Website,
+		Domain:          pgTextToStr(row.Domain),
+		Industry:        pgTextToStr(row.Industry),
+		Size:            size,
+		AnnualRevenue:   pgNumericToPtrFloat(row.AnnualRevenue),
+		Website:         pgTextToStr(row.Website),
 		Address:         row.Address,
-		OwnerID:         row.OwnerID,
-		ParentCompanyID: row.ParentCompanyID,
+		OwnerID:         pgUUIDToPtr(row.OwnerID),
+		ParentCompanyID: pgUUIDToPtr(row.ParentCompanyID),
 		Tags:            row.Tags,
 		CustomFields:    row.CustomFields,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-		DeletedAt:       row.DeletedAt,
+		CreatedAt:       row.CreatedAt.Time,
+		UpdatedAt:       row.UpdatedAt.Time,
+		DeletedAt:       pgTimestamptzToTime(row.DeletedAt),
 	}
 }
