@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -175,19 +176,29 @@ func (r *CustomFieldRepository) Reorder(ctx context.Context, tenantID uuid.UUID,
 }
 
 func mapCustomFieldRowToDomain(row *generated.CustomFieldDefinition) *custom_field.CustomFieldDefinition {
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	updatedAt := pgTimestamptzToTime(row.UpdatedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
+	if updatedAt == nil {
+		t := time.Time{}
+		updatedAt = &t
+	}
 	return &custom_field.CustomFieldDefinition{
-		ID:           row.ID,
-		TenantID:     row.TenantID,
-		EntityType:   row.EntityType,
+		ID:           pgUUIDToUUID(row.ID),
+		TenantID:     pgUUIDToUUID(row.TenantID),
+		EntityType:   custom_field.EntityType(row.EntityType),
 		FieldKey:     row.FieldKey,
 		Label:        row.Label,
-		FieldType:    row.FieldType,
+		FieldType:    custom_field.FieldType(row.FieldType),
 		Options:      row.Options,
 		IsRequired:   row.IsRequired,
 		ShowInList:   row.ShowInList,
 		ShowInCard:   row.ShowInCard,
 		Position:     int(row.Position),
-		CreatedAt:    row.CreatedAt,
-		UpdatedAt:    row.UpdatedAt,
+		CreatedAt:    *createdAt,
+		UpdatedAt:    *updatedAt,
 	}
 }
