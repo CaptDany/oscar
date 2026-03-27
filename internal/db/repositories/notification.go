@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -171,16 +172,27 @@ func (r *NotificationRepository) Delete(ctx context.Context, id, userID uuid.UUI
 }
 
 func mapNotificationRowToDomain(row *generated.Notification) *notification.Notification {
+	var entityType *string
+	if row.EntityType.Valid {
+		s := string(row.EntityType.EntityType)
+		entityType = &s
+	}
+	entityID := pgUUIDToPtr(row.EntityID)
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
 	return &notification.Notification{
-		ID:         row.ID,
-		TenantID:   row.TenantID,
-		UserID:     row.UserID,
+		ID:         pgUUIDToUUID(row.ID),
+		TenantID:   pgUUIDToUUID(row.TenantID),
+		UserID:     pgUUIDToUUID(row.UserID),
 		Type:       row.Type,
 		Title:      row.Title,
-		Body:       row.Body,
-		EntityType: row.EntityType,
-		EntityID:   row.EntityID,
+		Body:       pgTextToStrStr(row.Body),
+		EntityType: entityType,
+		EntityID:   entityID,
 		IsRead:     row.IsRead,
-		CreatedAt:  row.CreatedAt,
+		CreatedAt:  *createdAt,
 	}
 }
