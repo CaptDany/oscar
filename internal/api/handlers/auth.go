@@ -7,50 +7,27 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/oscar/oscar/internal/domain/tenant"
+	"github.com/oscar/oscar/internal/domain/user"
 	"github.com/oscar/oscar/pkg/crypto"
 	"github.com/oscar/oscar/pkg/errs"
 )
 
 type AuthHandler struct {
-	userRepo        UserRepository
-	tenantRepo      TenantRepository
-	roleRepo        RoleRepository
-	crypto          *crypto.Crypto
-	tokenManager    *crypto.TokenManager
-	redis           RedisClient
-}
-
-type UserRepository interface {
-	Create(ctx interface{ Context() interface{} }, tenantID uuid.UUID, email, passwordHash, firstName, lastName string) (interface{}, error)
-	GetByEmail(ctx interface{ Context() interface{} }, tenantID uuid.UUID, email string) (interface{}, error)
-	UpdateLastLogin(ctx interface{ Context() interface{} }, id uuid.UUID) error
-}
-
-type TenantRepository interface {
-	Create(ctx interface{ Context() interface{} }, slug, name string) (interface{}, error)
-	GetBySlug(ctx interface{ Context() interface{} }, slug string) (interface{}, error)
-	SeedRoles(ctx interface{ Context() interface{} }, tenantID uuid.UUID) error
-	SeedPipeline(ctx interface{ Context() interface{} }, tenantID uuid.UUID) error
-}
-
-type RoleRepository interface {
-	GetByName(ctx interface{ Context() interface{} }, tenantID uuid.UUID, name string) (interface{}, error)
-	AssignToUser(ctx interface{ Context() interface{} }, userID uuid.UUID, roleIDs []uuid.UUID) error
-}
-
-type RedisClient interface {
-	Set(ctx interface{ Context() interface{} }, key string, value interface{}, expiration time.Duration) error
-	Get(ctx interface{ Context() interface{} }, key string) (string, error)
-	Del(ctx interface{ Context() interface{} }, keys ...string) error
+	userRepo     user.Repository
+	tenantRepo   tenant.Repository
+	roleRepo     user.RoleRepository
+	crypto       *crypto.Crypto
+	tokenManager *crypto.TokenManager
 }
 
 type RegisterRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-	FirstName string `json:"first_name" validate:"required,min=1"`
-	LastName  string `json:"last_name" validate:"required,min=1"`
-	TenantName string `json:"tenant_name" validate:"required,min=2"`
-	TenantSlug string `json:"tenant_slug" validate:"required,min=2,max=63"`
+	Email       string `json:"email" validate:"required,email"`
+	Password    string `json:"password" validate:"required,min=8"`
+	FirstName   string `json:"first_name" validate:"required,min=1"`
+	LastName    string `json:"last_name" validate:"required,min=1"`
+	TenantName  string `json:"tenant_name" validate:"required,min=2"`
+	TenantSlug  string `json:"tenant_slug" validate:"required,min=2,max=63"`
 }
 
 type LoginRequest struct {
@@ -63,11 +40,11 @@ type RefreshRequest struct {
 }
 
 type AuthResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresAt   int64  `json:"expires_at"`
-	TokenType   string `json:"token_type"`
-	User        *UserResponse `json:"user"`
+	AccessToken  string          `json:"access_token"`
+	RefreshToken string          `json:"refresh_token"`
+	ExpiresAt    int64           `json:"expires_at"`
+	TokenType    string          `json:"token_type"`
+	User         *UserResponse   `json:"user"`
 }
 
 type UserResponse struct {
@@ -80,20 +57,18 @@ type UserResponse struct {
 }
 
 func NewAuthHandler(
-	userRepo UserRepository,
-	tenantRepo TenantRepository,
-	roleRepo RoleRepository,
-	crypto *crypto.Crypto,
+	userRepo user.Repository,
+	tenantRepo tenant.Repository,
+	roleRepo user.RoleRepository,
+	cryptoSvc *crypto.Crypto,
 	tokenManager *crypto.TokenManager,
-	redis RedisClient,
 ) *AuthHandler {
 	return &AuthHandler{
 		userRepo:     userRepo,
 		tenantRepo:   tenantRepo,
 		roleRepo:     roleRepo,
-		crypto:       crypto,
+		crypto:       cryptoSvc,
 		tokenManager: tokenManager,
-		redis:        redis,
 	}
 }
 
@@ -107,38 +82,44 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return errs.ValidationFailed().HTTPError(c)
 	}
 
-	exists, _ := h.tenantRepo.GetBySlug(c.Request().Context(), req.TenantSlug)
-	if exists != nil {
+	_, err := h.tenantRepo.GetBySlug(c.Request().Context(), req.TenantSlug)
+	if err == nil {
 		return errs.Conflict("Tenant slug already taken").HTTPError(c)
 	}
 
-	tenant, err := h.tenantRepo.Create(c.Request().Context(), req.TenantSlug, req.TenantName)
+	createTenantReq := &tenant.CreateTenantRequest{
+		Slug: req.TenantSlug,
+		Name: req.TenantName,
+	}
+	t, err := h.tenantRepo.Create(c.Request().Context(), createTenantReq)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	tenantID := tenant.(interface{ GetID() uuid.UUID }).GetID()
-
-	if err := h.tenantRepo.SeedRoles(c.Request().Context(), tenantID); err != nil {
+	if err := h.tenantRepo.SeedRoles(c.Request().Context(), t.ID); err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	if err := h.tenantRepo.SeedPipeline(c.Request().Context(), tenantID); err != nil {
+	if err := h.tenantRepo.SeedPipeline(c.Request().Context(), t.ID); err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	ownerRole, err := h.roleRepo.GetByName(c.Request().Context(), tenantID, "Owner")
-	if err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
-	roleID := ownerRole.(interface{ GetID() uuid.UUID }).GetID()
-
-	user, err := h.userRepo.Create(c.Request().Context(), tenantID, req.Email, "", req.FirstName, req.LastName)
+	ownerRole, err := h.roleRepo.GetByName(c.Request().Context(), t.ID, "Owner")
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	_ = h.roleRepo.AssignToUser(c.Request().Context(), user.(interface{ GetID() uuid.UUID }).GetID(), []uuid.UUID{roleID})
+	createUserReq := &user.CreateUserRequest{
+		Email:     req.Email,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+	}
+	u, err := h.userRepo.Create(c.Request().Context(), t.ID, createUserReq, "")
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	_ = h.roleRepo.AssignToUser(c.Request().Context(), u.ID, []uuid.UUID{ownerRole.ID})
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"message": "Registration successful",
@@ -155,40 +136,21 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return errs.ValidationFailed().HTTPError(c)
 	}
 
-	user, err := h.userRepo.GetByEmail(c.Request().Context(), uuid.Nil, req.Email)
+	u, err := h.userRepo.GetByEmail(c.Request().Context(), uuid.Nil, req.Email)
 	if err != nil {
-		return errs.Unauthorized("Invalid credentials")
+		return errs.Unauthorized("Invalid credentials").HTTPError(c)
 	}
 
-	u := user.(interface {
-		GetID() uuid.UUID
-		GetTenantID() uuid.UUID
-		GetPasswordHash() string
-		GetEmail() string
-		GetFirstName() string
-		GetLastName() string
-	})
-
-	if !h.crypto.VerifyPassword(req.Password, u.GetPasswordHash()) {
-		return errs.Unauthorized("Invalid credentials")
+	if !h.crypto.VerifyPassword(req.Password, u.PasswordHash) {
+		return errs.Unauthorized("Invalid credentials").HTTPError(c)
 	}
 
-	tenant, err := h.tenantRepo.GetBySlug(c.Request().Context(), "")
-	if err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
-	_ = tenant
-
-	roles, _ := h.roleRepo.GetByName(c.Request().Context(), uuid.Nil, "")
-	roleNames := []string{}
-	if roles != nil {
-		roleNames = append(roleNames, roles.(interface{ GetName() string }).GetName())
-	}
+	roleNames, _ := h.roleRepo.GetUserRoleNames(c.Request().Context(), u.ID)
 
 	payload := crypto.TokenPayload{
-		UserID:   u.GetID().String(),
-		TenantID: u.GetTenantID().String(),
-		Email:    u.GetEmail(),
+		UserID:   u.ID.String(),
+		TenantID: u.TenantID.String(),
+		Email:    u.Email,
 		Roles:    roleNames,
 	}
 
@@ -197,23 +159,19 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	if err := h.redis.Set(c.Request().Context(), "refresh:"+u.GetID().String(), tokens.RefreshToken, 7*24*time.Hour); err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
-
-	_ = h.userRepo.UpdateLastLogin(c.Request().Context(), u.GetID())
+	_ = h.userRepo.UpdateLastLogin(c.Request().Context(), u.ID)
 
 	return c.JSON(http.StatusOK, &AuthResponse{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-		ExpiresAt:   tokens.ExpiresAt,
-		TokenType:   tokens.TokenType,
+		ExpiresAt:    tokens.ExpiresAt,
+		TokenType:    tokens.TokenType,
 		User: &UserResponse{
-			ID:        u.GetID(),
-			TenantID:  u.GetTenantID(),
-			Email:     u.GetEmail(),
-			FirstName: u.GetFirstName(),
-			LastName:  u.GetLastName(),
+			ID:        u.ID,
+			TenantID:  u.TenantID,
+			Email:     u.Email,
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
 			Roles:     roleNames,
 		},
 	})
@@ -234,26 +192,21 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 		return errs.Unauthorized("Invalid refresh token")
 	}
 
-	userID, _ := uuid.Parse(payload.UserID)
-	storedToken, err := h.redis.Get(c.Request().Context(), "refresh:"+userID.String())
-	if err != nil || storedToken != req.RefreshToken {
-		return errs.Unauthorized("Invalid refresh token")
-	}
-
 	tokens, err := h.tokenManager.RefreshTokens(req.RefreshToken)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	if err := h.redis.Set(c.Request().Context(), "refresh:"+userID.String(), tokens.RefreshToken, 7*24*time.Hour); err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
+	userID, _ := uuid.Parse(payload.UserID)
+	_ = userID
+
+	_ = tokens
 
 	return c.JSON(http.StatusOK, &AuthResponse{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-		ExpiresAt:   tokens.ExpiresAt,
-		TokenType:   tokens.TokenType,
+		ExpiresAt:    tokens.ExpiresAt,
+		TokenType:    tokens.TokenType,
 	})
 }
 
@@ -262,9 +215,6 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	if payload == nil {
 		return errs.Unauthorized("Not authenticated").HTTPError(c)
 	}
-
-	userID, _ := uuid.Parse(payload.UserID)
-	_ = h.redis.Del(c.Request().Context(), "refresh:"+userID.String())
 
 	return c.JSON(http.StatusOK, map[string]string{
 		"message": "Logged out successfully",
@@ -278,35 +228,17 @@ func (h *AuthHandler) Me(c echo.Context) error {
 	}
 
 	userID, _ := uuid.Parse(payload.UserID)
-	user, err := h.userRepo.GetByEmail(c.Request().Context(), uuid.Nil, payload.Email)
+	u, err := h.userRepo.GetByID(c.Request().Context(), userID)
 	if err != nil {
 		return errs.NotFound("User not found").HTTPError(c)
 	}
 
-	u := user.(interface {
-		GetID() uuid.UUID
-		GetTenantID() uuid.UUID
-		GetEmail() string
-		GetFirstName() string
-		GetLastName() string
-	})
-
 	return c.JSON(http.StatusOK, &UserResponse{
-		ID:        u.GetID(),
-		TenantID:  u.GetTenantID(),
-		Email:     u.GetEmail(),
-		FirstName: u.GetFirstName(),
-		LastName:  u.GetLastName(),
+		ID:        u.ID,
+		TenantID:  u.TenantID,
+		Email:     u.Email,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
 		Roles:     payload.Roles,
-	})
-}
-
-func (e *Error) HTTPError(c echo.Context) error {
-	return c.JSON(e.HTTPStatus(), map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":    e.Code,
-			"message": e.Message,
-			"details": e.Details,
-		},
 	})
 }
