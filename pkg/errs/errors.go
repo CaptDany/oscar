@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 type Code string
@@ -74,6 +76,10 @@ func (e *Error) HTTPStatus() int {
 	default:
 		return http.StatusInternalServerError
 	}
+}
+
+func (e *Error) HTTPError(c echo.Context) error {
+	return c.JSON(e.HTTPStatus(), e)
 }
 
 var (
