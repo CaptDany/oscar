@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"github.com/oscar/oscar/internal/api/handlers"
 	"github.com/oscar/oscar/internal/api/middleware"
 	"github.com/oscar/oscar/internal/config"
+	"github.com/oscar/oscar/internal/db/repositories"
 	"github.com/oscar/oscar/pkg/crypto"
 )
 
@@ -36,22 +36,32 @@ func main() {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
 
-	cryptoSvc := crypto.New(cfg.App.Secret)
+	cryptoSvc := crypto.New()
 	tokenManager := crypto.NewTokenManager(cfg.App.Secret)
+
+	personRepo := repositories.NewPersonRepository(pool)
+	companyRepo := repositories.NewCompanyRepository(pool)
+	dealRepo := repositories.NewDealRepository(pool)
+	pipelineRepo := repositories.NewPipelineRepository(pool)
+	activityRepo := repositories.NewActivityRepository(pool)
+	activityAssocRepo := repositories.NewActivityAssociationRepository(pool)
+	tenantRepo := repositories.NewTenantRepository(pool)
+	userRepo := repositories.NewUserRepository(pool)
 
 	server := api.New()
 
-	personHandler := &handlers.PersonHandler{}
-	companyHandler := &handlers.CompanyHandler{}
-	dealHandler := &handlers.DealHandler{}
-	pipelineHandler := &handlers.PipelineHandler{}
-	activityHandler := &handlers.ActivityHandler{}
-	authHandler := &handlers.AuthHandler{}
+	personHandler := handlers.NewPersonHandler(personRepo)
+	companyHandler := handlers.NewCompanyHandler(companyRepo)
+	dealHandler := handlers.NewDealHandler(dealRepo, pipelineRepo)
+	pipelineHandler := handlers.NewPipelineHandler(pipelineRepo)
+	activityHandler := handlers.NewActivityHandler(activityRepo, activityAssocRepo)
+	roleRepo := repositories.NewRoleRepository(pool)
+	authHandler := handlers.NewAuthHandler(userRepo, tenantRepo, roleRepo, cryptoSvc, tokenManager)
 
 	authMw := middleware.Auth(tokenManager)
-	tenantMw := middleware.TenantResolver(nil)
+	tenantMw := middleware.TenantResolver(tenantRepo)
 
-	server.SetupRoutes(&handlers.Handlers{
+	server.SetupRoutes(&api.Handlers{
 		Auth:     authHandler,
 		Person:   personHandler,
 		Company:  companyHandler,
@@ -61,7 +71,7 @@ func main() {
 	}, authMw, tenantMw)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
-	
+
 	go func() {
 		log.Printf("Starting server on %s", addr)
 		if err := server.Start(addr); err != nil && err != http.ErrServerClosed {
@@ -75,7 +85,7 @@ func main() {
 
 	log.Println("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(); err != nil {
