@@ -23,8 +23,8 @@ func NewDealRepository(pool *pgxpool.Pool) *DealRepository {
 
 func (r *DealRepository) Create(ctx context.Context, tenantID uuid.UUID, req *deal.CreateDealRequest) (*deal.Deal, error) {
 	query := `
-		INSERT INTO deals (tenant_id, title, value, currency, stage_id, pipeline_id, person_id, company_id, owner_id, expected_close_date, probability, tags, custom_fields)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		INSERT INTO deals (tenant_id, title, value, currency, stage_id, pipeline_id, person_id, company_id, owner_id, expected_close_date, tags, custom_fields)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING *
 	`
 
@@ -37,7 +37,7 @@ func (r *DealRepository) Create(ctx context.Context, tenantID uuid.UUID, req *de
 	err := r.pool.QueryRow(ctx, query,
 		tenantID, req.Title, req.Value, currency, req.StageID, req.PipelineID,
 		req.PersonID, req.CompanyID, req.OwnerID, req.ExpectedCloseDate,
-		req.Probability, req.Tags, req.CustomFields,
+		req.Tags, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Title, &row.Value, &row.Currency, &row.StageID,
 		&row.PipelineID, &row.PersonID, &row.CompanyID, &row.OwnerID,
@@ -440,26 +440,26 @@ func (r *DealRepository) GetPipelineStats(ctx context.Context, pipelineID uuid.U
 
 func mapDealRowToDomain(row *generated.Deal) *deal.Deal {
 	return &deal.Deal{
-		ID:                row.ID,
-		TenantID:          row.TenantID,
-		Title:             row.Title,
-		Value:             row.Value,
-		Currency:          row.Currency,
-		StageID:           row.StageID,
-		PipelineID:        row.PipelineID,
-		PersonID:          row.PersonID,
-		CompanyID:         row.CompanyID,
-		OwnerID:           row.OwnerID,
-		ExpectedCloseDate: row.ExpectedCloseDate,
-		ClosedAt:          row.ClosedAt,
-		WonReason:         row.WonReason,
-		LostReason:        row.LostReason,
-		Probability:       int(row.Probability),
-		Tags:              row.Tags,
-		CustomFields:      row.CustomFields,
-		CreatedAt:         row.CreatedAt,
-		UpdatedAt:         row.UpdatedAt,
-		DeletedAt:         row.DeletedAt,
+		ID:                 pgUUIDToUUID(row.ID),
+		TenantID:           pgUUIDToUUID(row.TenantID),
+		Title:              row.Title,
+		Value:              pgNumericToFloat(row.Value),
+		Currency:           row.Currency,
+		StageID:            pgUUIDToPtr(row.StageID),
+		PipelineID:         pgUUIDToPtr(row.PipelineID),
+		PersonID:           pgUUIDToPtr(row.PersonID),
+		CompanyID:          pgUUIDToPtr(row.CompanyID),
+		OwnerID:            pgUUIDToPtr(row.OwnerID),
+		ExpectedCloseDate:   pgDateToTime(row.ExpectedCloseDate),
+		ClosedAt:           pgTimestamptzToTime(row.ClosedAt),
+		WonReason:          pgTextToStr(row.WonReason),
+		LostReason:         pgTextToStr(row.LostReason),
+		Probability:        pgInt4ToInt(row.Probability),
+		Tags:               row.Tags,
+		CustomFields:       row.CustomFields,
+		CreatedAt:          row.CreatedAt.Time,
+		UpdatedAt:          row.UpdatedAt.Time,
+		DeletedAt:          pgTimestamptzToTime(row.DeletedAt),
 	}
 }
 
@@ -693,25 +693,25 @@ func (r *PipelineRepository) DeleteStage(ctx context.Context, id uuid.UUID) erro
 
 func mapPipelineRowToDomain(row *generated.Pipeline) *deal.Pipeline {
 	return &deal.Pipeline{
-		ID:        row.ID,
-		TenantID:  row.TenantID,
+		ID:        pgUUIDToUUID(row.ID),
+		TenantID:  pgUUIDToUUID(row.TenantID),
 		Name:      row.Name,
 		IsDefault: row.IsDefault,
 		Currency:  row.Currency,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
+		CreatedAt: row.CreatedAt.Time,
+		UpdatedAt: row.UpdatedAt.Time,
 	}
 }
 
 func mapPipelineStageRowToDomain(row *generated.PipelineStage) *deal.PipelineStage {
 	return &deal.PipelineStage{
-		ID:         row.ID,
-		PipelineID: row.PipelineID,
-		Name:       row.Name,
-		Position:   int(row.Position),
+		ID:          pgUUIDToUUID(row.ID),
+		PipelineID:  pgUUIDToUUID(row.PipelineID),
+		Name:        row.Name,
+		Position:    int(row.Position),
 		Probability: int(row.Probability),
-		StageType:  row.StageType,
-		CreatedAt:  row.CreatedAt,
-		UpdatedAt:  row.UpdatedAt,
+		StageType:   string(row.StageType),
+		CreatedAt:   row.CreatedAt.Time,
+		UpdatedAt:   row.UpdatedAt.Time,
 	}
 }
