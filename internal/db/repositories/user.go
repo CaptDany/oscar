@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,20 +22,20 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{pool: pool}
 }
 
-func (r *UserRepository) Create(ctx context.Context, req *user.CreateUserRequest, passwordHash string) (*user.User, error) {
+func (r *UserRepository) Create(ctx context.Context, tenantID uuid.UUID, req *user.CreateUserRequest, passwordHash string) (*user.User, error) {
 	query := `
-		INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, timezone, locale)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING *
 	`
 
 	var row generated.User
 	err := r.pool.QueryRow(ctx, query,
-		req.TenantID, req.Email, passwordHash, req.FirstName, req.LastName,
-		req.AvatarURL, req.Timezone, req.Locale,
+		tenantID, req.Email, passwordHash, req.FirstName, req.LastName,
+		req.Timezone, req.Locale,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
-		&row.AvatarURL, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
 	if err != nil {
@@ -44,20 +45,20 @@ func (r *UserRepository) Create(ctx context.Context, req *user.CreateUserRequest
 	return mapUserRowToDomain(&row), nil
 }
 
-func (r *UserRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *user.CreateUserRequest, passwordHash string) (*user.User, error) {
+func (r *UserRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, req *user.CreateUserRequest, passwordHash string) (*user.User, error) {
 	query := `
-		INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, timezone, locale)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING *
 	`
 
 	var row generated.User
 	err := tx.QueryRow(ctx, query,
-		req.TenantID, req.Email, passwordHash, req.FirstName, req.LastName,
-		req.AvatarURL, req.Timezone, req.Locale,
+		tenantID, req.Email, passwordHash, req.FirstName, req.LastName,
+		req.Timezone, req.Locale,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
-		&row.AvatarURL, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
 	if err != nil {
@@ -73,7 +74,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*user.User,
 	var row generated.User
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
-		&row.AvatarURL, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
 	if err != nil {
@@ -92,7 +93,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	var row generated.User
 	err := r.pool.QueryRow(ctx, query, tenantID, email).Scan(
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
-		&row.AvatarURL, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
 	if err != nil {
@@ -124,7 +125,7 @@ func (r *UserRepository) Update(ctx context.Context, id uuid.UUID, req *user.Upd
 		id, req.Email, req.FirstName, req.LastName, req.AvatarURL, req.Timezone, req.Locale, req.IsActive,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
-		&row.AvatarURL, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 	)
 	if err != nil {
@@ -177,7 +178,7 @@ func (r *UserRepository) List(ctx context.Context, tenantID uuid.UUID, limit, of
 		var row generated.User
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
-			&row.AvatarURL, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+			&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 			&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
 		)
 		if err != nil {
@@ -199,21 +200,36 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID) erro
 }
 
 func mapUserRowToDomain(row *generated.User) *user.User {
+	avatarUrl := pgTextToStr(row.AvatarUrl)
+	timezone := pgTextToStrStr(row.Timezone)
+	locale := pgTextToStrStr(row.Locale)
+	lastLoginAt := pgTimestamptzToTime(row.LastLoginAt)
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	updatedAt := pgTimestamptzToTime(row.UpdatedAt)
+	deletedAt := pgTimestamptzToTime(row.DeletedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
+	if updatedAt == nil {
+		t := time.Time{}
+		updatedAt = &t
+	}
 	return &user.User{
-		ID:           row.ID,
-		TenantID:     row.TenantID,
+		ID:           pgUUIDToUUID(row.ID),
+		TenantID:     pgUUIDToUUID(row.TenantID),
 		Email:        row.Email,
 		PasswordHash: row.PasswordHash,
 		FirstName:    row.FirstName,
 		LastName:      row.LastName,
-		AvatarURL:    row.AvatarURL,
-		Timezone:     row.Timezone,
-		Locale:       row.Locale,
+		AvatarURL:    avatarUrl,
+		Timezone:     timezone,
+		Locale:       locale,
 		IsActive:     row.IsActive,
-		LastLoginAt:   row.LastLoginAt,
-		CreatedAt:    row.CreatedAt,
-		UpdatedAt:    row.UpdatedAt,
-		DeletedAt:    row.DeletedAt,
+		LastLoginAt:   lastLoginAt,
+		CreatedAt:    *createdAt,
+		UpdatedAt:    *updatedAt,
+		DeletedAt:    deletedAt,
 	}
 }
 
@@ -376,20 +392,55 @@ func (r *RoleRepository) GetUserRoleNames(ctx context.Context, userID uuid.UUID)
 	return names, nil
 }
 
+func (r *RoleRepository) Create(ctx context.Context, tenantID uuid.UUID, name string, permissions map[string]user.Permission) (*user.Role, error) {
+	permsJSON, err := json.Marshal(permissions)
+	if err != nil {
+		return nil, fmt.Errorf("role.Create marshal: %w", err)
+	}
+
+	query := `
+		INSERT INTO roles (tenant_id, name, permissions)
+		VALUES ($1, $2, $3)
+		RETURNING *
+	`
+
+	var row generated.Role
+	err = r.pool.QueryRow(ctx, query, tenantID, name, permsJSON).Scan(
+		&row.ID, &row.TenantID, &row.Name, &row.Description, &row.IsSystem, &row.Permissions,
+		&row.CreatedAt, &row.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("role.Create: %w", err)
+	}
+
+	return mapRoleRowToDomain(&row), nil
+}
+
 func mapRoleRowToDomain(row *generated.Role) *user.Role {
 	permissions := make(map[string]user.Permission)
 	if row.Permissions != nil {
 		json.Unmarshal(row.Permissions, &permissions)
 	}
+	desc := pgTextToStr(row.Description)
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	updatedAt := pgTimestamptzToTime(row.UpdatedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
+	if updatedAt == nil {
+		t := time.Time{}
+		updatedAt = &t
+	}
 
 	return &user.Role{
-		ID:          row.ID,
-		TenantID:    row.TenantID,
+		ID:          pgUUIDToUUID(row.ID),
+		TenantID:    pgUUIDToUUID(row.TenantID),
 		Name:        row.Name,
-		Description: row.Description,
+		Description: desc,
 		IsSystem:    row.IsSystem,
 		Permissions: permissions,
-		CreatedAt:   row.CreatedAt,
-		UpdatedAt:   row.UpdatedAt,
+		CreatedAt:   *createdAt,
+		UpdatedAt:   *updatedAt,
 	}
 }
