@@ -1,11 +1,13 @@
 package middleware
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/oscar/oscar/internal/domain/tenant"
 	"github.com/oscar/oscar/pkg/crypto"
 )
 
@@ -74,9 +76,7 @@ func TenantResolver(tenantRepo TenantRepository) echo.MiddlewareFunc {
 				return echo.ErrUnauthorized
 			}
 
-			ctx := c.Request().Context()
-
-			_, err := tenantRepo.GetByID(ctx, tenantID)
+			_, err := tenantRepo.GetByID(context.Background(), tenantID)
 			if err != nil {
 				return echo.ErrForbidden
 			}
@@ -113,13 +113,13 @@ func RateLimit(redis RedisClient, maxRequests int, window time.Duration) echo.Mi
 			clientIP := c.RealIP()
 			key := "ratelimit:" + clientIP
 
-			count, err := redis.Incr(c.Request().Context(), key)
+			count, err := redis.Incr(context.Background(), key)
 			if err != nil {
 				return next(c)
 			}
 
 			if count == 1 {
-				redis.Expire(c.Request().Context(), key, window)
+				_ = redis.Expire(context.Background(), key, window)
 			}
 
 			if count > int64(maxRequests) {
@@ -148,10 +148,10 @@ func Recover() echo.MiddlewareFunc {
 }
 
 type TenantRepository interface {
-	GetByID(ctx interface{ Context() interface{} }, id uuid.UUID) (interface{}, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*tenant.Tenant, error)
 }
 
 type RedisClient interface {
-	Incr(ctx interface{ Context() interface{} }, key string) (int64, error)
-	Expire(ctx interface{ Context() interface{} }, key string, duration time.Duration) error
+	Incr(ctx context.Context, key string) (int64, error)
+	Expire(ctx context.Context, key string, duration time.Duration) error
 }
