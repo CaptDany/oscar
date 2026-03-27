@@ -1,0 +1,17 @@
+apiVersion: v2
+name: opencrm
+description: A Helm chart for OpenCRM - Open Source CRM
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - crm
+  - sales
+  - lead-management
+  - deal-tracking
+home: https://github.com/opencrm/opencrm
+sources:
+  - https://github.com/opencrm/opencrm
+maintainers:
+  - name: OpenCRM Team
+    email: hello@opencrm.dev
