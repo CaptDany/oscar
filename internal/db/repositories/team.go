@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -117,7 +118,7 @@ func (r *TeamRepository) AddMember(ctx context.Context, teamID, userID uuid.UUID
 
 	row := &generated.TeamMember{}
 	err := r.pool.QueryRow(ctx, query, teamID, userID, isLead).Scan(
-		&row.ID, &row.TeamID, &row.UserID, &row.IsLead, &row.CreatedAt,
+		&row.TeamID, &row.UserID, &row.IsLead, &row.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("team.AddMember: %w", err)
@@ -153,7 +154,7 @@ func (r *TeamRepository) ListMembers(ctx context.Context, teamID uuid.UUID) ([]t
 	for rows.Next() {
 		row := &generated.TeamMember{}
 		err := rows.Scan(
-			&row.ID, &row.TeamID, &row.UserID, &row.IsLead, &row.CreatedAt,
+			&row.TeamID, &row.UserID, &row.IsLead, &row.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("team.ListMembers scan: %w", err)
@@ -207,22 +208,38 @@ func (r *TeamRepository) SetLead(ctx context.Context, teamID, userID uuid.UUID) 
 }
 
 func mapTeamRowToDomain(row *generated.Team) *team.Team {
+	desc := pgTextToStr(row.Description)
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	updatedAt := pgTimestamptzToTime(row.UpdatedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
+	if updatedAt == nil {
+		t := time.Time{}
+		updatedAt = &t
+	}
 	return &team.Team{
-		ID:          row.ID,
-		TenantID:    row.TenantID,
+		ID:          pgUUIDToUUID(row.ID),
+		TenantID:    pgUUIDToUUID(row.TenantID),
 		Name:        row.Name,
-		Description: row.Description,
-		CreatedAt:   row.CreatedAt,
-		UpdatedAt:   row.UpdatedAt,
+		Description: desc,
+		CreatedAt:   *createdAt,
+		UpdatedAt:   *updatedAt,
 	}
 }
 
 func mapTeamMemberRowToDomain(row *generated.TeamMember) *team.TeamMember {
+	createdAt := pgTimestamptzToTime(row.CreatedAt)
+	if createdAt == nil {
+		t := time.Time{}
+		createdAt = &t
+	}
 	return &team.TeamMember{
-		ID:       row.ID,
-		TeamID:   row.TeamID,
-		UserID:   row.UserID,
+		ID:        pgUUIDToUUID(row.TeamID),
+		TeamID:   pgUUIDToUUID(row.TeamID),
+		UserID:   pgUUIDToUUID(row.UserID),
 		IsLead:   row.IsLead,
-		CreatedAt: row.CreatedAt,
+		CreatedAt: *createdAt,
 	}
 }
