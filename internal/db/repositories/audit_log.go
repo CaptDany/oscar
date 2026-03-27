@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/oscar/oscar/internal/db/generated"
@@ -33,7 +32,7 @@ func (r *AuditLogRepository) Create(ctx context.Context, tenantID uuid.UUID, use
 		tenantID, userID, action, entityType, entityID, diff, ipAddress, userAgent,
 	).Scan(
 		&row.ID, &row.TenantID, &row.UserID, &row.Action, &row.EntityType, &row.EntityID,
-		&row.Diff, &row.IPAddress, &row.UserAgent,
+		&row.Diff, &row.IpAddress, &row.UserAgent,
 		&row.CreatedAt,
 	)
 	if err != nil {
@@ -76,9 +75,9 @@ func (r *AuditLogRepository) List(ctx context.Context, tenantID uuid.UUID, filte
 	}
 
 	listQuery := `
-		SELECT al.*, u.email as user_email, u.first_name, u.last_name
+		SELECT al.id, al.tenant_id, al.user_id, al.action, al.entity_type, al.entity_id,
+		       al.diff, al.ip_address, al.user_agent, al.created_at
 		FROM audit_logs al
-		LEFT JOIN users u ON al.user_id = u.id
 		` + baseQuery + ` ORDER BY al.created_at DESC LIMIT $` + fmt.Sprintf("%d", argIdx) + ` OFFSET $` + fmt.Sprintf("%d", argIdx+1)
 	args = append(args, limit, 0)
 
@@ -93,22 +92,13 @@ func (r *AuditLogRepository) List(ctx context.Context, tenantID uuid.UUID, filte
 		row := &generated.AuditLog{}
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.UserID, &row.Action, &row.EntityType, &row.EntityID,
-			&row.Diff, &row.IPAddress, &row.UserAgent,
+			&row.Diff, &row.IpAddress, &row.UserAgent,
 			&row.CreatedAt,
 		)
 		if err != nil {
 			return nil, "", 0, fmt.Errorf("auditLog.List scan: %w", err)
 		}
-		log := mapAuditLogRowToDomain(row)
-
-		if userEmail, ok := rows.ColumnTypes()[9]; ok {
-			var email *string
-			if err := rows.Scan(&email); err == nil {
-				log.UserEmail = email
-			}
-		}
-
-		logs = append(logs, log)
+		logs = append(logs, mapAuditLogRowToDomain(row))
 	}
 
 	nextCursor := ""
@@ -126,9 +116,9 @@ func (r *AuditLogRepository) ListByEntity(ctx context.Context, tenantID uuid.UUI
 	}
 
 	query := `
-		SELECT al.*, u.email as user_email, u.first_name, u.last_name
+		SELECT al.id, al.tenant_id, al.user_id, al.action, al.entity_type, al.entity_id,
+		       al.diff, al.ip_address, al.user_agent, al.created_at
 		FROM audit_logs al
-		LEFT JOIN users u ON al.user_id = u.id
 		WHERE al.tenant_id = $1 AND al.entity_type = $2 AND al.entity_id = $3
 		ORDER BY al.created_at DESC
 		LIMIT $4 OFFSET $5
@@ -145,7 +135,7 @@ func (r *AuditLogRepository) ListByEntity(ctx context.Context, tenantID uuid.UUI
 		row := &generated.AuditLog{}
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.UserID, &row.Action, &row.EntityType, &row.EntityID,
-			&row.Diff, &row.IPAddress, &row.UserAgent,
+			&row.Diff, &row.IpAddress, &row.UserAgent,
 			&row.CreatedAt,
 		)
 		if err != nil {
@@ -163,9 +153,9 @@ func (r *AuditLogRepository) ListByUser(ctx context.Context, tenantID, userID uu
 	}
 
 	query := `
-		SELECT al.*, u.email as user_email, u.first_name, u.last_name
+		SELECT al.id, al.tenant_id, al.user_id, al.action, al.entity_type, al.entity_id,
+		       al.diff, al.ip_address, al.user_agent, al.created_at
 		FROM audit_logs al
-		LEFT JOIN users u ON al.user_id = u.id
 		WHERE al.tenant_id = $1 AND al.user_id = $2
 		ORDER BY al.created_at DESC
 		LIMIT $3 OFFSET $4
@@ -182,7 +172,7 @@ func (r *AuditLogRepository) ListByUser(ctx context.Context, tenantID, userID uu
 		row := &generated.AuditLog{}
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.UserID, &row.Action, &row.EntityType, &row.EntityID,
-			&row.Diff, &row.IPAddress, &row.UserAgent,
+			&row.Diff, &row.IpAddress, &row.UserAgent,
 			&row.CreatedAt,
 		)
 		if err != nil {
@@ -207,16 +197,27 @@ func (r *AuditLogRepository) Count(ctx context.Context, tenantID uuid.UUID) (int
 }
 
 func mapAuditLogRowToDomain(row *generated.AuditLog) *audit_log.AuditLog {
+	entityType := ""
+	if row.EntityType.Valid {
+		entityType = row.EntityType.String
+	}
+
+	var ipStr *string
+	if row.IpAddress != nil {
+		s := row.IpAddress.String()
+		ipStr = &s
+	}
+
 	return &audit_log.AuditLog{
-		ID:         row.ID,
-		TenantID:   row.TenantID,
-		UserID:     row.UserID,
+		ID:         pgUUIDToUUID(row.ID),
+		TenantID:   pgUUIDToUUID(row.TenantID),
+		UserID:     pgUUIDToPtr(row.UserID),
 		Action:     row.Action,
-		EntityType: row.EntityType,
-		EntityID:   row.EntityID,
+		EntityType: entityType,
+		EntityID:   pgUUIDToUUID(row.EntityID),
 		Diff:       row.Diff,
-		IPAddress:  row.IPAddress,
-		UserAgent:  row.UserAgent,
-		CreatedAt:  row.CreatedAt,
+		IPAddress:  ipStr,
+		UserAgent:  pgTextToStr(row.UserAgent),
+		CreatedAt:  row.CreatedAt.Time,
 	}
 }
