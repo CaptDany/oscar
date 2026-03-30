@@ -11,3 +11,7 @@ coverage.html
 .idea/
 dist/
 web/dist/
+server
+tmp/
+web/.astro/
+web/package-lock.json
