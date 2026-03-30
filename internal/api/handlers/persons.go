@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
@@ -20,32 +22,32 @@ func NewPersonHandler(repo person.Repository) *PersonHandler {
 }
 
 type CreatePersonRequest struct {
-	Type        string   `json:"type" validate:"required,oneof=lead contact customer"`
-	Status      string   `json:"status"`
-	FirstName   string   `json:"first_name" validate:"required"`
-	LastName    string   `json:"last_name" validate:"required"`
-	Email       []string `json:"email"`
-	Phone       []string `json:"phone"`
-	AvatarURL   *string  `json:"avatar_url"`
-	CompanyID   *string  `json:"company_id"`
-	OwnerID     *string  `json:"owner_id"`
-	Source      *string  `json:"source"`
-	Tags        []string `json:"tags"`
+	Type      string   `json:"type" validate:"required,oneof=lead contact customer"`
+	Status    string   `json:"status"`
+	FirstName string   `json:"first_name" validate:"required,titlecase"`
+	LastName  string   `json:"last_name" validate:"required,titlecase"`
+	Email     []string `json:"email" validate:"omitempty,dive,email"`
+	Phone     []string `json:"phone" validate:"omitempty,dive,phone"`
+	AvatarURL *string  `json:"avatar_url"`
+	CompanyID *string  `json:"company_id"`
+	OwnerID   *string  `json:"owner_id"`
+	Source    *string  `json:"source"`
+	Tags      []string `json:"tags"`
 }
 
 type UpdatePersonRequest struct {
-	Type        *string  `json:"type"`
-	Status      *string  `json:"status"`
-	FirstName   *string  `json:"first_name"`
-	LastName    *string  `json:"last_name"`
-	Email       []string `json:"email"`
-	Phone       []string `json:"phone"`
-	AvatarURL   *string  `json:"avatar_url"`
-	CompanyID   *string  `json:"company_id"`
-	OwnerID     *string  `json:"owner_id"`
-	Source      *string  `json:"source"`
-	Score       *int     `json:"score"`
-	Tags        []string `json:"tags"`
+	Type      *string  `json:"type"`
+	Status    *string  `json:"status"`
+	FirstName *string  `json:"first_name" validate:"omitempty,titlecase"`
+	LastName  *string  `json:"last_name" validate:"omitempty,titlecase"`
+	Email     []string `json:"email" validate:"omitempty,dive,email"`
+	Phone     []string `json:"phone" validate:"omitempty,dive,phone"`
+	AvatarURL *string  `json:"avatar_url"`
+	CompanyID *string  `json:"company_id"`
+	OwnerID   *string  `json:"owner_id"`
+	Source    *string  `json:"source"`
+	Score     *int     `json:"score"`
+	Tags      []string `json:"tags"`
 }
 
 type ConvertPersonRequest struct {
@@ -64,7 +66,7 @@ type ListPersonsQuery struct {
 
 func (h *PersonHandler) List(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uuid.UUID)
-	
+
 	var query ListPersonsQuery
 	if err := c.Bind(&query); err != nil {
 		return errs.BadRequest("Invalid query parameters").HTTPError(c)
@@ -77,11 +79,11 @@ func (h *PersonHandler) List(c echo.Context) error {
 	}
 
 	filter := &person.ListPersonsFilter{
-		Type:    person.PersonType(query.Type),
-		Status:  person.PersonStatus(query.Status),
-		Search:  query.Search,
-		Cursor:  query.Cursor,
-		Limit:   query.Limit,
+		Type:   person.PersonType(query.Type),
+		Status: person.PersonStatus(query.Status),
+		Search: query.Search,
+		Cursor: query.Cursor,
+		Limit:  query.Limit,
 	}
 
 	if query.OwnerID != "" {
@@ -114,7 +116,7 @@ func (h *PersonHandler) Create(c echo.Context) error {
 		return errs.BadRequest("Invalid request body").HTTPError(c)
 	}
 	if err := c.Validate(&req); err != nil {
-		return errs.ValidationFailed().HTTPError(c)
+		return parseValidationError(err, c)
 	}
 
 	createReq := &person.CreatePersonRequest{
@@ -179,7 +181,7 @@ func (h *PersonHandler) Update(c echo.Context) error {
 	}
 
 	updateReq := &person.UpdatePersonRequest{}
-	
+
 	if req.Type != nil {
 		t := person.PersonType(*req.Type)
 		updateReq.Type = &t
@@ -317,7 +319,7 @@ func (h *PersonHandler) RemoveTag(c echo.Context) error {
 
 func (h *PersonHandler) Search(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uuid.UUID)
-	
+
 	query := c.QueryParam("q")
 	if query == "" {
 		return errs.BadRequest("Search query is required").HTTPError(c)
@@ -359,4 +361,45 @@ func parseTime(s string) *time.Time {
 		return nil
 	}
 	return &t
+}
+
+func parseValidationError(err error, c echo.Context) error {
+	ve, ok := err.(validator.ValidationErrors)
+	if !ok {
+		return errs.ValidationFailed(errs.Detail{Message: err.Error()}).HTTPError(c)
+	}
+
+	details := make([]errs.Detail, 0, len(ve))
+	for _, fe := range ve {
+		field := toSnakeCase(fe.Field())
+		var msg string
+		switch fe.Tag() {
+		case "required":
+			msg = "This field is required"
+		case "email":
+			msg = "Invalid email format"
+		case "phone":
+			msg = "Phone must have at least 10 digits"
+		case "titlecase":
+			msg = "Must be in Title Case (e.g., John Doe)"
+		case "oneof":
+			msg = "Must be one of: " + fe.Param()
+		default:
+			msg = "Invalid value for " + fe.Field()
+		}
+		details = append(details, errs.Detail{Field: field, Message: msg})
+	}
+
+	return errs.ValidationFailed(details...).HTTPError(c)
+}
+
+func toSnakeCase(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result.WriteRune('_')
+		}
+		result.WriteRune(r)
+	}
+	return strings.ToLower(result.String())
 }

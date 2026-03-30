@@ -39,7 +39,49 @@ func ValidateStruct(s interface{}) error {
 }
 
 func ValidateField(level validator.FieldLevel) bool {
-	// This function is kept for backward compatibility
-	// In newer versions of validator, FieldLevel doesn't have Validate()
 	return true
+}
+
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
+func FormatValidationErrors(err error) []ValidationError {
+	var errors []ValidationError
+
+	// Handle Echo's validation errors
+	if ve, ok := err.(validator.ValidationErrors); ok {
+		for _, e := range ve {
+			field := e.Field()
+			message := getValidationMessage(e.Tag())
+			errors = append(errors, ValidationError{
+				Field:   field,
+				Message: message,
+			})
+		}
+		return errors
+	}
+
+	// Handle generic errors
+	errors = append(errors, ValidationError{
+		Field:   "unknown",
+		Message: err.Error(),
+	})
+	return errors
+}
+
+func getValidationMessage(tag string) string {
+	switch tag {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email format"
+	case "min":
+		return "Value is too short"
+	case "max":
+		return "Value is too long"
+	default:
+		return "Invalid value"
+	}
 }
