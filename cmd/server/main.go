@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/oscar/oscar/internal/api"
 	"github.com/oscar/oscar/internal/api/handlers"
 	"github.com/oscar/oscar/internal/api/middleware"
 	"github.com/oscar/oscar/internal/config"
 	"github.com/oscar/oscar/internal/db/repositories"
+	"github.com/oscar/oscar/internal/storage"
 	"github.com/oscar/oscar/pkg/crypto"
 )
 
@@ -35,6 +38,29 @@ func main() {
 	if err := pool.Ping(context.Background()); err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
+
+	var redisClient *redis.Client
+	var rateLimiter *middleware.InMemoryRateLimiter
+
+	if cfg.Redis.URL != "" {
+		u, err := url.Parse(cfg.Redis.URL)
+		if err != nil {
+			log.Printf("[RateLimit] Invalid Redis URL: %v", err)
+		} else {
+			redisClient = redis.NewClient(&redis.Options{
+				Addr: u.Host,
+			})
+
+			if err := redisClient.Ping(context.Background()).Err(); err != nil {
+				log.Printf("[RateLimit] Redis unavailable, using in-memory fallback: %v", err)
+				redisClient = nil
+			} else {
+				log.Println("[RateLimit] Redis connected successfully")
+			}
+		}
+	}
+
+	rateLimiter = middleware.NewRateLimiter(redisClient, 100, time.Minute)
 
 	cryptoSvc := crypto.New()
 	tokenManager := crypto.NewTokenManager(cfg.App.Secret)
@@ -58,8 +84,20 @@ func main() {
 	roleRepo := repositories.NewRoleRepository(pool)
 	authHandler := handlers.NewAuthHandler(userRepo, tenantRepo, roleRepo, cryptoSvc, tokenManager)
 
+	minioClient, err := storage.NewMinIOClient(&cfg.Storage)
+	if err != nil {
+		log.Fatalf("Failed to create MinIO client: %v", err)
+	}
+	if err := minioClient.EnsureBucket(context.Background()); err != nil {
+		log.Fatalf("Failed to ensure MinIO bucket: %v", err)
+	}
+
+	userHandler := handlers.NewUserHandler(userRepo, roleRepo, minioClient)
+	uploadHandler := handlers.NewUploadHandler(minioClient, userRepo)
+
 	authMw := middleware.Auth(tokenManager)
-	tenantMw := middleware.TenantResolver(tenantRepo)
+	tenantPool := repositories.NewTenantPool(pool)
+	tenantMw := middleware.TenantResolver(tenantRepo, tenantPool)
 
 	server.SetupRoutes(&api.Handlers{
 		Auth:     authHandler,
@@ -68,7 +106,9 @@ func main() {
 		Deal:     dealHandler,
 		Pipeline: pipelineHandler,
 		Activity: activityHandler,
-	}, authMw, tenantMw)
+		User:     userHandler,
+		Upload:   uploadHandler,
+	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
 
@@ -84,6 +124,10 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
+
+	if redisClient != nil {
+		redisClient.Close()
+	}
 
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

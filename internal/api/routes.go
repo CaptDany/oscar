@@ -5,6 +5,8 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/oscar/oscar/internal/api/handlers"
+	"github.com/oscar/oscar/internal/api/middleware"
+	"github.com/oscar/oscar/pkg/errs"
 )
 
 type Handlers struct {
@@ -14,10 +16,12 @@ type Handlers struct {
 	Deal     *handlers.DealHandler
 	Pipeline *handlers.PipelineHandler
 	Activity *handlers.ActivityHandler
+	User     *handlers.UserHandler
+	Upload   *handlers.UploadHandler
 }
 
-func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc) {
-	api := s.Group("/api/v1")
+func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
+	api := s.Group("/api/v1", middleware.RateLimitMiddleware(rateLimiter))
 
 	api.POST("/auth/register", h.Auth.Register)
 	api.POST("/auth/login", h.Auth.Login)
@@ -26,8 +30,11 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	auth := api.Group("", authMiddleware)
 	auth.POST("/auth/logout", h.Auth.Logout)
 	auth.GET("/auth/me", h.Auth.Me)
+	auth.POST("/upload/avatar", h.Upload.GetAvatarPresignedURL)
+	auth.POST("/upload/avatar/confirm", h.Upload.ConfirmAvatarUpload)
 
 	tenantScoped := auth.Group("", authMiddlewareWithTenant)
+	tenantScoped.GET("/avatar/:user_id", h.Upload.GetAvatarURL)
 
 	persons := tenantScoped.Group("/persons")
 	persons.GET("", h.Person.List)
@@ -76,9 +83,15 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	activities.GET("/:id", h.Activity.Get)
 	activities.PATCH("/:id", h.Activity.Update)
 	activities.POST("/:id/complete", h.Activity.Complete)
+	activities.POST("/:id/uncomplete", h.Activity.Uncomplete)
 	activities.DELETE("/:id", h.Activity.Delete)
 
 	tenantScoped.GET("/timeline", h.Activity.Timeline)
+
+	users := tenantScoped.Group("/users")
+	users.GET("", h.User.List, RequirePermission("users", "view"))
+	users.GET("/:id", h.User.Get, RequirePermission("users", "view"))
+	users.PUT("/:id/roles", h.User.UpdateRoles, RequirePermission("users", "edit"))
 }
 
 func GetTenantID(c echo.Context) uuid.UUID {
@@ -107,7 +120,7 @@ func RequirePermission(resource, action string) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			roles := GetRoles(c)
 			if roles == nil {
-				return echo.ErrForbidden
+				return errs.PermissionDenied(resource, action)
 			}
 
 			canAccess := false
@@ -119,7 +132,7 @@ func RequirePermission(resource, action string) echo.MiddlewareFunc {
 			}
 
 			if !canAccess {
-				return echo.ErrForbidden
+				return errs.PermissionDenied(resource, action)
 			}
 
 			return next(c)
@@ -135,6 +148,7 @@ func hasPermission(role, resource, action string) bool {
 			"deals":      "all",
 			"activities": "all",
 			"settings":   "all",
+			"users":      "all",
 		},
 		"Admin": {
 			"persons":    "all",
@@ -142,6 +156,7 @@ func hasPermission(role, resource, action string) bool {
 			"deals":      "all",
 			"activities": "all",
 			"settings":   "all",
+			"users":      "all",
 		},
 		"Manager": {
 			"persons":    "team",
