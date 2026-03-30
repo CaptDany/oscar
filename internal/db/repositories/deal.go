@@ -208,65 +208,70 @@ func (r *DealRepository) List(ctx context.Context, tenantID uuid.UUID, filter *d
 		limit = 20
 	}
 
-	baseQuery := `WHERE tenant_id = $1 AND deleted_at IS NULL`
+	baseQuery := `WHERE d.tenant_id = $1 AND d.deleted_at IS NULL`
 	args := []interface{}{tenantID}
 	argIdx := 2
 
 	if filter.PipelineID != nil {
-		baseQuery += fmt.Sprintf(" AND pipeline_id = $%d", argIdx)
+		baseQuery += fmt.Sprintf(" AND d.pipeline_id = $%d", argIdx)
 		args = append(args, *filter.PipelineID)
 		argIdx++
 	}
 	if filter.StageID != nil {
-		baseQuery += fmt.Sprintf(" AND stage_id = $%d", argIdx)
+		baseQuery += fmt.Sprintf(" AND d.stage_id = $%d", argIdx)
 		args = append(args, *filter.StageID)
 		argIdx++
 	}
 	if filter.OwnerID != nil {
-		baseQuery += fmt.Sprintf(" AND owner_id = $%d", argIdx)
+		baseQuery += fmt.Sprintf(" AND d.owner_id = $%d", argIdx)
 		args = append(args, *filter.OwnerID)
 		argIdx++
 	}
 	if filter.PersonID != nil {
-		baseQuery += fmt.Sprintf(" AND person_id = $%d", argIdx)
+		baseQuery += fmt.Sprintf(" AND d.person_id = $%d", argIdx)
 		args = append(args, *filter.PersonID)
 		argIdx++
 	}
 	if filter.Search != "" {
-		baseQuery += fmt.Sprintf(" AND title ILIKE $%d", argIdx)
+		baseQuery += fmt.Sprintf(" AND d.title ILIKE $%d", argIdx)
 		args = append(args, "%"+filter.Search+"%")
 		argIdx++
 	}
 
-	countQuery := `SELECT COUNT(*) FROM deals ` + baseQuery
+	countQuery := `SELECT COUNT(*) FROM deals d ` + baseQuery
 	var total int
 	if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, "", 0, fmt.Errorf("deal.List count: %w", err)
 	}
 
-	listQuery := `SELECT * FROM deals ` + baseQuery + ` ORDER BY created_at DESC LIMIT $` + fmt.Sprintf("%d", argIdx) + ` OFFSET $` + fmt.Sprintf("%d", argIdx+1)
+	listQuery := `SELECT d.id, d.tenant_id, d.title, d.value, d.currency, d.stage_id, d.pipeline_id, d.person_id, d.company_id, d.owner_id, d.expected_close_date, d.closed_at, d.won_reason, d.lost_reason, d.probability, d.tags, d.custom_fields, d.created_at, d.updated_at, d.deleted_at, c.name as company_name FROM deals d LEFT JOIN companies c ON d.company_id = c.id ` + baseQuery + ` ORDER BY d.created_at DESC LIMIT $` + fmt.Sprintf("%d", argIdx) + ` OFFSET $` + fmt.Sprintf("%d", argIdx+1)
 	args = append(args, limit, 0)
 
 	rows, err := r.pool.Query(ctx, listQuery, args...)
 	if err != nil {
-		return nil, "", 0, fmt.Errorf("deal.List: %w", err)
+		return nil, "", 0, fmt.Errorf("deal.List query: %w", err)
 	}
 	defer rows.Close()
 
 	var deals []*deal.Deal
 	for rows.Next() {
 		row := &generated.Deal{}
+		var companyName *string
+
 		err := rows.Scan(
-			&row.ID, &row.TenantID, &row.Title, &row.Value, &row.Currency, &row.StageID,
-			&row.PipelineID, &row.PersonID, &row.CompanyID, &row.OwnerID,
+			&row.ID, &row.TenantID, &row.Title, &row.Value, &row.Currency,
+			&row.StageID, &row.PipelineID, &row.PersonID, &row.CompanyID, &row.OwnerID,
 			&row.ExpectedCloseDate, &row.ClosedAt, &row.WonReason, &row.LostReason,
 			&row.Probability, &row.Tags, &row.CustomFields,
-			&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+			&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt, &companyName,
 		)
 		if err != nil {
 			return nil, "", 0, fmt.Errorf("deal.List scan: %w", err)
 		}
-		deals = append(deals, mapDealRowToDomain(row))
+
+		d := mapDealRowToDomain(row)
+		d.CompanyName = companyName
+		deals = append(deals, d)
 	}
 
 	nextCursor := ""
@@ -439,28 +444,44 @@ func (r *DealRepository) GetPipelineStats(ctx context.Context, pipelineID uuid.U
 }
 
 func mapDealRowToDomain(row *generated.Deal) *deal.Deal {
+	wonReason := pgTextToStr(row.WonReason)
+	lostReason := pgTextToStr(row.LostReason)
 	return &deal.Deal{
-		ID:                 pgUUIDToUUID(row.ID),
-		TenantID:           pgUUIDToUUID(row.TenantID),
-		Title:              row.Title,
-		Value:              pgNumericToFloat(row.Value),
-		Currency:           row.Currency,
-		StageID:            pgUUIDToPtr(row.StageID),
-		PipelineID:         pgUUIDToPtr(row.PipelineID),
-		PersonID:           pgUUIDToPtr(row.PersonID),
-		CompanyID:          pgUUIDToPtr(row.CompanyID),
-		OwnerID:            pgUUIDToPtr(row.OwnerID),
-		ExpectedCloseDate:   pgDateToTime(row.ExpectedCloseDate),
-		ClosedAt:           pgTimestamptzToTime(row.ClosedAt),
-		WonReason:          pgTextToStr(row.WonReason),
-		LostReason:         pgTextToStr(row.LostReason),
-		Probability:        pgInt4ToInt(row.Probability),
-		Tags:               row.Tags,
-		CustomFields:       row.CustomFields,
-		CreatedAt:          row.CreatedAt.Time,
-		UpdatedAt:          row.UpdatedAt.Time,
-		DeletedAt:          pgTimestamptzToTime(row.DeletedAt),
+		ID:                pgUUIDToUUID(row.ID),
+		TenantID:          pgUUIDToUUID(row.TenantID),
+		Title:             row.Title,
+		Value:             pgNumericToFloat(row.Value),
+		Currency:          row.Currency,
+		StageID:           pgUUIDToPtr(row.StageID),
+		PipelineID:        pgUUIDToPtr(row.PipelineID),
+		PersonID:          pgUUIDToPtr(row.PersonID),
+		CompanyID:         pgUUIDToPtr(row.CompanyID),
+		OwnerID:           pgUUIDToPtr(row.OwnerID),
+		ExpectedCloseDate: pgDateToTime(row.ExpectedCloseDate),
+		ClosedAt:          pgTimestamptzToTime(row.ClosedAt),
+		WonReason:         wonReason,
+		LostReason:        lostReason,
+		Probability:       pgInt4ToInt(row.Probability),
+		Tags:              row.Tags,
+		CustomFields:      row.CustomFields,
+		CreatedAt:         row.CreatedAt.Time,
+		UpdatedAt:         row.UpdatedAt.Time,
+		DeletedAt:         pgTimestamptzToTime(row.DeletedAt),
+		Status:            computeStatus(pgTimestamptzToTime(row.ClosedAt), wonReason, lostReason),
 	}
+}
+
+func computeStatus(closedAt interface{}, wonReason, lostReason *string) string {
+	if closedAt != nil {
+		if wonReason != nil && *wonReason != "" {
+			return "won"
+		}
+		if lostReason != nil && *lostReason != "" {
+			return "lost"
+		}
+		return "closed"
+	}
+	return "open"
 }
 
 type PipelineRepository struct {

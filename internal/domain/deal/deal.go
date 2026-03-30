@@ -8,26 +8,28 @@ import (
 )
 
 type Deal struct {
-	ID                uuid.UUID  `json:"id"`
-	TenantID          uuid.UUID  `json:"tenant_id"`
-	Title             string     `json:"title"`
-	Value             float64    `json:"value"`
-	Currency          string     `json:"currency"`
-	StageID           *uuid.UUID `json:"stage_id"`
-	PipelineID        *uuid.UUID `json:"pipeline_id"`
-	PersonID          *uuid.UUID `json:"person_id"`
-	CompanyID         *uuid.UUID `json:"company_id"`
-	OwnerID           *uuid.UUID `json:"owner_id"`
-	ExpectedCloseDate *time.Time `json:"expected_close_date"`
-	ClosedAt          *time.Time `json:"closed_at"`
-	WonReason         *string    `json:"won_reason"`
-	LostReason        *string    `json:"lost_reason"`
-	Probability       int        `json:"probability"`
+	ID                uuid.UUID   `json:"id"`
+	TenantID          uuid.UUID   `json:"tenant_id"`
+	Title             string      `json:"title"`
+	Value             float64     `json:"value"`
+	Currency          string      `json:"currency"`
+	StageID           *uuid.UUID  `json:"stage_id"`
+	PipelineID        *uuid.UUID  `json:"pipeline_id"`
+	PersonID          *uuid.UUID  `json:"person_id"`
+	CompanyID         *uuid.UUID  `json:"company_id"`
+	CompanyName       *string     `json:"company_name,omitempty"`
+	OwnerID           *uuid.UUID  `json:"owner_id"`
+	ExpectedCloseDate *time.Time  `json:"expected_close_date"`
+	ClosedAt          *time.Time  `json:"closed_at"`
+	WonReason         *string     `json:"won_reason,omitempty"`
+	LostReason        *string     `json:"lost_reason,omitempty"`
+	Probability       int         `json:"probability"`
 	Tags              []string    `json:"tags"`
 	CustomFields      interface{} `json:"custom_fields"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
-	DeletedAt         *time.Time `json:"-"`
+	CreatedAt         time.Time   `json:"created_at"`
+	UpdatedAt         time.Time   `json:"updated_at"`
+	DeletedAt         *time.Time  `json:"-"`
+	Status            string      `json:"status"`
 }
 
 type PipelineStage struct {
@@ -68,35 +70,35 @@ type DealWithStage struct {
 }
 
 type CreateDealRequest struct {
-	Title             string        `json:"title" validate:"required,min=1,max=255"`
-	Value             float64       `json:"value"`
-	Currency          string        `json:"currency"`
-	StageID           *uuid.UUID    `json:"stage_id"`
-	PipelineID        *uuid.UUID    `json:"pipeline_id"`
-	PersonID          *uuid.UUID    `json:"person_id"`
-	CompanyID         *uuid.UUID    `json:"company_id"`
-	OwnerID           *uuid.UUID    `json:"owner_id"`
-	ExpectedCloseDate *time.Time    `json:"expected_close_date"`
-	Tags              []string      `json:"tags"`
-	CustomFields      interface{}   `json:"custom_fields"`
+	Title             string      `json:"title" validate:"required,min=1,max=255"`
+	Value             float64     `json:"value"`
+	Currency          string      `json:"currency"`
+	StageID           *uuid.UUID  `json:"stage_id"`
+	PipelineID        *uuid.UUID  `json:"pipeline_id"`
+	PersonID          *uuid.UUID  `json:"person_id"`
+	CompanyID         *uuid.UUID  `json:"company_id"`
+	OwnerID           *uuid.UUID  `json:"owner_id"`
+	ExpectedCloseDate *time.Time  `json:"expected_close_date"`
+	Tags              []string    `json:"tags"`
+	CustomFields      interface{} `json:"custom_fields"`
 }
 
 type UpdateDealRequest struct {
-	Title             *string       `json:"title"`
-	Value             *float64      `json:"value"`
-	Currency          *string       `json:"currency"`
-	StageID           *uuid.UUID    `json:"stage_id"`
-	PipelineID        *uuid.UUID    `json:"pipeline_id"`
-	PersonID          *uuid.UUID    `json:"person_id"`
-	CompanyID         *uuid.UUID    `json:"company_id"`
-	OwnerID           *uuid.UUID    `json:"owner_id"`
-	ExpectedCloseDate *time.Time    `json:"expected_close_date"`
-	Probability       *int          `json:"probability"`
-	Tags              []string      `json:"tags"`
-	CustomFields      interface{}   `json:"custom_fields"`
-	ClosedAt          *time.Time    `json:"closed_at"`
-	WonReason         *string       `json:"won_reason"`
-	LostReason        *string       `json:"lost_reason"`
+	Title             *string     `json:"title"`
+	Value             *float64    `json:"value"`
+	Currency          *string     `json:"currency"`
+	StageID           *uuid.UUID  `json:"stage_id"`
+	PipelineID        *uuid.UUID  `json:"pipeline_id"`
+	PersonID          *uuid.UUID  `json:"person_id"`
+	CompanyID         *uuid.UUID  `json:"company_id"`
+	OwnerID           *uuid.UUID  `json:"owner_id"`
+	ExpectedCloseDate *time.Time  `json:"expected_close_date"`
+	Probability       *int        `json:"probability"`
+	Tags              []string    `json:"tags"`
+	CustomFields      interface{} `json:"custom_fields"`
+	ClosedAt          *time.Time  `json:"closed_at"`
+	WonReason         *string     `json:"won_reason"`
+	LostReason        *string     `json:"lost_reason"`
 }
 
 type MoveDealRequest struct {
