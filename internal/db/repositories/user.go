@@ -88,10 +88,19 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*user.User,
 }
 
 func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*user.User, error) {
-	query := `SELECT * FROM users WHERE tenant_id = $1 AND email = $2 AND deleted_at IS NULL`
+	var query string
+	var args []interface{}
+
+	if tenantID == uuid.Nil {
+		query = `SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
+		args = []interface{}{email}
+	} else {
+		query = `SELECT * FROM users WHERE tenant_id = $1 AND email = $2 AND deleted_at IS NULL`
+		args = []interface{}{tenantID, email}
+	}
 
 	var row generated.User
-	err := r.pool.QueryRow(ctx, query, tenantID, email).Scan(
+	err := r.pool.QueryRow(ctx, query, args...).Scan(
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
 		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
@@ -140,6 +149,15 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, id uuid.UUID, passw
 	_, err := r.pool.Exec(ctx, query, id, passwordHash)
 	if err != nil {
 		return fmt.Errorf("user.UpdatePassword: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepository) UpdateAvatar(ctx context.Context, id uuid.UUID, avatarURL string) error {
+	query := `UPDATE users SET avatar_url = $2 WHERE id = $1 AND deleted_at IS NULL`
+	_, err := r.pool.Exec(ctx, query, id, avatarURL)
+	if err != nil {
+		return fmt.Errorf("user.UpdateAvatar: %w", err)
 	}
 	return nil
 }
@@ -221,12 +239,12 @@ func mapUserRowToDomain(row *generated.User) *user.User {
 		Email:        row.Email,
 		PasswordHash: row.PasswordHash,
 		FirstName:    row.FirstName,
-		LastName:      row.LastName,
+		LastName:     row.LastName,
 		AvatarURL:    avatarUrl,
 		Timezone:     timezone,
 		Locale:       locale,
 		IsActive:     row.IsActive,
-		LastLoginAt:   lastLoginAt,
+		LastLoginAt:  lastLoginAt,
 		CreatedAt:    *createdAt,
 		UpdatedAt:    *updatedAt,
 		DeletedAt:    deletedAt,
@@ -335,6 +353,46 @@ func (r *RoleRepository) AssignToUser(ctx context.Context, userID uuid.UUID, rol
 			return fmt.Errorf("role.AssignToUser: %w", err)
 		}
 	}
+	return nil
+}
+
+func (r *RoleRepository) RemoveFromUser(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	if len(roleIDs) == 0 {
+		return nil
+	}
+	query := `DELETE FROM user_roles WHERE user_id = $1 AND role_id = ANY($2)`
+	_, err := r.pool.Exec(ctx, query, userID, roleIDs)
+	if err != nil {
+		return fmt.Errorf("role.RemoveFromUser: %w", err)
+	}
+	return nil
+}
+
+func (r *RoleRepository) SetUserRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("role.SetUserRoles begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	deleteQuery := `DELETE FROM user_roles WHERE user_id = $1`
+	_, err = tx.Exec(ctx, deleteQuery, userID)
+	if err != nil {
+		return fmt.Errorf("role.SetUserRoles delete: %w", err)
+	}
+
+	for _, roleID := range roleIDs {
+		insertQuery := `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`
+		_, err = tx.Exec(ctx, insertQuery, userID, roleID)
+		if err != nil {
+			return fmt.Errorf("role.SetUserRoles insert: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("role.SetUserRoles commit: %w", err)
+	}
+
 	return nil
 }
 

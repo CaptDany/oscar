@@ -105,6 +105,28 @@ func (r *ActivityRepository) Update(ctx context.Context, id uuid.UUID, req *acti
 	return mapActivityRowToDomain(row), nil
 }
 
+func (r *ActivityRepository) Uncomplete(ctx context.Context, id uuid.UUID) (*activity.Activity, error) {
+	query := `
+		UPDATE activities
+		SET status = 'planned', completed_at = NULL
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING *
+	`
+
+	row := &generated.Activity{}
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&row.ID, &row.TenantID, &row.Type, &row.Subject, &row.Body, &row.Outcome,
+		&row.Direction, &row.Status, &row.DueAt, &row.CompletedAt, &row.DurationSeconds,
+		&row.OwnerID, &row.CreatedBy, &row.CustomFields,
+		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("activity.Uncomplete: %w", err)
+	}
+
+	return mapActivityRowToDomain(row), nil
+}
+
 func (r *ActivityRepository) Complete(ctx context.Context, id uuid.UUID) (*activity.Activity, error) {
 	query := `
 		UPDATE activities

@@ -316,7 +316,28 @@ func mapBrandingRowToDomain(row *generated.TenantBranding) *tenant.TenantBrandin
 		AppName:         pgTextToStrStr(row.AppName),
 		CustomCSS:       pgTextToStr(row.CustomCss),
 		EmailHeaderHTML: pgTextToStr(row.EmailHeaderHtml),
-		CreatedAt:      *createdAt,
-		UpdatedAt:      *updatedAt,
+		CreatedAt:       *createdAt,
+		UpdatedAt:       *updatedAt,
 	}
+}
+
+type TenantPool struct {
+	*pgxpool.Pool
+}
+
+func (p *TenantPool) SetTenantContext(ctx context.Context, tenantID uuid.UUID) (context.Context, pgx.Tx, error) {
+	tx, err := p.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return ctx, nil, err
+	}
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL app.current_tenant = '%s'", tenantID.String()))
+	if err != nil {
+		tx.Rollback(ctx)
+		return ctx, nil, err
+	}
+	return context.WithValue(ctx, "tx", tx), tx, nil
+}
+
+func NewTenantPool(pool *pgxpool.Pool) *TenantPool {
+	return &TenantPool{Pool: pool}
 }

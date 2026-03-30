@@ -124,7 +124,7 @@ func (r *CompanyRepository) List(ctx context.Context, tenantID uuid.UUID, filter
 		limit = 20
 	}
 
-	baseQuery := `WHERE tenant_id = $1 AND deleted_at IS NULL`
+	baseQuery := `FROM companies WHERE tenant_id = $1 AND deleted_at IS NULL`
 	args := []interface{}{tenantID}
 	argIdx := 2
 
@@ -144,14 +144,22 @@ func (r *CompanyRepository) List(ctx context.Context, tenantID uuid.UUID, filter
 		argIdx++
 	}
 
-	countQuery := `SELECT COUNT(*) FROM companies ` + baseQuery
-	var total int
-	if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
-		return nil, "", 0, fmt.Errorf("company.List count: %w", err)
+	if filter.CursorAfter != nil && filter.CursorID != nil {
+		baseQuery += fmt.Sprintf(" AND (created_at < $%d OR (created_at = $%d AND id < $%d))", argIdx, argIdx, argIdx+1)
+		args = append(args, *filter.CursorAfter, *filter.CursorID)
+		argIdx += 2
 	}
 
-	listQuery := `SELECT * FROM companies ` + baseQuery + ` ORDER BY created_at DESC LIMIT $` + fmt.Sprintf("%d", argIdx) + ` OFFSET $` + fmt.Sprintf("%d", argIdx+1)
-	args = append(args, limit, 0)
+	var total int
+	if filter.IncludeTotal {
+		countQuery := `SELECT COUNT(*) ` + baseQuery
+		if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+			return nil, "", 0, fmt.Errorf("company.List count: %w", err)
+		}
+	}
+
+	listQuery := `SELECT id, tenant_id, name, domain, industry, size, annual_revenue, website, address, owner_id, parent_company_id, tags, custom_fields, created_at, updated_at, deleted_at ` + baseQuery + ` ORDER BY created_at DESC, id DESC LIMIT $` + fmt.Sprintf("%d", argIdx)
+	args = append(args, limit+1)
 
 	rows, err := r.pool.Query(ctx, listQuery, args...)
 	if err != nil {
@@ -177,7 +185,8 @@ func (r *CompanyRepository) List(ctx context.Context, tenantID uuid.UUID, filter
 	nextCursor := ""
 	if len(companies) > limit {
 		companies = companies[:limit]
-		nextCursor = companies[len(companies)-1].ID.String()
+		last := companies[len(companies)-1]
+		nextCursor = fmt.Sprintf("%s:%s", last.CreatedAt.Format("2006-01-02T15:04:05.000000Z07:00"), last.ID.String())
 	}
 
 	return companies, nextCursor, total, nil
