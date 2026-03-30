@@ -451,7 +451,7 @@ go test ./internal/domain/person/...
 
 ## License
 
-MIT License - see LICENSE file for details.
+GNU GPLv3 - see LICENSE file for details.
 
 ## Roadmap
 

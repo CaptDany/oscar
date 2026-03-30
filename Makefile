@@ -50,7 +50,7 @@ migrate/force: ## Force migration to version (usage: make migrate/force version=
 
 ## Development
 dev: ## Run in development mode with hot reload
-	air
+	$(HOME)/go/bin/air
 
 run: ## Run the server
 	go run ./cmd/server
@@ -74,7 +74,7 @@ clean: ## Clean build artifacts
 
 ## Tools (install if missing)
 tools: ## Install development tools
-	go install github.com/cosmtrek/air@latest
+	go install github.com/air-verse/air@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-	go install github.com/golang-migrate/migrate/cmd/migrate@latest
+	go install github.com/golang-migrate/migrate/v4/cmd/migrate@latest
