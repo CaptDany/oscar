@@ -2,6 +2,7 @@ package config
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -14,10 +15,10 @@ import (
 )
 
 var (
-	ErrMissingSecret    = errors.New("APP_SECRET is required")
-	ErrSecretTooShort   = errors.New("APP_SECRET must be at least 32 bytes")
-	ErrInvalidDatabase  = errors.New("DATABASE_URL is invalid")
-	ErrInvalidRedis     = errors.New("REDIS_URL is invalid")
+	ErrMissingSecret   = errors.New("APP_SECRET is required")
+	ErrSecretTooShort  = errors.New("APP_SECRET must be at least 32 bytes")
+	ErrInvalidDatabase = errors.New("DATABASE_URL is invalid")
+	ErrInvalidRedis    = errors.New("REDIS_URL is invalid")
 )
 
 type Config struct {
@@ -32,26 +33,26 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Env      string
-	Port     string
-	Secret   []byte
-	BaseURL  string
-	Host     string
+	Env     string
+	Port    string
+	Secret  []byte
+	BaseURL string
+	Host    string
 }
 
 type DatabaseConfig struct {
-	URL        string
-	MaxConns   int32
-	MaxIdle    int32
-	MinConns   int32
-	ConnTTL    time.Duration
+	URL      string
+	MaxConns int32
+	MaxIdle  int32
+	MinConns int32
+	ConnTTL  time.Duration
 }
 
 type RedisConfig struct {
-	URL       string
-	Password  string
-	DB        int
-	PoolSize  int
+	URL         string
+	Password    string
+	DB          int
+	PoolSize    int
 	PoolTimeout time.Duration
 }
 
@@ -65,17 +66,17 @@ type StorageConfig struct {
 }
 
 type EmailConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Pass     string
-	From     string
+	Host string
+	Port int
+	User string
+	Pass string
+	From string
 }
 
 type SMSConfig struct {
-	AccountSID  string
-	AuthToken   string
-	FromNumber  string
+	AccountSID string
+	AuthToken  string
+	FromNumber string
 }
 
 type TelemetryConfig struct {
@@ -84,10 +85,10 @@ type TelemetryConfig struct {
 }
 
 type FeaturesConfig struct {
-	EmailSync  bool
-	SMS        bool
-	WhatsApp   bool
-	APIKeys    bool
+	EmailSync bool
+	SMS       bool
+	WhatsApp  bool
+	APIKeys   bool
 }
 
 func Load() (*Config, error) {
@@ -99,7 +100,7 @@ func Load() (*Config, error) {
 		App: AppConfig{
 			Env:     getEnv("APP_ENV", "development"),
 			Port:    getEnv("APP_PORT", "8080"),
-			Secret:  []byte(getEnv("APP_SECRET", "")),
+			Secret:  decodeHexSecret(getEnv("APP_SECRET", "")),
 			BaseURL: getEnv("APP_BASE_URL", "http://localhost:8080"),
 			Host:    getEnv("APP_HOST", "0.0.0.0"),
 		},
@@ -207,4 +208,15 @@ func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
 		}
 	}
 	return defaultVal
+}
+
+func decodeHexSecret(hexStr string) []byte {
+	if hexStr == "" {
+		return nil
+	}
+	decoded, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return []byte(hexStr)
+	}
+	return decoded
 }

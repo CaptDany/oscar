@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -26,8 +27,8 @@ type TokenPayload struct {
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresAt   int64  `json:"expires_at"`
-	TokenType   string `json:"token_type"`
+	ExpiresAt    int64  `json:"expires_at"`
+	TokenType    string `json:"token_type"`
 }
 
 type TokenManager struct {
@@ -57,8 +58,8 @@ func (tm *TokenManager) GenerateTokenPair(payload TokenPayload, accessTTL, refre
 	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresAt:   time.Now().Add(accessTTL).Unix(),
-		TokenType:   "Bearer",
+		ExpiresAt:    time.Now().Add(accessTTL).Unix(),
+		TokenType:    "Bearer",
 	}, nil
 }
 
@@ -72,14 +73,15 @@ func (tm *TokenManager) generateToken(payload TokenPayload, ttl time.Duration) (
 
 	jsonToken := paseto.JSONToken{
 		IssuedAt:   now,
-		Expiration:  expiration,
+		Expiration: expiration,
 		NotBefore:  now,
 	}
 
 	jsonToken.Set("uid", payload.UserID)
 	jsonToken.Set("tid", payload.TenantID)
 	jsonToken.Set("em", payload.Email)
-	jsonToken.Set("roles", fmt.Sprintf("%v", payload.Roles))
+	rolesJSON, _ := json.Marshal(payload.Roles)
+	jsonToken.Set("roles", string(rolesJSON))
 
 	return tm.paseto.Encrypt(tm.symmetricKey, jsonToken, nil)
 }
@@ -98,8 +100,10 @@ func (tm *TokenManager) ValidateToken(token string) (*TokenPayload, error) {
 		UserID:   jsonToken.Get("uid"),
 		TenantID: jsonToken.Get("tid"),
 		Email:    jsonToken.Get("em"),
-		Roles:    []string{jsonToken.Get("roles")},
 		Exp:      jsonToken.Expiration.Unix(),
+	}
+	if err := json.Unmarshal([]byte(jsonToken.Get("roles")), &payload.Roles); err != nil {
+		payload.Roles = []string{}
 	}
 
 	if payload.UserID == "" {

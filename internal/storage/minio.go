@@ -78,6 +78,15 @@ func (m *MinIOClient) GetPresignedURL(ctx context.Context, objectName string, ex
 	return URL.String(), nil
 }
 
+func (m *MinIOClient) GetPresignedPutURL(ctx context.Context, objectName string, expiry time.Duration) (string, error) {
+	req, err := m.client.PresignedPutObject(ctx, m.bucket, objectName, expiry)
+	if err != nil {
+		return "", fmt.Errorf("failed to get presigned put URL: %w", err)
+	}
+
+	return req.String(), nil
+}
+
 func (m *MinIOClient) Delete(ctx context.Context, objectName string) error {
 	err := m.client.RemoveObject(ctx, m.bucket, objectName, minio.RemoveObjectOptions{})
 	if err != nil {
