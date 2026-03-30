@@ -16,6 +16,8 @@ import Layout from '../layouts/Layout.astro';
           <p class="text-gray-500 mt-2">Create your free account</p>
         </div>
 
+        <div id="error-message" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600"></div>
+
         <form id="register-form" class="space-y-6">
           <div>
             <label for="company_name" class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
@@ -27,18 +29,31 @@ import Layout from '../layouts/Layout.astro';
               class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
               placeholder="Acme Inc."
             />
+            <p id="slug-hint" class="text-xs text-gray-500 mt-1 hidden">Slug: <span id="slug-preview"></span></p>
           </div>
 
-          <div>
-            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              required
-              class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-              placeholder="John Doe"
-            />
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+              <input
+                type="text"
+                id="first_name"
+                name="first_name"
+                required
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+              <input
+                type="text"
+                id="last_name"
+                name="last_name"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
+                placeholder="Doe"
+              />
+            </div>
           </div>
 
           <div>
@@ -69,9 +84,14 @@ import Layout from '../layouts/Layout.astro';
 
           <button
             type="submit"
-            class="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+            id="submit-btn"
+            class="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
           >
-            Create Account
+            <span id="btn-text">Create Account</span>
+            <svg id="btn-loading" class="hidden w-5 h-5 animate-spin ml-2" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
           </button>
         </form>
 
@@ -90,45 +110,94 @@ import Layout from '../layouts/Layout.astro';
 </Layout>
 
 <script>
+  import { api } from '../lib/api';
+
   const form = document.getElementById('register-form');
-  
+  const errorMessage = document.getElementById('error-message');
+  const submitBtn = document.getElementById('submit-btn');
+  const btnText = document.getElementById('btn-text');
+  const btnLoading = document.getElementById('btn-loading');
+  const companyNameInput = document.getElementById('company_name');
+  const slugHint = document.getElementById('slug-hint');
+  const slugPreview = document.getElementById('slug-preview');
+
+  function generateSlug(name: string): string {
+    return name.toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 63);
+  }
+
+  function showError(message: string) {
+    if (errorMessage) {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove('hidden');
+    }
+  }
+
+  function hideError() {
+    if (errorMessage) {
+      errorMessage.classList.add('hidden');
+    }
+  }
+
+  function setLoading(loading: boolean) {
+    if (submitBtn) {
+      (submitBtn as HTMLButtonElement).disabled = loading;
+    }
+    if (btnText) {
+      btnText.textContent = loading ? 'Creating account...' : 'Create Account';
+    }
+    if (btnLoading) {
+      btnLoading.classList.toggle('hidden', !loading);
+    }
+  }
+
+  companyNameInput?.addEventListener('input', (e) => {
+    const slug = generateSlug((e.target as HTMLInputElement).value);
+    if (slug) {
+      if (slugHint) slugHint.classList.remove('hidden');
+      if (slugPreview) slugPreview.textContent = slug;
+    } else {
+      if (slugHint) slugHint.classList.add('hidden');
+    }
+  });
+
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+    hideError();
+
     const companyName = (document.getElementById('company_name') as HTMLInputElement).value;
-    const name = (document.getElementById('name') as HTMLInputElement).value;
+    const firstName = (document.getElementById('first_name') as HTMLInputElement).value;
+    const lastName = (document.getElementById('last_name') as HTMLInputElement).value;
     const email = (document.getElementById('email') as HTMLInputElement).value;
     const password = (document.getElementById('password') as HTMLInputElement).value;
 
-    const nameParts = name.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+    if (password.length < 8) {
+      showError('Password must be at least 8 characters');
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      const response = await fetch('/api/v1/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tenant_name: companyName,
-          tenant_slug: companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-          email,
-          password,
-          first_name: firstName,
-          last_name: lastName,
-        }),
+      await api.auth.register({
+        tenant_name: companyName,
+        tenant_slug: generateSlug(companyName),
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
       });
-
-      if (response.ok) {
-        window.location.href = '/login?registered=true';
-      } else {
-        const error = await response.json();
-        alert(error.error?.message || 'Registration failed');
-      }
-    } catch (error) {
+      
+      window.location.href = '/login?registered=true';
+    } catch (error: any) {
       console.error('Registration error:', error);
-      alert('An error occurred. Please try again.');
+      showError(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   });
 </script>
