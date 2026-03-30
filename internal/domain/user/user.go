@@ -25,14 +25,14 @@ type User struct {
 }
 
 type Role struct {
-	ID          uuid.UUID              `json:"id"`
-	TenantID    uuid.UUID              `json:"tenant_id"`
-	Name        string                 `json:"name"`
-	Description *string                `json:"description"`
-	IsSystem    bool                   `json:"is_system"`
-	Permissions map[string]Permission   `json:"permissions"`
-	CreatedAt   time.Time              `json:"created_at"`
-	UpdatedAt   time.Time              `json:"updated_at"`
+	ID          uuid.UUID             `json:"id"`
+	TenantID    uuid.UUID             `json:"tenant_id"`
+	Name        string                `json:"name"`
+	Description *string               `json:"description"`
+	IsSystem    bool                  `json:"is_system"`
+	Permissions map[string]Permission `json:"permissions"`
+	CreatedAt   time.Time             `json:"created_at"`
+	UpdatedAt   time.Time             `json:"updated_at"`
 }
 
 type Permission struct {
@@ -44,10 +44,10 @@ type Permission struct {
 }
 
 const (
-	ScopeNone  = "none"
-	ScopeOwn   = "own"
-	ScopeTeam  = "team"
-	ScopeAll   = "all"
+	ScopeNone = "none"
+	ScopeOwn  = "own"
+	ScopeTeam = "team"
+	ScopeAll  = "all"
 )
 
 func (u *User) FullName() string {
@@ -77,13 +77,13 @@ func (u *User) HasPermission(resource, action string, roles []Role) bool {
 }
 
 type CreateUserRequest struct {
-	Email       string `json:"email" validate:"required,email"`
-	Password    string `json:"password" validate:"required,min=8"`
-	FirstName   string `json:"first_name" validate:"required,min=1,max=100"`
-	LastName    string `json:"last_name" validate:"required,min=1,max=100"`
-	Timezone    string `json:"timezone"`
-	Locale      string `json:"locale"`
-	RoleIDs     []uuid.UUID `json:"role_ids"`
+	Email     string      `json:"email" validate:"required,email"`
+	Password  string      `json:"password" validate:"required,min=8"`
+	FirstName string      `json:"first_name" validate:"required,min=1,max=100"`
+	LastName  string      `json:"last_name" validate:"required,min=1,max=100"`
+	Timezone  string      `json:"timezone"`
+	Locale    string      `json:"locale"`
+	RoleIDs   []uuid.UUID `json:"role_ids"`
 }
 
 type UpdateUserRequest struct {
@@ -122,6 +122,7 @@ type Repository interface {
 	GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*User, error)
 	Update(ctx context.Context, id uuid.UUID, req *UpdateUserRequest) (*User, error)
 	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
+	UpdateAvatar(ctx context.Context, id uuid.UUID, avatarKey string) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*User, int, error)
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
@@ -133,6 +134,8 @@ type RoleRepository interface {
 	GetSystemRoles(ctx context.Context, tenantID uuid.UUID) ([]Role, error)
 	List(ctx context.Context, tenantID uuid.UUID) ([]Role, error)
 	AssignToUser(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error
+	RemoveFromUser(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error
+	SetUserRoles(ctx context.Context, userID uuid.UUID, roleIDs []uuid.UUID) error
 	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]Role, error)
 	GetUserRoleNames(ctx context.Context, userID uuid.UUID) ([]string, error)
 	Create(ctx context.Context, tenantID uuid.UUID, name string, permissions map[string]Permission) (*Role, error)

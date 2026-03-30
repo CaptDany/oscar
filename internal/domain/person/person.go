@@ -10,20 +10,20 @@ import (
 type PersonType string
 
 const (
-	PersonTypeLead    PersonType = "lead"
-	PersonTypeContact PersonType = "contact"
+	PersonTypeLead     PersonType = "lead"
+	PersonTypeContact  PersonType = "contact"
 	PersonTypeCustomer PersonType = "customer"
 )
 
 type PersonStatus string
 
 const (
-	PersonStatusNew        PersonStatus = "new"
-	PersonStatusContacted  PersonStatus = "contacted"
-	PersonStatusQualified  PersonStatus = "qualified"
+	PersonStatusNew         PersonStatus = "new"
+	PersonStatusContacted   PersonStatus = "contacted"
+	PersonStatusQualified   PersonStatus = "qualified"
 	PersonStatusUnqualified PersonStatus = "unqualified"
-	PersonStatusActive     PersonStatus = "active"
-	PersonStatusInactive   PersonStatus = "inactive"
+	PersonStatusActive      PersonStatus = "active"
+	PersonStatusInactive    PersonStatus = "inactive"
 )
 
 type PersonSource string
@@ -39,25 +39,26 @@ const (
 )
 
 type Person struct {
-	ID          uuid.UUID    `json:"id"`
-	TenantID    uuid.UUID    `json:"tenant_id"`
-	Type        PersonType   `json:"type"`
-	Status      PersonStatus `json:"status"`
-	FirstName   string       `json:"first_name"`
-	LastName    string       `json:"last_name"`
-	Email       []string     `json:"email"`
-	Phone       []string     `json:"phone"`
-	AvatarURL   *string      `json:"avatar_url"`
-	CompanyID   *uuid.UUID   `json:"company_id"`
-	OwnerID     *uuid.UUID   `json:"owner_id"`
-	Source      *PersonSource `json:"source"`
-	Score       int          `json:"score"`
-	Tags        []string     `json:"tags"`
-	CustomFields interface{} `json:"custom_fields"`
-	ConvertedAt *time.Time   `json:"converted_at"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-	DeletedAt   *time.Time   `json:"-"`
+	ID           uuid.UUID     `json:"id"`
+	TenantID     uuid.UUID     `json:"tenant_id"`
+	Type         PersonType    `json:"type"`
+	Status       PersonStatus  `json:"status"`
+	FirstName    string        `json:"first_name"`
+	LastName     string        `json:"last_name"`
+	Email        []string      `json:"email"`
+	Phone        []string      `json:"phone"`
+	AvatarURL    *string       `json:"avatar_url"`
+	CompanyID    *uuid.UUID    `json:"company_id"`
+	CompanyName  *string       `json:"company_name,omitempty"`
+	OwnerID      *uuid.UUID    `json:"owner_id"`
+	Source       *PersonSource `json:"source"`
+	Score        int           `json:"score"`
+	Tags         []string      `json:"tags"`
+	CustomFields interface{}   `json:"custom_fields"`
+	ConvertedAt  *time.Time    `json:"converted_at"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+	DeletedAt    *time.Time    `json:"-"`
 }
 
 func (p *Person) FullName() string {
@@ -115,14 +116,14 @@ type ConvertPersonRequest struct {
 }
 
 type ListPersonsFilter struct {
-	Type     PersonType
-	Status   PersonStatus
-	OwnerID  *uuid.UUID
+	Type      PersonType
+	Status    PersonStatus
+	OwnerID   *uuid.UUID
 	CompanyID *uuid.UUID
-	Search   string
-	Tags     []string
-	Cursor   string
-	Limit    int
+	Search    string
+	Tags      []string
+	Cursor    string
+	Limit     int
 }
 
 type Repository interface {

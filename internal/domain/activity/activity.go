@@ -14,7 +14,7 @@ const (
 	ActivityTypeCall     ActivityType = "call"
 	ActivityTypeEmail    ActivityType = "email"
 	ActivityTypeMeeting  ActivityType = "meeting"
-	ActivityTypeTask    ActivityType = "task"
+	ActivityTypeTask     ActivityType = "task"
 	ActivityTypeWhatsapp ActivityType = "whatsapp"
 	ActivityTypeSMS      ActivityType = "sms"
 )
@@ -23,7 +23,7 @@ type ActivityStatus string
 
 const (
 	ActivityStatusPlanned   ActivityStatus = "planned"
-	ActivityStatusCompleted  ActivityStatus = "completed"
+	ActivityStatusCompleted ActivityStatus = "completed"
 	ActivityStatusCancelled ActivityStatus = "cancelled"
 )
 
@@ -37,20 +37,20 @@ const (
 type EntityType string
 
 const (
-	EntityTypePerson   EntityType = "person"
-	EntityTypeCompany  EntityType = "company"
-	EntityTypeDeal     EntityType = "deal"
+	EntityTypePerson  EntityType = "person"
+	EntityTypeCompany EntityType = "company"
+	EntityTypeDeal    EntityType = "deal"
 )
 
 type Activity struct {
-	ID              uuid.UUID         `json:"id"`
-	TenantID        uuid.UUID         `json:"tenant_id"`
-	Type            ActivityType      `json:"type"`
+	ID              uuid.UUID          `json:"id"`
+	TenantID        uuid.UUID          `json:"tenant_id"`
+	Type            ActivityType       `json:"type"`
 	Subject         string             `json:"subject"`
 	Body            *string            `json:"body"`
 	Outcome         *string            `json:"outcome"`
 	Direction       *ActivityDirection `json:"direction"`
-	Status          ActivityStatus    `json:"status"`
+	Status          ActivityStatus     `json:"status"`
 	DueAt           *time.Time         `json:"due_at"`
 	CompletedAt     *time.Time         `json:"completed_at"`
 	DurationSeconds *int               `json:"duration_seconds"`
@@ -63,11 +63,11 @@ type Activity struct {
 }
 
 type ActivityAssociation struct {
-	ID          uuid.UUID  `json:"id"`
-	ActivityID  uuid.UUID  `json:"activity_id"`
-	EntityType  EntityType `json:"entity_type"`
-	EntityID    uuid.UUID  `json:"entity_id"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID         uuid.UUID  `json:"id"`
+	ActivityID uuid.UUID  `json:"activity_id"`
+	EntityType EntityType `json:"entity_type"`
+	EntityID   uuid.UUID  `json:"entity_id"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 type TimelineEntry struct {
@@ -76,12 +76,12 @@ type TimelineEntry struct {
 }
 
 type CreateActivityRequest struct {
-	Type            ActivityType      `json:"type" validate:"required"`
+	Type            ActivityType       `json:"type" validate:"required"`
 	Subject         string             `json:"subject" validate:"required,min=1,max=255"`
 	Body            *string            `json:"body"`
 	Outcome         *string            `json:"outcome"`
 	Direction       *ActivityDirection `json:"direction"`
-	Status          ActivityStatus    `json:"status"`
+	Status          ActivityStatus     `json:"status"`
 	DueAt           *time.Time         `json:"due_at"`
 	DurationSeconds *int               `json:"duration_seconds"`
 	OwnerID         *uuid.UUID         `json:"owner_id"`
@@ -105,14 +105,14 @@ type UpdateActivityRequest struct {
 }
 
 type ListActivitiesFilter struct {
-	Type     ActivityType
-	Status   ActivityStatus
-	OwnerID  *uuid.UUID
+	Type       ActivityType
+	Status     ActivityStatus
+	OwnerID    *uuid.UUID
 	EntityType EntityType
-	EntityID *uuid.UUID
-	DueBefore *time.Time
-	Cursor   string
-	Limit    int
+	EntityID   *uuid.UUID
+	DueBefore  *time.Time
+	Cursor     string
+	Limit      int
 }
 
 type Repository interface {
@@ -120,6 +120,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*Activity, error)
 	Update(ctx context.Context, id uuid.UUID, req *UpdateActivityRequest) (*Activity, error)
 	Complete(ctx context.Context, id uuid.UUID) (*Activity, error)
+	Uncomplete(ctx context.Context, id uuid.UUID) (*Activity, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) (*Activity, error)
 	List(ctx context.Context, tenantID uuid.UUID, filter *ListActivitiesFilter) ([]*Activity, string, int, error)
 	GetPendingReminders(ctx context.Context, tenantID uuid.UUID) ([]*Activity, error)
