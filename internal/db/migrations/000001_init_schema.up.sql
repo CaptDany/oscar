@@ -5,6 +5,19 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 -- Create custom error codes schema
 CREATE SCHEMA IF NOT EXISTS app;
 
+-- Immutable search functions for GIN indexes
+CREATE OR REPLACE FUNCTION search_company_text(TEXT, TEXT) RETURNS TSVECTOR AS $$
+BEGIN
+    RETURN to_tsvector('english', COALESCE($1, '') || ' ' || COALESCE($2, ''));
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION search_person_text(TEXT, TEXT, TEXT[]) RETURNS TSVECTOR AS $$
+BEGIN
+    RETURN to_tsvector('english', COALESCE($1, '') || ' ' || COALESCE($2, '') || ' ' || COALESCE(array_to_string($3, ' '), ''));
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
 -- =============================================================================
 -- ENUMS
 -- =============================================================================
@@ -212,7 +225,7 @@ CREATE TABLE companies (
 CREATE INDEX idx_companies_tenant_id ON companies(tenant_id);
 CREATE INDEX idx_companies_owner_id ON companies(owner_id);
 CREATE INDEX idx_companies_deleted_at ON companies(deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_companies_search ON companies USING gin(to_tsvector('english', name || ' ' || COALESCE(domain, '')));
+CREATE INDEX idx_companies_search ON companies USING gin(search_company_text(name, domain));
 
 -- =============================================================================
 -- PERSONS (LEADS, CONTACTS, CUSTOMERS)
@@ -245,7 +258,7 @@ CREATE INDEX idx_persons_type_status ON persons(tenant_id, type, status);
 CREATE INDEX idx_persons_owner_id ON persons(owner_id);
 CREATE INDEX idx_persons_company_id ON persons(company_id);
 CREATE INDEX idx_persons_deleted_at ON persons(deleted_at) WHERE deleted_at IS NULL;
-CREATE INDEX idx_persons_search ON persons USING gin(to_tsvector('english', first_name || ' ' || last_name || ' ' || COALESCE(array_to_string(email, ' '), '')));
+CREATE INDEX idx_persons_search ON persons USING gin(search_person_text(first_name, last_name, email));
 
 -- =============================================================================
 -- PIPELINES & STAGES
