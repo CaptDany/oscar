@@ -9,11 +9,12 @@ import (
 
 	"github.com/oscar/oscar/internal/domain/activity"
 	"github.com/oscar/oscar/pkg/errs"
+	"github.com/oscar/oscar/pkg/validator"
 )
 
 type ActivityHandler struct {
-	repo         activity.Repository
-	assocRepo    activity.AssociationRepository
+	repo      activity.Repository
+	assocRepo activity.AssociationRepository
 }
 
 func NewActivityHandler(repo activity.Repository, assocRepo activity.AssociationRepository) *ActivityHandler {
@@ -21,40 +22,42 @@ func NewActivityHandler(repo activity.Repository, assocRepo activity.Association
 }
 
 type CreateActivityRequest struct {
-	Type            string   `json:"type" validate:"required,oneof=note call email meeting task whatsapp sms"`
-	Subject         string   `json:"subject" validate:"required"`
-	Body            *string  `json:"body"`
-	Outcome         *string  `json:"outcome"`
-	Direction       *string  `json:"direction"`
-	Status          string   `json:"status"`
-	DueAt           *string  `json:"due_at"`
-	DurationSeconds *int     `json:"duration_seconds"`
-	OwnerID         *string  `json:"owner_id"`
-	EntityType      *string  `json:"entity_type"`
-	EntityID        *string  `json:"entity_id"`
+	Type            string  `json:"type" validate:"required,oneof=note call email meeting task whatsapp sms"`
+	Subject         string  `json:"subject"`
+	Title           string  `json:"title" validate:"required"` // Alias for subject, made required
+	Body            *string `json:"body"`
+	Outcome         *string `json:"outcome"`
+	Direction       *string `json:"direction"`
+	Status          string  `json:"status"`
+	DueAt           *string `json:"due_at"`
+	DurationSeconds *int    `json:"duration_seconds"`
+	OwnerID         *string `json:"owner_id"`
+	EntityType      *string `json:"entity_type"`
+	EntityID        *string `json:"entity_id"`
 }
 
 type UpdateActivityRequest struct {
-	Type            *string  `json:"type"`
-	Subject         *string  `json:"subject"`
-	Body            *string  `json:"body"`
-	Outcome         *string  `json:"outcome"`
-	Direction       *string  `json:"direction"`
-	Status          *string  `json:"status"`
-	DueAt           *string  `json:"due_at"`
-	CompletedAt     *string  `json:"completed_at"`
-	DurationSeconds *int     `json:"duration_seconds"`
-	OwnerID         *string  `json:"owner_id"`
+	Type            *string `json:"type"`
+	Subject         *string `json:"subject"`
+	Title           *string `json:"title"` // Alias for subject
+	Body            *string `json:"body"`
+	Outcome         *string `json:"outcome"`
+	Direction       *string `json:"direction"`
+	Status          *string `json:"status"`
+	DueAt           *string `json:"due_at"`
+	CompletedAt     *string `json:"completed_at"`
+	DurationSeconds *int    `json:"duration_seconds"`
+	OwnerID         *string `json:"owner_id"`
 }
 
 type ListActivitiesQuery struct {
-	Type      string `query:"type"`
-	Status    string `query:"status"`
-	OwnerID   string `query:"owner_id"`
+	Type       string `query:"type"`
+	Status     string `query:"status"`
+	OwnerID    string `query:"owner_id"`
 	EntityType string `query:"entity_type"`
-	EntityID  string `query:"entity_id"`
-	Cursor    string `query:"cursor"`
-	Limit     int    `query:"limit"`
+	EntityID   string `query:"entity_id"`
+	Cursor     string `query:"cursor"`
+	Limit      int    `query:"limit"`
 }
 
 func (h *ActivityHandler) List(c echo.Context) error {
@@ -115,12 +118,24 @@ func (h *ActivityHandler) Create(c echo.Context) error {
 		return errs.BadRequest("Invalid request body").HTTPError(c)
 	}
 	if err := c.Validate(&req); err != nil {
-		return errs.ValidationFailed().HTTPError(c)
+		validationErrors := validator.FormatValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    "VALIDATION_FAILED",
+				"message": "Validation failed",
+				"details": validationErrors,
+			},
+		})
+	}
+
+	subject := req.Subject
+	if subject == "" {
+		subject = req.Title
 	}
 
 	createReq := &activity.CreateActivityRequest{
 		Type:            activity.ActivityType(req.Type),
-		Subject:         req.Subject,
+		Subject:         subject,
 		Body:            req.Body,
 		Outcome:         req.Outcome,
 		Status:          activity.ActivityStatus(req.Status),
@@ -212,6 +227,8 @@ func (h *ActivityHandler) Update(c echo.Context) error {
 	}
 	if req.Subject != nil {
 		updateReq.Subject = req.Subject
+	} else if req.Title != nil && *req.Title != "" {
+		updateReq.Subject = req.Title
 	}
 	if req.Body != nil {
 		updateReq.Body = req.Body
@@ -269,6 +286,22 @@ func (h *ActivityHandler) Complete(c echo.Context) error {
 	}
 
 	a, err := h.repo.Complete(c.Request().Context(), id)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"data": a,
+	})
+}
+
+func (h *ActivityHandler) Uncomplete(c echo.Context) error {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return errs.BadRequest("Invalid activity ID").HTTPError(c)
+	}
+
+	a, err := h.repo.Uncomplete(c.Request().Context(), id)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}

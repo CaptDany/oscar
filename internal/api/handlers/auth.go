@@ -11,6 +11,7 @@ import (
 	"github.com/oscar/oscar/internal/domain/user"
 	"github.com/oscar/oscar/pkg/crypto"
 	"github.com/oscar/oscar/pkg/errs"
+	"github.com/oscar/oscar/pkg/validator"
 )
 
 type AuthHandler struct {
@@ -22,12 +23,12 @@ type AuthHandler struct {
 }
 
 type RegisterRequest struct {
-	Email       string `json:"email" validate:"required,email"`
-	Password    string `json:"password" validate:"required,min=8"`
-	FirstName   string `json:"first_name" validate:"required,min=1"`
-	LastName    string `json:"last_name" validate:"required,min=1"`
-	TenantName  string `json:"tenant_name" validate:"required,min=2"`
-	TenantSlug  string `json:"tenant_slug" validate:"required,min=2,max=63"`
+	Email      string `json:"email" validate:"required,email"`
+	Password   string `json:"password" validate:"required,min=8"`
+	FirstName  string `json:"first_name" validate:"required,min=1"`
+	LastName   string `json:"last_name"`
+	TenantName string `json:"tenant_name" validate:"required,min=2"`
+	TenantSlug string `json:"tenant_slug" validate:"required,min=2,max=63"`
 }
 
 type LoginRequest struct {
@@ -40,11 +41,11 @@ type RefreshRequest struct {
 }
 
 type AuthResponse struct {
-	AccessToken  string          `json:"access_token"`
-	RefreshToken string          `json:"refresh_token"`
-	ExpiresAt    int64           `json:"expires_at"`
-	TokenType    string          `json:"token_type"`
-	User         *UserResponse   `json:"user"`
+	AccessToken  string        `json:"access_token"`
+	RefreshToken string        `json:"refresh_token"`
+	ExpiresAt    int64         `json:"expires_at"`
+	TokenType    string        `json:"token_type"`
+	User         *UserResponse `json:"user"`
 }
 
 type UserResponse struct {
@@ -79,32 +80,44 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	}
 
 	if err := c.Validate(&req); err != nil {
-		return errs.ValidationFailed().HTTPError(c)
+		validationErrors := validator.FormatValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    "VALIDATION_FAILED",
+				"message": "Validation failed",
+				"details": validationErrors,
+			},
+		})
 	}
 
-	_, err := h.tenantRepo.GetBySlug(c.Request().Context(), req.TenantSlug)
-	if err == nil {
-		return errs.Conflict("Tenant slug already taken").HTTPError(c)
-	}
+	var t *tenant.Tenant
+	var err error
+	var isNewTenant bool
 
-	createTenantReq := &tenant.CreateTenantRequest{
-		Slug: req.TenantSlug,
-		Name: req.TenantName,
-	}
-	t, err := h.tenantRepo.Create(c.Request().Context(), createTenantReq)
+	existingTenant, err := h.tenantRepo.GetBySlug(c.Request().Context(), req.TenantSlug)
 	if err != nil {
-		return errs.Internal(err).HTTPError(c)
+		createTenantReq := &tenant.CreateTenantRequest{
+			Slug: req.TenantSlug,
+			Name: req.TenantName,
+		}
+		t, err = h.tenantRepo.Create(c.Request().Context(), createTenantReq)
+		if err != nil {
+			return errs.Internal(err).HTTPError(c)
+		}
+		isNewTenant = true
+
+		if err := h.tenantRepo.SeedRoles(c.Request().Context(), t.ID); err != nil {
+			return errs.Internal(err).HTTPError(c)
+		}
+
+		if err := h.tenantRepo.SeedPipeline(c.Request().Context(), t.ID); err != nil {
+			return errs.Internal(err).HTTPError(c)
+		}
+	} else {
+		t = existingTenant
 	}
 
-	if err := h.tenantRepo.SeedRoles(c.Request().Context(), t.ID); err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
-
-	if err := h.tenantRepo.SeedPipeline(c.Request().Context(), t.ID); err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
-
-	ownerRole, err := h.roleRepo.GetByName(c.Request().Context(), t.ID, "Owner")
+	passwordHash, err := h.crypto.HashPassword(req.Password)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
@@ -114,12 +127,29 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 	}
-	u, err := h.userRepo.Create(c.Request().Context(), t.ID, createUserReq, "")
+	u, err := h.userRepo.Create(c.Request().Context(), t.ID, createUserReq, passwordHash)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	_ = h.roleRepo.AssignToUser(c.Request().Context(), u.ID, []uuid.UUID{ownerRole.ID})
+	var defaultRoleName string
+	if isNewTenant {
+		defaultRoleName = "Owner"
+	} else {
+		existingUsers, _, _ := h.userRepo.List(c.Request().Context(), t.ID, 1, 0)
+		if len(existingUsers) == 0 {
+			defaultRoleName = "Owner"
+		} else {
+			defaultRoleName = "Read Only"
+		}
+	}
+
+	defaultRole, err := h.roleRepo.GetByName(c.Request().Context(), t.ID, defaultRoleName)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	_ = h.roleRepo.AssignToUser(c.Request().Context(), u.ID, []uuid.UUID{defaultRole.ID})
 
 	return c.JSON(http.StatusCreated, map[string]interface{}{
 		"message": "Registration successful",
@@ -133,7 +163,14 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	if err := c.Validate(&req); err != nil {
-		return errs.ValidationFailed().HTTPError(c)
+		validationErrors := validator.FormatValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    "VALIDATION_FAILED",
+				"message": "Validation failed",
+				"details": validationErrors,
+			},
+		})
 	}
 
 	u, err := h.userRepo.GetByEmail(c.Request().Context(), uuid.Nil, req.Email)
@@ -156,7 +193,12 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	tokens, err := h.tokenManager.GenerateTokenPair(payload, 15*time.Minute, 7*24*time.Hour)
 	if err != nil {
-		return errs.Internal(err).HTTPError(c)
+		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    "INTERNAL_ERROR",
+				"message": err.Error(),
+			},
+		})
 	}
 
 	_ = h.userRepo.UpdateLastLogin(c.Request().Context(), u.ID)

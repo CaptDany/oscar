@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -19,13 +21,13 @@ func NewCompanyHandler(repo company.Repository) *CompanyHandler {
 }
 
 type CreateCompanyRequest struct {
-	Name          string  `json:"name" validate:"required"`
-	Domain        *string `json:"domain"`
-	Industry      *string `json:"industry"`
-	Size          *string `json:"size"`
+	Name          string   `json:"name" validate:"required"`
+	Domain        *string  `json:"domain"`
+	Industry      *string  `json:"industry"`
+	Size          *string  `json:"size"`
 	AnnualRevenue *float64 `json:"annual_revenue"`
-	Website       *string `json:"website"`
-	OwnerID       *string `json:"owner_id"`
+	Website       *string  `json:"website"`
+	OwnerID       *string  `json:"owner_id"`
 	Tags          []string `json:"tags"`
 }
 
@@ -41,10 +43,11 @@ type UpdateCompanyRequest struct {
 }
 
 type ListCompaniesQuery struct {
-	OwnerID string `query:"owner_id"`
-	Search  string `query:"search"`
-	Cursor  string `query:"cursor"`
-	Limit   int    `query:"limit"`
+	OwnerID      string `query:"owner_id"`
+	Search       string `query:"search"`
+	Cursor       string `query:"cursor"`
+	Limit        int    `query:"limit"`
+	IncludeTotal bool   `query:"include_total"`
 }
 
 func (h *CompanyHandler) List(c echo.Context) error {
@@ -59,9 +62,10 @@ func (h *CompanyHandler) List(c echo.Context) error {
 	}
 
 	filter := &company.ListCompaniesFilter{
-		Search: query.Search,
-		Cursor: query.Cursor,
-		Limit:  query.Limit,
+		Search:       query.Search,
+		Cursor:       query.Cursor,
+		Limit:        query.Limit,
+		IncludeTotal: query.IncludeTotal,
 	}
 
 	if query.OwnerID != "" {
@@ -72,17 +76,38 @@ func (h *CompanyHandler) List(c echo.Context) error {
 		filter.OwnerID = &ownerID
 	}
 
+	if query.Cursor != "" {
+		parts := strings.SplitN(query.Cursor, ":", 2)
+		if len(parts) != 2 {
+			return errs.BadRequest("Invalid cursor format").HTTPError(c)
+		}
+		cursorAfter, err := time.Parse(time.RFC3339Nano, parts[0])
+		if err != nil {
+			return errs.BadRequest("Invalid cursor timestamp").HTTPError(c)
+		}
+		cursorID, err := uuid.Parse(parts[1])
+		if err != nil {
+			return errs.BadRequest("Invalid cursor ID").HTTPError(c)
+		}
+		filter.CursorAfter = &cursorAfter
+		filter.CursorID = &cursorID
+	}
+
 	companies, nextCursor, total, err := h.repo.List(c.Request().Context(), tenantID, filter)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
 	}
 
+	meta := map[string]interface{}{
+		"next_cursor": nextCursor,
+	}
+	if query.IncludeTotal {
+		meta["total"] = total
+	}
+
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": companies,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"total":       total,
-		},
+		"meta": meta,
 	})
 }
 
