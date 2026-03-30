@@ -1,0 +1,130 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Pipeline">
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900">Pipeline</h1>
+    <p class="text-gray-500">Visualize your sales pipeline</p>
+  </div>
+
+  <div id="pipeline-content">
+    <div class="text-center py-12 text-gray-400">
+      <svg class="w-8 h-8 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p>Loading pipeline...</p>
+    </div>
+  </div>
+
+  <script>
+    import { auth, api } from '../lib/api';
+
+    function formatCurrency(value: number): string {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value || 0);
+    }
+
+    async function loadPipeline() {
+      const token = auth.token;
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      try {
+        const [pipelinesData, dealsData] = await Promise.all([
+          api.pipelines.list(token),
+          api.deals.kanban(token),
+        ]);
+
+        const content = document.getElementById('pipeline-content')!;
+
+        if (pipelinesData.data && pipelinesData.data.length > 0) {
+          const pipeline = pipelinesData.data[0];
+          const stagesData = await api.pipelines.getStages(token, pipeline.id);
+
+          if (stagesData && stagesData.length > 0) {
+            content.innerHTML = `
+              <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-900">${pipeline.name}</h2>
+                <p class="text-gray-500">${stagesData.length} stages</p>
+              </div>
+              <div class="flex gap-6 overflow-x-auto pb-4">
+                ${stagesData.map((stage: any) => {
+                  const stageDeals = dealsData.filter((d: any) => d.stage_id === stage.id) || [];
+                  const stageValue = stageDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+                  
+                  return `
+                    <div class="flex-shrink-0 w-80 bg-gray-100 rounded-xl p-4">
+                      <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-gray-900">${stage.name}</h3>
+                        <span class="px-2 py-1 text-xs bg-white rounded-full text-gray-600">${stageDeals.length}</span>
+                      </div>
+                      <div class="text-sm text-gray-500 mb-4">
+                        <span class="font-medium text-primary-600">${formatCurrency(stageValue)}</span>
+                      </div>
+                      <div class="space-y-3">
+                        ${stageDeals.map((deal: any) => `
+                          <div class="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/deals'">
+                            <div class="font-medium text-gray-900 mb-1">${deal.title || 'Untitled Deal'}</div>
+                            <div class="flex items-center justify-between">
+                              <span class="text-sm font-medium text-primary-600">${formatCurrency(deal.value || 0)}</span>
+                              <span class="text-xs text-gray-500">${deal.company_name || 'No company'}</span>
+                            </div>
+                            ${deal.expected_close_date ? `
+                              <div class="mt-2 text-xs text-gray-400">
+                                Close: ${new Date(deal.expected_close_date).toLocaleDateString()}
+                              </div>
+                            ` : ''}
+                          </div>
+                        `).join('')}
+                        ${stageDeals.length === 0 ? `
+                          <div class="text-center py-8 text-gray-400 text-sm">
+                            No deals in this stage
+                          </div>
+                        ` : ''}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `;
+          } else {
+            content.innerHTML = `
+              <div class="bg-white rounded-xl shadow-sm p-12 text-center">
+                <p class="text-gray-400">No stages found for this pipeline.</p>
+              </div>
+            `;
+          }
+        } else {
+          content.innerHTML = `
+            <div class="bg-white rounded-xl shadow-sm p-12 text-center">
+              <p class="text-gray-400">No pipelines found.</p>
+            </div>
+          `;
+        }
+
+      } catch (error: any) {
+        console.error('Failed to load pipeline:', error);
+        if (error.message?.includes('Unauthorized')) {
+          auth.clear();
+          window.location.href = '/login';
+        }
+        const content = document.getElementById('pipeline-content')!;
+        content.innerHTML = `
+          <div class="bg-white rounded-xl shadow-sm p-12 text-center">
+            <p class="text-red-400">Failed to load pipeline. Please try again.</p>
+          </div>
+        `;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadPipeline);
+  </script>
+</AppLayout>
