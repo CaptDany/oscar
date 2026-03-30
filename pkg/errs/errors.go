@@ -11,15 +11,15 @@ import (
 type Code string
 
 const (
-	CodeNotFound          Code = "NOT_FOUND"
-	CodeUnauthorized      Code = "UNAUTHORIZED"
-	CodeForbidden         Code = "FORBIDDEN"
-	CodeBadRequest        Code = "BAD_REQUEST"
-	CodeConflict          Code = "CONFLICT"
-	CodeUnprocessable     Code = "UNPROCESSABLE_ENTITY"
-	CodeInternalError     Code = "INTERNAL_ERROR"
-	CodeTooManyRequests   Code = "TOO_MANY_REQUESTS"
-	CodeValidationFailed  Code = "VALIDATION_FAILED"
+	CodeNotFound         Code = "NOT_FOUND"
+	CodeUnauthorized     Code = "UNAUTHORIZED"
+	CodeForbidden        Code = "FORBIDDEN"
+	CodeBadRequest       Code = "BAD_REQUEST"
+	CodeConflict         Code = "CONFLICT"
+	CodeUnprocessable    Code = "UNPROCESSABLE_ENTITY"
+	CodeInternalError    Code = "INTERNAL_ERROR"
+	CodeTooManyRequests  Code = "TOO_MANY_REQUESTS"
+	CodeValidationFailed Code = "VALIDATION_FAILED"
 )
 
 type Error struct {
@@ -32,6 +32,11 @@ type Error struct {
 type Detail struct {
 	Field   string `json:"field,omitempty"`
 	Message string `json:"message"`
+}
+
+type PermissionDeniedDetail struct {
+	Resource string `json:"resource"`
+	Action   string `json:"action"`
 }
 
 func (e *Error) Error() string {
@@ -83,12 +88,12 @@ func (e *Error) HTTPError(c echo.Context) error {
 }
 
 var (
-	ErrNotFound          = &Error{Code: CodeNotFound, Message: "Resource not found"}
-	ErrUnauthorized      = &Error{Code: CodeUnauthorized, Message: "Authentication required"}
-	ErrForbidden         = &Error{Code: CodeForbidden, Message: "You don't have permission to perform this action"}
-	ErrConflict          = &Error{Code: CodeConflict, Message: "Resource already exists"}
-	ErrInternal          = &Error{Code: CodeInternalError, Message: "An internal error occurred"}
-	ErrTooManyRequests   = &Error{Code: CodeTooManyRequests, Message: "Rate limit exceeded"}
+	ErrNotFound        = &Error{Code: CodeNotFound, Message: "Resource not found"}
+	ErrUnauthorized    = &Error{Code: CodeUnauthorized, Message: "Authentication required"}
+	ErrForbidden       = &Error{Code: CodeForbidden, Message: "You don't have permission to perform this action"}
+	ErrConflict        = &Error{Code: CodeConflict, Message: "Resource already exists"}
+	ErrInternal        = &Error{Code: CodeInternalError, Message: "An internal error occurred"}
+	ErrTooManyRequests = &Error{Code: CodeTooManyRequests, Message: "Rate limit exceeded"}
 )
 
 func NotFound(format string, args ...interface{}) *Error {
@@ -155,4 +160,26 @@ func Is(err, target error) bool {
 
 func As(err error, target interface{}) bool {
 	return errors.As(err, target)
+}
+
+func PermissionDenied(resource, action string) *Error {
+	return &Error{
+		Code:    CodeForbidden,
+		Message: fmt.Sprintf("You don't have permission to %s %s", action, resource),
+		Details: []Detail{
+			{Field: "resource", Message: resource},
+			{Field: "action", Message: action},
+		},
+	}
+}
+
+func ResourceNotFound(resource string, id string) *Error {
+	return &Error{
+		Code:    CodeNotFound,
+		Message: fmt.Sprintf("%s not found", resource),
+		Details: []Detail{
+			{Field: "resource", Message: resource},
+			{Field: "id", Message: id},
+		},
+	}
 }
