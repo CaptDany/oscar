@@ -19,6 +19,7 @@ import (
 	"github.com/oscar/oscar/internal/api/middleware"
 	"github.com/oscar/oscar/internal/config"
 	"github.com/oscar/oscar/internal/db/repositories"
+	"github.com/oscar/oscar/internal/email"
 	"github.com/oscar/oscar/internal/storage"
 	"github.com/oscar/oscar/pkg/crypto"
 )
@@ -65,6 +66,8 @@ func main() {
 	cryptoSvc := crypto.New()
 	tokenManager := crypto.NewTokenManager(cfg.App.Secret)
 
+	emailClient := email.NewEmailClient(&cfg.Email)
+
 	personRepo := repositories.NewPersonRepository(pool)
 	companyRepo := repositories.NewCompanyRepository(pool)
 	dealRepo := repositories.NewDealRepository(pool)
@@ -73,6 +76,11 @@ func main() {
 	activityAssocRepo := repositories.NewActivityAssociationRepository(pool)
 	tenantRepo := repositories.NewTenantRepository(pool)
 	userRepo := repositories.NewUserRepository(pool)
+	notificationRepo := repositories.NewNotificationRepository(pool)
+	teamRepo := repositories.NewTeamRepository(pool)
+	productRepo := repositories.NewProductRepository(pool)
+	brandingRepo := repositories.NewBrandingRepository(pool)
+	invitationRepo := repositories.NewInvitationRepository(pool)
 
 	server := api.New()
 
@@ -82,7 +90,8 @@ func main() {
 	pipelineHandler := handlers.NewPipelineHandler(pipelineRepo)
 	activityHandler := handlers.NewActivityHandler(activityRepo, activityAssocRepo)
 	roleRepo := repositories.NewRoleRepository(pool)
-	authHandler := handlers.NewAuthHandler(userRepo, tenantRepo, roleRepo, cryptoSvc, tokenManager)
+	authHandler := handlers.NewAuthHandlerWithInvitations(userRepo, tenantRepo, roleRepo, invitationRepo, cryptoSvc, tokenManager, emailClient, cfg.App.BaseURL, cfg.App.FrontendURL)
+	oauthHandler := handlers.NewOAuthHandler(userRepo, tenantRepo, roleRepo, cryptoSvc, tokenManager, nil, cfg.App.BaseURL, &cfg.OAuth)
 
 	minioClient, err := storage.NewMinIOClient(&cfg.Storage)
 	if err != nil {
@@ -99,15 +108,27 @@ func main() {
 	tenantPool := repositories.NewTenantPool(pool)
 	tenantMw := middleware.TenantResolver(tenantRepo, tenantPool)
 
+	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
+	teamHandler := handlers.NewTeamHandler(teamRepo)
+	productHandler := handlers.NewProductHandler(productRepo)
+	settingsHandler := handlers.NewSettingsHandler(tenantRepo, brandingRepo)
+	invitationHandler := handlers.NewInvitationHandler(invitationRepo, userRepo, roleRepo, tenantRepo, cryptoSvc, &handlers.MockEmailSender{})
+
 	server.SetupRoutes(&api.Handlers{
-		Auth:     authHandler,
-		Person:   personHandler,
-		Company:  companyHandler,
-		Deal:     dealHandler,
-		Pipeline: pipelineHandler,
-		Activity: activityHandler,
-		User:     userHandler,
-		Upload:   uploadHandler,
+		Auth:         authHandler,
+		OAuth:        oauthHandler,
+		Person:       personHandler,
+		Company:      companyHandler,
+		Deal:         dealHandler,
+		Pipeline:     pipelineHandler,
+		Activity:     activityHandler,
+		User:         userHandler,
+		Upload:       uploadHandler,
+		Notification: notificationHandler,
+		Team:         teamHandler,
+		Product:      productHandler,
+		Settings:     settingsHandler,
+		Invitation:   invitationHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
