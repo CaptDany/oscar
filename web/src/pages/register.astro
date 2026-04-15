@@ -1,203 +1,176 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import '../styles/global.css';
+
+const { user } = Astro.locals;
+
+if (user) {
+  return Astro.redirect('/dashboard');
+}
 ---
 
-<Layout title="Register | Oscar">
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100">
-    <div class="max-w-md w-full mx-4">
-      <div class="bg-white rounded-2xl shadow-xl p-8">
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 mb-4">
-            <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
-          <h1 class="text-2xl font-bold text-gray-900">Get Started</h1>
-          <p class="text-gray-500 mt-2">Create your free account</p>
-        </div>
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register | oscar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-bg flex items-center justify-center p-4 grain">
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px]"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-secondary/10 rounded-full blur-[150px]"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary-container/5 rounded-full blur-[200px]"></div>
+  </div>
 
-        <div id="error-message" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600"></div>
+  <div class="w-full max-w-md relative z-10">
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-container mb-4 shadow-glow hover:scale-105 transition-transform">
+        <span class="text-bg font-display font-bold text-2xl">O</span>
+      </a>
+      <h1 class="text-display-sm font-display text-on-surface">Create Account</h1>
+      <p class="text-body-lg text-on-surface-variant mt-2">Start your CRM journey today</p>
+    </div>
 
-        <form id="register-form" class="space-y-6">
+    <div class="card-elevated p-8">
+      <form id="register-form" class="space-y-5">
+        <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="company_name" class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+            <label for="first_name" class="block text-label-lg text-on-surface mb-2">First Name</label>
             <input
               type="text"
-              id="company_name"
-              name="company_name"
+              id="first_name"
+              name="first_name"
               required
-              class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-              placeholder="Acme Inc."
+              class="input w-full"
+              placeholder="oscar"
             />
-            <p id="slug-hint" class="text-xs text-gray-500 mt-1 hidden">Slug: <span id="slug-preview"></span></p>
           </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-              <input
-                type="text"
-                id="first_name"
-                name="first_name"
-                required
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                placeholder="John"
-              />
-            </div>
-            <div>
-              <label for="last_name" class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-              <input
-                type="text"
-                id="last_name"
-                name="last_name"
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                placeholder="Doe"
-              />
-            </div>
-          </div>
-
           <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label for="last_name" class="block text-label-lg text-on-surface mb-2">Last Name</label>
             <input
-              type="email"
-              id="email"
-              name="email"
+              type="text"
+              id="last_name"
+              name="last_name"
               required
-              class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-              placeholder="you@company.com"
+              class="input w-full"
+              placeholder="Smith"
             />
           </div>
-
-          <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              required
-              minlength="8"
-              class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-              placeholder="••••••••"
-            />
-            <p class="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
-          </div>
-
-          <button
-            type="submit"
-            id="submit-btn"
-            class="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
-          >
-            <span id="btn-text">Create Account</span>
-            <svg id="btn-loading" class="hidden w-5 h-5 animate-spin ml-2" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </button>
-        </form>
-
-        <div class="mt-6 text-center">
-          <p class="text-sm text-gray-600">
-            Already have an account? <a href="/login" class="text-primary-600 hover:text-primary-500 font-medium">Sign in</a>
-          </p>
         </div>
-      </div>
 
-      <p class="mt-8 text-center text-sm text-gray-500">
-        By creating an account, you agree to our <a href="/terms" class="text-primary-600">Terms of Service</a>.
+        <div>
+          <label for="email" class="block text-label-lg text-on-surface mb-2">Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            class="input w-full"
+            placeholder="you@company.com"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="block text-label-lg text-on-surface mb-2">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            required
+            minlength="8"
+            class="input w-full"
+            placeholder="Min 8 characters"
+          />
+        </div>
+
+        <div>
+          <label for="tenant_name" class="block text-label-lg text-on-surface mb-2">Organization Name</label>
+          <input
+            type="text"
+            id="tenant_name"
+            name="tenant_name"
+            required
+            class="input w-full"
+            placeholder="Acme Inc"
+          />
+        </div>
+
+        <div id="error-message" class="hidden text-error text-sm bg-error/10 p-3 rounded-lg"></div>
+
+        <button
+          type="submit"
+          id="submit-btn"
+          class="btn-primary w-full py-3 text-base"
+        >
+          Create Account
+        </button>
+      </form>
+
+      <p class="mt-6 text-center text-body-md text-on-surface-variant">
+        Already have an account?
+        <a href="/login" class="text-primary hover:text-primary/80 font-medium transition-colors">Sign in</a>
       </p>
     </div>
+
+    <p class="mt-8 text-center text-body-sm text-on-surface-variant">
+      <span class="material-symbols-outlined text-sm align-text-bottom">shield</span>
+      By creating an account, you agree to our Terms of Service
+    </p>
   </div>
-</Layout>
 
-<script>
-  import { api } from '../lib/api';
+  <script>
+    const form = document.getElementById('register-form') as HTMLFormElement;
+    const errorEl = document.getElementById('error-message')!;
+    const submitBtn = document.getElementById('submit-btn')!;
 
-  const form = document.getElementById('register-form');
-  const errorMessage = document.getElementById('error-message');
-  const submitBtn = document.getElementById('submit-btn');
-  const btnText = document.getElementById('btn-text');
-  const btnLoading = document.getElementById('btn-loading');
-  const companyNameInput = document.getElementById('company_name');
-  const slugHint = document.getElementById('slug-hint');
-  const slugPreview = document.getElementById('slug-preview');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.classList.add('hidden');
+      submitBtn.setAttribute('disabled', 'true');
+      submitBtn.textContent = 'Creating account...';
 
-  function generateSlug(name: string): string {
-    return name.toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 63);
-  }
+      const formData = new FormData(form);
+      const firstName = formData.get('first_name') as string;
+      const lastName = formData.get('last_name') as string;
+      const email = formData.get('email') as string;
+      const password = formData.get('password') as string;
+      const tenantName = formData.get('tenant_name') as string;
 
-  function showError(message: string) {
-    if (errorMessage) {
-      errorMessage.textContent = message;
-      errorMessage.classList.remove('hidden');
-    }
-  }
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            password: password,
+            tenant_name: tenantName,
+          }),
+        });
 
-  function hideError() {
-    if (errorMessage) {
-      errorMessage.classList.add('hidden');
-    }
-  }
+        const data = await res.json();
 
-  function setLoading(loading: boolean) {
-    if (submitBtn) {
-      (submitBtn as HTMLButtonElement).disabled = loading;
-    }
-    if (btnText) {
-      btnText.textContent = loading ? 'Creating account...' : 'Create Account';
-    }
-    if (btnLoading) {
-      btnLoading.classList.toggle('hidden', !loading);
-    }
-  }
+        if (!res.ok) {
+          throw new Error(data.error?.message || data.error?.details?.[0]?.message || 'Registration failed');
+        }
 
-  companyNameInput?.addEventListener('input', (e) => {
-    const slug = generateSlug((e.target as HTMLInputElement).value);
-    if (slug) {
-      if (slugHint) slugHint.classList.remove('hidden');
-      if (slugPreview) slugPreview.textContent = slug;
-    } else {
-      if (slugHint) slugHint.classList.add('hidden');
-    }
-  });
+        localStorage.setItem('oscar_auth', JSON.stringify({
+          token: data.token,
+          user: data.user,
+        }));
 
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideError();
-
-    const companyName = (document.getElementById('company_name') as HTMLInputElement).value;
-    const firstName = (document.getElementById('first_name') as HTMLInputElement).value;
-    const lastName = (document.getElementById('last_name') as HTMLInputElement).value;
-    const email = (document.getElementById('email') as HTMLInputElement).value;
-    const password = (document.getElementById('password') as HTMLInputElement).value;
-
-    if (password.length < 8) {
-      showError('Password must be at least 8 characters');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await api.auth.register({
-        tenant_name: companyName,
-        tenant_slug: generateSlug(companyName),
-        email,
-        password,
-        first_name: firstName,
-        last_name: lastName,
-      });
-      
-      window.location.href = '/login?registered=true';
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      showError(error.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  });
-</script>
+        window.location.href = '/dashboard';
+      } catch (err: any) {
+        errorEl.textContent = err.message || 'An error occurred';
+        errorEl.classList.remove('hidden');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.textContent = 'Create Account';
+      }
+    });
+  </script>
+</body>
+</html>
