@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -20,6 +21,13 @@ func NewCompanyRepository(pool *pgxpool.Pool) *CompanyRepository {
 	return &CompanyRepository{pool: pool}
 }
 
+func interfaceToJSON(data interface{}) ([]byte, error) {
+	if data == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(data)
+}
+
 func (r *CompanyRepository) Create(ctx context.Context, tenantID uuid.UUID, req *company.CreateCompanyRequest) (*company.Company, error) {
 	query := `
 		INSERT INTO companies (tenant_id, name, domain, industry, size, annual_revenue, website, address, owner_id, parent_company_id, tags, custom_fields)
@@ -27,10 +35,15 @@ func (r *CompanyRepository) Create(ctx context.Context, tenantID uuid.UUID, req 
 		RETURNING *
 	`
 
+	addressJSON, err := interfaceToJSON(req.Address)
+	if err != nil {
+		return nil, fmt.Errorf("company.Create: failed to encode address: %w", err)
+	}
+
 	row := &generated.Company{}
-	err := r.pool.QueryRow(ctx, query,
+	err = r.pool.QueryRow(ctx, query,
 		tenantID, req.Name, req.Domain, req.Industry, req.Size,
-		req.AnnualRevenue, req.Website, req.Address, req.OwnerID,
+		req.AnnualRevenue, req.Website, addressJSON, req.OwnerID,
 		req.ParentCompanyID, req.Tags, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Name, &row.Domain, &row.Industry, &row.Size,
@@ -74,7 +87,7 @@ func (r *CompanyRepository) Update(ctx context.Context, id uuid.UUID, req *compa
 			size = COALESCE($5, size),
 			annual_revenue = COALESCE($6, annual_revenue),
 			website = COALESCE($7, website),
-			address = COALESCE($8, address),
+			address = $8,
 			owner_id = COALESCE($9, owner_id),
 			parent_company_id = COALESCE($10, parent_company_id),
 			tags = COALESCE($11, tags),
@@ -83,10 +96,15 @@ func (r *CompanyRepository) Update(ctx context.Context, id uuid.UUID, req *compa
 		RETURNING *
 	`
 
+	addressJSON, err := interfaceToJSON(req.Address)
+	if err != nil {
+		return nil, fmt.Errorf("company.Update: failed to encode address: %w", err)
+	}
+
 	row := &generated.Company{}
-	err := r.pool.QueryRow(ctx, query,
+	err = r.pool.QueryRow(ctx, query,
 		id, req.Name, req.Domain, req.Industry, req.Size,
-		req.AnnualRevenue, req.Website, req.Address, req.OwnerID,
+		req.AnnualRevenue, req.Website, addressJSON, req.OwnerID,
 		req.ParentCompanyID, req.Tags, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Name, &row.Domain, &row.Industry, &row.Size,
@@ -258,6 +276,17 @@ func mapCompanyRowToDomain(row *generated.Company) *company.Company {
 		s := company.CompanySize(row.Size.CompanySize)
 		size = &s
 	}
+
+	var address interface{}
+	if len(row.Address) > 0 {
+		json.Unmarshal(row.Address, &address)
+	}
+
+	var customFields interface{}
+	if len(row.CustomFields) > 0 {
+		json.Unmarshal(row.CustomFields, &customFields)
+	}
+
 	return &company.Company{
 		ID:              pgUUIDToUUID(row.ID),
 		TenantID:        pgUUIDToUUID(row.TenantID),
@@ -267,11 +296,11 @@ func mapCompanyRowToDomain(row *generated.Company) *company.Company {
 		Size:            size,
 		AnnualRevenue:   pgNumericToPtrFloat(row.AnnualRevenue),
 		Website:         pgTextToStr(row.Website),
-		Address:         row.Address,
+		Address:         address,
 		OwnerID:         pgUUIDToPtr(row.OwnerID),
 		ParentCompanyID: pgUUIDToPtr(row.ParentCompanyID),
 		Tags:            row.Tags,
-		CustomFields:    row.CustomFields,
+		CustomFields:    customFields,
 		CreatedAt:       row.CreatedAt.Time,
 		UpdatedAt:       row.UpdatedAt.Time,
 		DeletedAt:       pgTimestamptzToTime(row.DeletedAt),
