@@ -1,0 +1,698 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Activity Timeline">
+  <!-- Log Activity Modal -->
+  <div id="log-activity-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeLogActivityModal()"></div>
+    <div class="relative w-full max-w-md bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+        <h2 id="activity-modal-title" class="text-lg font-headline font-bold text-white">Log Activity</h2>
+        <button onclick="closeLogActivityModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+          <span class="material-symbols-outlined text-gray-400">close</span>
+        </button>
+      </div>
+      <form id="log-activity-form" class="p-6 space-y-4">
+        <input type="hidden" id="edit-activity-id" name="id" />
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Activity Type *</label>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" class="activity-type-btn selected" data-type="call" onclick="selectActivityType('call', this)">
+              <span class="material-symbols-outlined text-xl">call</span>
+              <span>Call</span>
+            </button>
+            <button type="button" class="activity-type-btn" data-type="email" onclick="selectActivityType('email', this)">
+              <span class="material-symbols-outlined text-xl">mail</span>
+              <span>Email</span>
+            </button>
+            <button type="button" class="activity-type-btn" data-type="meeting" onclick="selectActivityType('meeting', this)">
+              <span class="material-symbols-outlined text-xl">groups</span>
+              <span>Meeting</span>
+            </button>
+            <button type="button" class="activity-type-btn" data-type="note" onclick="selectActivityType('note', this)">
+              <span class="material-symbols-outlined text-xl">note</span>
+              <span>Note</span>
+            </button>
+          </div>
+          <input type="hidden" id="activity-type" name="type" value="call" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Subject *</label>
+          <input type="text" id="activity-title" name="title" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Brief description of the activity" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Notes</label>
+          <textarea id="activity-body" name="body" rows="3" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary resize-none" placeholder="Additional details..."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Due Date</label>
+            <input type="datetime-local" id="activity-due-at" name="due_at" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Direction</label>
+            <select id="activity-direction" name="direction" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
+              <option value="">-- Select --</option>
+              <option value="inbound">Inbound</option>
+              <option value="outbound">Outbound</option>
+            </select>
+          </div>
+        </div>
+        <div id="edit-status-row" class="hidden">
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Status</label>
+          <select id="activity-status" name="status" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
+            <option value="planned">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" id="delete-activity-btn" onclick="deleteActivity()" class="mr-auto px-4 py-2 text-sm font-mono text-error hover:bg-error/10 rounded transition-colors hidden">Delete</button>
+          <button type="button" onclick="closeLogActivityModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">save</span>
+            <span id="activity-modal-submit-text">Save Activity</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <main class="flex-1 ml-[220px] transition-all duration-300 p-8 grid grid-cols-12 gap-8 custom-scrollbar overflow-y-auto">
+    <!-- Page Header -->
+    <div class="col-span-12 flex justify-between items-end mb-4">
+      <div>
+        <h1 class="text-4xl font-headline font-bold text-on-background tracking-tight">Activity Timeline</h1>
+        <p class="text-on-surface-variant font-mono text-sm mt-1 uppercase tracking-wider">SYSTEM_LOG_REF: V0.1.0-STABLE</p>
+      </div>
+      <button onclick="openLogActivityModal()" class="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary-container/20">
+        <span class="material-symbols-outlined text-sm">add</span>
+        Log Activity
+      </button>
+    </div>
+
+    <!-- Content Grid -->
+    <div class="col-span-12 lg:col-span-9 space-y-10">
+      <!-- Group: Today -->
+      <section id="today-section">
+        <div class="flex items-center gap-4 mb-6">
+          <h2 class="font-headline text-lg font-bold text-primary">Today</h2>
+          <div class="flex-1 h-[1px] bg-outline-variant/30"></div>
+          <span id="today-date" class="font-mono text-[11px] text-on-surface-variant px-2 py-0.5 bg-surface-container-high rounded uppercase">--</span>
+        </div>
+        <div id="today-activities" class="space-y-px">
+          <div class="group flex items-center gap-6 p-4 bg-surface-container-low hover:bg-surface-container transition-all relative">
+            <div class="flex flex-col items-center gap-2">
+              <div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary border border-outline-variant/20">
+                <span class="material-symbols-outlined">schedule</span>
+              </div>
+            </div>
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-4 items-center gap-4">
+              <div class="col-span-2">
+                <h3 class="font-bold text-on-surface">No activities today</h3>
+                <div class="flex gap-2 mt-1">
+                  <span class="font-mono text-[10px] text-slate-500 uppercase tracking-tighter">Start logging activities to see them here</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Group: Yesterday -->
+      <section id="yesterday-section">
+        <div class="flex items-center gap-4 mb-6">
+          <h2 class="font-headline text-lg font-bold text-on-surface-variant">Yesterday</h2>
+          <div class="flex-1 h-[1px] bg-outline-variant/30"></div>
+          <span id="yesterday-date" class="font-mono text-[11px] text-on-surface-variant px-2 py-0.5 bg-surface-container-high rounded uppercase">--</span>
+        </div>
+        <div id="yesterday-activities" class="space-y-px">
+        </div>
+      </section>
+
+      <!-- Group: Last Week -->
+      <section id="lastweek-section">
+        <div class="flex items-center gap-4 mb-6">
+          <h2 class="font-headline text-lg font-bold text-on-surface-variant">Last Week</h2>
+          <div class="flex-1 h-[1px] bg-outline-variant/30"></div>
+          <span class="font-mono text-[11px] text-on-surface-variant px-2 py-0.5 bg-surface-container-high rounded uppercase">--</span>
+        </div>
+        <div id="lastweek-activities" class="space-y-px">
+        </div>
+      </section>
+    </div>
+
+    <!-- Filter Panel -->
+    <aside class="col-span-12 lg:col-span-3">
+      <div class="sticky top-24 bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10">
+        <div class="p-6 border-b border-outline-variant/10 bg-surface-container">
+          <h3 class="font-headline font-bold text-on-surface uppercase tracking-widest text-xs">Filter Activities</h3>
+        </div>
+        <div class="p-6 space-y-6">
+          <!-- Search -->
+          <div class="space-y-2">
+            <label class="font-mono text-[10px] text-slate-500 uppercase">Global Search</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+              <input class="w-full bg-surface-container-highest border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary font-mono placeholder:text-slate-600" placeholder="Search activities..." type="text"/>
+            </div>
+          </div>
+
+          <!-- Type Toggles -->
+          <div class="space-y-4">
+            <label class="font-mono text-[10px] text-slate-500 uppercase block">Activity Type</label>
+            <div class="space-y-2">
+              <label class="flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary text-xl">call</span>
+                  <span class="text-sm font-medium">Calls</span>
+                </div>
+                <input id="filter-call" checked class="filter-type rounded w-4 h-4 bg-surface-container-highest border-outline-variant text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+              </label>
+              <label class="flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary text-xl">mail</span>
+                  <span class="text-sm font-medium">Emails</span>
+                </div>
+                <input id="filter-email" checked class="filter-type rounded w-4 h-4 bg-surface-container-highest border-outline-variant text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+              </label>
+              <label class="flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary text-xl">groups</span>
+                  <span class="text-sm font-medium">Meetings</span>
+                </div>
+                <input id="filter-meeting" checked class="filter-type rounded w-4 h-4 bg-surface-container-highest border-outline-variant text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+              </label>
+              <label class="flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary text-xl">note</span>
+                  <span class="text-sm font-medium">Notes</span>
+                </div>
+                <input id="filter-note" checked class="filter-type rounded w-4 h-4 bg-surface-container-highest border-outline-variant text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+              </label>
+            </div>
+          </div>
+
+          <!-- Quick Filters -->
+          <div class="pt-6 border-t border-outline-variant/10">
+            <button onclick="resetFilters()" class="w-full text-left font-mono text-[11px] text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">filter_list</span> Reset to defaults
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Card -->
+      <div class="mt-6 bg-gradient-to-br from-surface-container-low to-background p-6 rounded-xl border border-outline-variant/10">
+        <p class="font-mono text-[10px] text-slate-500 uppercase tracking-widest mb-4">Weekly Velocity</p>
+        <div id="weekly-chart" class="flex items-end gap-1 h-12 mb-4">
+          <!-- Chart bars will be rendered here -->
+        </div>
+        <div class="flex justify-between items-center">
+          <span id="weekly-count" class="text-2xl font-headline font-bold">0</span>
+          <span id="weekly-trend" class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1 rounded">No data</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Floating Quick Action -->
+  <button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all hover:rotate-90 z-50">
+    <span class="material-symbols-outlined text-3xl">add</span>
+  </button>
+</AppLayout>
+
+<script>
+  let allActivities: any[] = [];
+  let editingActivityId: string | null = null;
+
+  function getActivityIcon(type: string): string {
+    const icons: Record<string, string> = {
+      'call': 'call',
+      'email': 'mail',
+      'meeting': 'groups',
+      'task': 'assignment',
+      'deal_created': 'attach_money',
+      'deal_updated': 'trending_up',
+      'deal_won': 'emoji_events',
+      'deal_lost': 'cancel',
+      'contact_added': 'person_add',
+      'note': 'note',
+    };
+    return icons[type] || 'circle';
+  }
+
+  function getStatusBadge(status: string): string {
+    const statuses: Record<string, string> = {
+      'completed': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+      'planned': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+      'cancelled': 'bg-red-500/10 text-red-400 border-red-500/20',
+      'won': 'bg-primary/10 text-primary border-primary/20',
+    };
+    return statuses[status] || 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+  }
+
+  function formatDate(date: Date): string {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function formatTime(dateStr: string): string {
+    return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function isToday(dateStr: string): boolean {
+    const date = new Date(dateStr);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  }
+
+  function isYesterday(dateStr: string): boolean {
+    const date = new Date(dateStr);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return date.toDateString() === yesterday.toDateString();
+  }
+
+  function createActivityRow(activity: any, isLast: boolean = false): string {
+    const statusDisplay = activity.status === 'planned' ? 'Scheduled' : 
+                          activity.status === 'completed' ? 'Completed' :
+                          activity.status === 'cancelled' ? 'Cancelled' : 
+                          (activity.status || 'Logged');
+    
+    const directionIcon = activity.direction === 'inbound' ? 'arrow_downward' : 
+                         activity.direction === 'outbound' ? 'arrow_upward' : '';
+    
+    const isSelected = editingActivityId === activity.id;
+    const containerClass = isSelected 
+      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' 
+      : 'border-transparent hover:border-[var(--color-primary)]/30';
+    
+    return `
+      <div class="group flex items-center gap-6 p-4 bg-[var(--color-surface-container-low)] hover:bg-[var(--color-surface-container)] ${containerClass} border transition-all relative cursor-pointer rounded-lg mb-1" onclick="openEditActivityModal('${activity.id}')">
+        <div class="flex flex-col items-center gap-2">
+          <div class="w-10 h-10 rounded-lg ${isSelected ? 'bg-[var(--color-primary)]/20 border-[var(--color-primary)]/50' : 'bg-[var(--color-surface-container-highest)] border-[var(--color-outline-variant)]/20'} flex items-center justify-center text-[var(--color-primary)] border transition-all">
+            <span class="material-symbols-outlined">${getActivityIcon(activity.type)}</span>
+          </div>
+        </div>
+        <div class="flex-1 grid grid-cols-1 md:grid-cols-4 items-center gap-4">
+          <div class="col-span-2">
+            <h3 class="font-bold text-[var(--color-on-surface)] group-hover:text-[var(--color-primary)] transition-colors">${activity.subject || 'Activity'}</h3>
+            ${activity.body ? `<p class="text-sm text-[var(--color-on-surface-variant)] mt-1 line-clamp-2">${activity.body}</p>` : ''}
+            <div class="flex items-center gap-3 mt-2">
+              <span class="font-mono text-[10px] text-slate-500 uppercase tracking-tighter flex items-center gap-1">
+                <span class="material-symbols-outlined text-[12px]">schedule</span> ${formatTime(activity.created_at)}
+              </span>
+              ${directionIcon ? `
+                <span class="font-mono text-[10px] text-slate-500 uppercase tracking-tighter flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[12px]">${directionIcon}</span> ${activity.direction}
+                </span>
+              ` : ''}
+            </div>
+          </div>
+          <div class="flex flex-col gap-2">
+            ${activity.due_at ? `
+              <div class="flex items-center gap-2 text-[10px] font-mono text-amber-400">
+                <span class="material-symbols-outlined text-[14px]">event</span>
+                ${formatDueDate(activity.due_at)}
+              </div>
+            ` : ''}
+          </div>
+          <div class="flex items-center justify-end gap-2">
+            <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${getStatusBadge(activity.status)}">${statusDisplay}</span>
+            <span class="material-symbols-outlined text-[var(--color-primary)] opacity-0 group-hover:opacity-100 transition-opacity text-lg">edit</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  function formatDueDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  function getActiveFilters(): string[] {
+    const filters: string[] = [];
+    if ((document.getElementById('filter-call') as HTMLInputElement)?.checked) filters.push('call');
+    if ((document.getElementById('filter-email') as HTMLInputElement)?.checked) filters.push('email');
+    if ((document.getElementById('filter-meeting') as HTMLInputElement)?.checked) filters.push('meeting');
+    if ((document.getElementById('filter-note') as HTMLInputElement)?.checked) filters.push('note');
+    return filters;
+  }
+
+  function resetFilters() {
+    const filterIds = ['filter-call', 'filter-email', 'filter-meeting', 'filter-note'];
+    filterIds.forEach(id => {
+      const el = document.getElementById(id) as HTMLInputElement;
+      if (el) el.checked = true;
+    });
+    renderActivities();
+  }
+
+  function renderActivities() {
+    const filters = getActiveFilters();
+    const filtered = allActivities.filter((a: any) => filters.includes(a.type));
+
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const todayActivities = filtered.filter((a: any) => isToday(a.created_at));
+    const yesterdayActivities = filtered.filter((a: any) => isYesterday(a.created_at));
+    const lastWeekActivities = filtered.filter((a: any) => {
+      const date = new Date(a.created_at);
+      return date < yesterday && date >= weekAgo;
+    });
+
+    document.getElementById('today-date')!.textContent = formatDate(today);
+    document.getElementById('yesterday-date')!.textContent = formatDate(yesterday);
+
+    if (todayActivities.length > 0) {
+      document.getElementById('today-activities')!.innerHTML = todayActivities.map((a: any, i: number) =>
+        createActivityRow(a, i === todayActivities.length - 1)
+      ).join('');
+    } else {
+      document.getElementById('today-activities')!.innerHTML = `
+        <div class="group flex items-center gap-6 p-4 bg-surface-container-low hover:bg-surface-container transition-all relative">
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary border border-outline-variant/20">
+              <span class="material-symbols-outlined">schedule</span>
+            </div>
+          </div>
+          <div class="flex-1 grid grid-cols-1 md:grid-cols-4 items-center gap-4">
+            <div class="col-span-2">
+              <h3 class="font-bold text-on-surface">No activities today</h3>
+              <div class="flex gap-2 mt-1">
+                <span class="font-mono text-[10px] text-slate-500 uppercase tracking-tighter">Start logging activities to see them here</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (yesterdayActivities.length > 0) {
+      document.getElementById('yesterday-activities')!.innerHTML = yesterdayActivities.map((a: any, i: number) =>
+        createActivityRow(a, i === yesterdayActivities.length - 1)
+      ).join('');
+    } else {
+      document.getElementById('yesterday-activities')!.innerHTML = '';
+    }
+
+    if (lastWeekActivities.length > 0) {
+      document.getElementById('lastweek-activities')!.innerHTML = lastWeekActivities.map((a: any, i: number) =>
+        createActivityRow(a, i === lastWeekActivities.length - 1)
+      ).join('');
+    } else {
+      document.getElementById('lastweek-activities')!.innerHTML = '';
+    }
+
+    renderWeeklyChart(filtered);
+  }
+
+  function renderWeeklyChart(activities: any[]) {
+    const days: string[] = [];
+    const counts: number[] = [];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toDateString();
+      days.push(dateStr);
+      
+      const count = activities.filter((a: any) => new Date(a.created_at).toDateString() === dateStr).length;
+      counts.push(count);
+    }
+
+    const maxCount = Math.max(...counts, 1);
+    const chartEl = document.getElementById('weekly-chart')!;
+    chartEl.innerHTML = counts.map((count, i) => {
+      const height = count > 0 ? Math.max((count / maxCount) * 100, 15) : 10;
+      const isToday = i === 6;
+      const bgClass = isToday ? 'bg-primary' : 'bg-primary-container/60';
+      const shadow = isToday ? 'shadow-[0_-4px_12px_rgba(210,187,255,0.2)]' : '';
+      const dayLabel = new Date(days[i]).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0);
+      return `
+        <div class="flex-1 flex flex-col items-center gap-1">
+          <div class="w-full ${bgClass} ${shadow} rounded-t transition-all" style="height: ${height}%"></div>
+          <span class="text-[8px] font-mono text-slate-500">${dayLabel}</span>
+        </div>
+      `;
+    }).join('');
+
+    const weeklyCount = counts.reduce((a, b) => a + b, 0);
+    document.getElementById('weekly-count')!.textContent = weeklyCount.toString();
+    
+    const trendEl = document.getElementById('weekly-trend')!;
+    const todayCount = counts[6] || 0;
+    const yesterdayCount = counts[5] || 0;
+    
+    if (todayCount > yesterdayCount && todayCount > 0) {
+      trendEl.className = 'text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1 rounded';
+      trendEl.textContent = '+' + (todayCount - yesterdayCount) + ' today';
+    } else if (todayCount < yesterdayCount && todayCount > 0) {
+      trendEl.className = 'text-[10px] font-mono text-red-400 bg-red-500/10 px-1 rounded';
+      trendEl.textContent = (todayCount - yesterdayCount) + ' today';
+    } else {
+      trendEl.className = 'text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1 rounded';
+      trendEl.textContent = weeklyCount > 0 ? 'Active' : 'No data';
+    }
+  }
+
+  (window as any).selectActivityType = function(type: string, btn: HTMLElement) {
+    document.querySelectorAll('.activity-type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    (document.getElementById('activity-type') as HTMLInputElement).value = type;
+  };
+
+  (window as any).openLogActivityModal = function() {
+    editingActivityId = null;
+    document.getElementById('edit-activity-id')!.value = '';
+    document.getElementById('activity-modal-title')!.textContent = 'Log Activity';
+    document.getElementById('activity-modal-submit-text')!.textContent = 'Save Activity';
+    document.getElementById('edit-status-row')!.classList.add('hidden');
+    document.getElementById('delete-activity-btn')!.classList.add('hidden');
+    
+    (document.getElementById('log-activity-form') as HTMLFormElement).reset();
+    document.querySelectorAll('.activity-type-btn').forEach(b => b.classList.remove('selected'));
+    (document.querySelector('[data-type="call"]') as HTMLElement)?.classList.add('selected');
+    (document.getElementById('activity-type') as HTMLInputElement).value = 'call';
+    document.getElementById('log-activity-modal')!.classList.remove('hidden');
+  };
+
+  (window as any).openEditActivityModal = function(activityId: string) {
+    const activity = allActivities.find((a: any) => a.id === activityId);
+    if (!activity) return;
+
+    editingActivityId = activityId;
+    document.getElementById('edit-activity-id')!.value = activityId;
+    document.getElementById('activity-modal-title')!.textContent = 'Edit Activity';
+    document.getElementById('activity-modal-submit-text')!.textContent = 'Update Activity';
+    document.getElementById('edit-status-row')!.classList.remove('hidden');
+    document.getElementById('delete-activity-btn')!.classList.remove('hidden');
+
+    document.querySelectorAll('.activity-type-btn').forEach(b => b.classList.remove('selected'));
+    const typeBtn = document.querySelector(`[data-type="${activity.type}"]`) as HTMLElement;
+    if (typeBtn) typeBtn.classList.add('selected');
+    (document.getElementById('activity-type') as HTMLInputElement).value = activity.type;
+    
+    (document.getElementById('activity-title') as HTMLInputElement).value = activity.subject || '';
+    (document.getElementById('activity-body') as HTMLTextAreaElement).value = activity.body || '';
+    (document.getElementById('activity-direction') as HTMLSelectElement).value = activity.direction || '';
+    
+    if (activity.due_at) {
+      const dueDate = new Date(activity.due_at);
+      const localDateTime = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      (document.getElementById('activity-due-at') as HTMLInputElement).value = localDateTime;
+    } else {
+      (document.getElementById('activity-due-at') as HTMLInputElement).value = '';
+    }
+    
+    (document.getElementById('activity-status') as HTMLSelectElement).value = activity.status || 'planned';
+    
+    document.getElementById('log-activity-modal')!.classList.remove('hidden');
+  };
+
+  (window as any).closeLogActivityModal = function() {
+    document.getElementById('log-activity-modal')!.classList.add('hidden');
+    editingActivityId = null;
+    renderActivities();
+  };
+
+  (window as any).deleteActivity = async function() {
+    if (!editingActivityId) return;
+    if (!confirm('Delete this activity?')) return;
+    
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`/api/v1/activities/${editingActivityId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        closeLogActivityModal();
+        loadActivities();
+      } else {
+        const error = await res.json();
+        alert('Failed to delete: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to delete activity:', err);
+    }
+  };
+
+  async function loadActivities() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/activities?limit=100', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status === 401) {
+        window.location.href = '/login?reason=session_expired';
+        return;
+      }
+
+      const { data } = await res.json();
+      allActivities = data || [];
+      renderActivities();
+    } catch (err) {
+      console.error('Failed to load activities:', err);
+    }
+  }
+
+  document.getElementById('log-activity-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    const token = getToken();
+    if (!token) return;
+
+    const type = formData.get('type') as string;
+    const title = formData.get('title') as string;
+
+    if (!title || !title.trim()) {
+      alert('Please enter a subject');
+      return;
+    }
+
+    const payload: Record<string, any> = {
+      type,
+      title: title.trim(),
+    };
+
+    const body = formData.get('body') as string;
+    if (body && body.trim()) {
+      payload.body = body.trim();
+    }
+
+    const direction = formData.get('direction') as string;
+    if (direction) {
+      payload.direction = direction;
+    }
+
+    const dueAt = formData.get('due_at') as string;
+    if (dueAt) {
+      const date = new Date(dueAt);
+      payload.due_at = date.toISOString();
+    }
+
+    const status = formData.get('status') as string;
+    if (status && editingActivityId) {
+      payload.status = status;
+    }
+
+    try {
+      const isEdit = editingActivityId !== null;
+      const url = isEdit ? `/api/v1/activities/${editingActivityId}` : '/api/v1/activities';
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeLogActivityModal();
+        loadActivities();
+      } else {
+        const error = await res.json();
+        alert('Failed to save activity: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to save activity:', err);
+    }
+  });
+
+  document.querySelectorAll('.filter-type').forEach(cb => {
+    cb.addEventListener('change', renderActivities);
+  });
+
+  loadActivities();
+</script>
+
+<style>
+  main {
+    margin-left: 220px;
+  }
+
+  .activity-type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 8px;
+    background: var(--color-surface-container-highest);
+    border: 1px solid var(--color-outline-variant);
+    border-radius: 8px;
+    color: var(--color-on-surface-variant);
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .activity-type-btn:hover {
+    background: var(--color-surface-container);
+    border-color: var(--color-primary);
+  }
+
+  .activity-type-btn.selected {
+    background: var(--color-primary-container);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary-container);
+  }
+
+  .activity-type-btn .material-symbols-outlined {
+    font-size: 20px;
+  }
+</style>
