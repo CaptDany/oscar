@@ -1,6 +1,6 @@
 apiVersion: v2
 name: oscar
-description: A Helm chart for Oscar - Open Source CRM
+description: A Helm chart for oscar - Open Source CRM
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
@@ -13,5 +13,5 @@ home: https://github.com/oscar/oscar
 sources:
   - https://github.com/oscar/oscar
 maintainers:
-  - name: Oscar Team
+  - name: oscar Team
     email: hello@danytellez.cc

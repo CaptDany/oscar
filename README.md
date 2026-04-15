@@ -1,4 +1,4 @@
-# Oscar CRM
+# oscar CRM
 
 A production-grade, open-source CRM backend built in Go with multi-tenant SaaS architecture, designed for scalability and performance.
 
