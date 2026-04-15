@@ -169,3 +169,86 @@ func (h *UserHandler) UpdateRoles(c echo.Context) error {
 		"roles":      roleNames,
 	})
 }
+
+type UpdateUserRequest struct {
+	FirstName *string `json:"first_name" validate:"omitempty,min=1,max=100"`
+	LastName  *string `json:"last_name" validate:"omitempty,min=1,max=100"`
+	AvatarURL *string `json:"avatar_url"`
+	Timezone  *string `json:"timezone"`
+	Locale    *string `json:"locale"`
+	IsActive  *bool   `json:"is_active"`
+}
+
+func (h *UserHandler) Update(c echo.Context) error {
+	requestingUserID := c.Get("user_id").(uuid.UUID)
+	requestingRoles := c.Get("roles").([]string)
+
+	targetUserID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return errs.BadRequest("Invalid user ID").HTTPError(c)
+	}
+
+	var req UpdateUserRequest
+	if err := c.Bind(&req); err != nil {
+		return errs.BadRequest("Invalid request body").HTTPError(c)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return errs.ValidationFailed().HTTPError(c)
+	}
+
+	_, err = h.userRepo.GetByID(c.Request().Context(), targetUserID)
+	if err != nil {
+		return errs.NotFound("User not found").HTTPError(c)
+	}
+
+	isOwnerOrAdmin := false
+	for _, role := range requestingRoles {
+		if role == "Owner" || role == "Admin" {
+			isOwnerOrAdmin = true
+			break
+		}
+	}
+
+	isSelfEdit := requestingUserID == targetUserID
+
+	if !isSelfEdit && !isOwnerOrAdmin {
+		return errs.Forbidden("You don't have permission to edit this user").HTTPError(c)
+	}
+
+	domainReq := &user.UpdateUserRequest{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		AvatarURL: req.AvatarURL,
+		Timezone:  req.Timezone,
+		Locale:    req.Locale,
+	}
+
+	if isOwnerOrAdmin && !isSelfEdit {
+		domainReq.IsActive = req.IsActive
+	}
+
+	updatedUser, err := h.userRepo.Update(c.Request().Context(), targetUserID, domainReq)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	updatedRoles, _ := h.roleRepo.GetUserRoles(c.Request().Context(), updatedUser.ID)
+	var roleNames []string
+	for _, r := range updatedRoles {
+		roleNames = append(roleNames, r.Name)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"id":         updatedUser.ID,
+		"tenant_id":  updatedUser.TenantID,
+		"email":      updatedUser.Email,
+		"first_name": updatedUser.FirstName,
+		"last_name":  updatedUser.LastName,
+		"avatar_url": h.getAvatarURL(c, updatedUser.AvatarURL),
+		"timezone":   updatedUser.Timezone,
+		"locale":     updatedUser.Locale,
+		"is_active":  updatedUser.IsActive,
+		"roles":      roleNames,
+	})
+}
