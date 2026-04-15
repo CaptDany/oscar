@@ -85,6 +85,7 @@ type CreateActivityRequest struct {
 	DueAt           *time.Time         `json:"due_at"`
 	DurationSeconds *int               `json:"duration_seconds"`
 	OwnerID         *uuid.UUID         `json:"owner_id"`
+	CreatedBy       *uuid.UUID         `json:"created_by"`
 	CustomFields    interface{}        `json:"custom_fields"`
 	EntityType      *EntityType        `json:"entity_type"`
 	EntityID        *uuid.UUID         `json:"entity_id"`

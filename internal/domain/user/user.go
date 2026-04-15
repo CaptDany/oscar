@@ -2,26 +2,28 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type User struct {
-	ID           uuid.UUID  `json:"id"`
-	TenantID     uuid.UUID  `json:"tenant_id"`
-	Email        string     `json:"email"`
-	PasswordHash string     `json:"-"`
-	FirstName    string     `json:"first_name"`
-	LastName     string     `json:"last_name"`
-	AvatarURL    *string    `json:"avatar_url"`
-	Timezone     string     `json:"timezone"`
-	Locale       string     `json:"locale"`
-	IsActive     bool       `json:"is_active"`
-	LastLoginAt  *time.Time `json:"last_login_at"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	DeletedAt    *time.Time `json:"-"`
+	ID              uuid.UUID  `json:"id"`
+	TenantID        uuid.UUID  `json:"tenant_id"`
+	Email           string     `json:"email"`
+	PasswordHash    string     `json:"-"`
+	FirstName       string     `json:"first_name"`
+	LastName        string     `json:"last_name"`
+	AvatarURL       *string    `json:"avatar_url"`
+	Timezone        string     `json:"timezone"`
+	Locale          string     `json:"locale"`
+	IsActive        bool       `json:"is_active"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	DeletedAt       *time.Time `json:"-"`
 }
 
 type Role struct {
@@ -120,12 +122,36 @@ type Repository interface {
 	Create(ctx context.Context, tenantID uuid.UUID, req *CreateUserRequest, passwordHash string) (*User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*User, error)
+	GetByVerificationToken(ctx context.Context, token string) (*User, error)
 	Update(ctx context.Context, id uuid.UUID, req *UpdateUserRequest) (*User, error)
 	UpdatePassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	UpdateAvatar(ctx context.Context, id uuid.UUID, avatarKey string) error
+	VerifyEmail(ctx context.Context, userID uuid.UUID) error
+	SetEmailVerificationToken(ctx context.Context, userID uuid.UUID, token string) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*User, int, error)
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
+	GetByOAuthProvider(ctx context.Context, provider, providerUserID string) (*OAuthUser, error)
+	LinkOAuth(ctx context.Context, userID uuid.UUID, provider, providerUserID string) error
+	CreateOAuthUser(ctx context.Context, req *CreateOAuthUserRequest, provider, providerUserID string) (*User, error)
+}
+
+var (
+	ErrUserNotFound      = fmt.Errorf("user not found")
+	ErrOAuthUserNotFound = fmt.Errorf("oauth user not found")
+)
+
+type OAuthUser struct {
+	UserID         uuid.UUID
+	Provider       string
+	ProviderUserID string
+}
+
+type CreateOAuthUserRequest struct {
+	TenantID  uuid.UUID
+	Email     string
+	FirstName string
+	LastName  string
 }
 
 type RoleRepository interface {
