@@ -112,6 +112,7 @@ func (h *ActivityHandler) List(c echo.Context) error {
 
 func (h *ActivityHandler) Create(c echo.Context) error {
 	tenantID := c.Get("tenant_id").(uuid.UUID)
+	userID := c.Get("user_id").(uuid.UUID)
 
 	var req CreateActivityRequest
 	if err := c.Bind(&req); err != nil {
@@ -140,6 +141,7 @@ func (h *ActivityHandler) Create(c echo.Context) error {
 		Outcome:         req.Outcome,
 		Status:          activity.ActivityStatus(req.Status),
 		DurationSeconds: req.DurationSeconds,
+		CreatedBy:       &userID,
 	}
 
 	if req.Direction != nil {
@@ -214,6 +216,15 @@ func (h *ActivityHandler) Update(c echo.Context) error {
 		return errs.BadRequest("Invalid activity ID").HTTPError(c)
 	}
 
+	existing, err := h.repo.GetByID(c.Request().Context(), id)
+	if err != nil {
+		return errs.NotFound("Activity not found").HTTPError(c)
+	}
+
+	if err := h.checkActivityPermission(c, existing); err != nil {
+		return err
+	}
+
 	var req UpdateActivityRequest
 	if err := c.Bind(&req); err != nil {
 		return errs.BadRequest("Invalid request body").HTTPError(c)
@@ -285,6 +296,14 @@ func (h *ActivityHandler) Complete(c echo.Context) error {
 		return errs.BadRequest("Invalid activity ID").HTTPError(c)
 	}
 
+	existing, err := h.repo.GetByID(c.Request().Context(), id)
+	if err != nil {
+		return errs.NotFound("Activity not found").HTTPError(c)
+	}
+	if err := h.checkActivityPermission(c, existing); err != nil {
+		return err
+	}
+
 	a, err := h.repo.Complete(c.Request().Context(), id)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
@@ -301,6 +320,14 @@ func (h *ActivityHandler) Uncomplete(c echo.Context) error {
 		return errs.BadRequest("Invalid activity ID").HTTPError(c)
 	}
 
+	existing, err := h.repo.GetByID(c.Request().Context(), id)
+	if err != nil {
+		return errs.NotFound("Activity not found").HTTPError(c)
+	}
+	if err := h.checkActivityPermission(c, existing); err != nil {
+		return err
+	}
+
 	a, err := h.repo.Uncomplete(c.Request().Context(), id)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
@@ -315,6 +342,14 @@ func (h *ActivityHandler) Delete(c echo.Context) error {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return errs.BadRequest("Invalid activity ID").HTTPError(c)
+	}
+
+	existing, err := h.repo.GetByID(c.Request().Context(), id)
+	if err != nil {
+		return errs.NotFound("Activity not found").HTTPError(c)
+	}
+	if err := h.checkActivityPermission(c, existing); err != nil {
+		return err
 	}
 
 	a, err := h.repo.SoftDelete(c.Request().Context(), id)
@@ -351,4 +386,21 @@ func (h *ActivityHandler) Timeline(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": entries,
 	})
+}
+
+func (h *ActivityHandler) checkActivityPermission(c echo.Context, activity *activity.Activity) error {
+	userID := c.Get("user_id").(uuid.UUID)
+	roles := c.Get("roles").([]string)
+
+	if activity.CreatedBy != nil && *activity.CreatedBy == userID {
+		return nil
+	}
+
+	for _, role := range roles {
+		if role == "Owner" || role == "Admin" {
+			return nil
+		}
+	}
+
+	return errs.Forbidden("You do not have permission to modify this activity").HTTPError(c)
 }
