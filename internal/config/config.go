@@ -28,16 +28,18 @@ type Config struct {
 	Storage   StorageConfig
 	Email     EmailConfig
 	SMS       SMSConfig
+	OAuth     OAuthConfig
 	Telemetry TelemetryConfig
 	Features  FeaturesConfig
 }
 
 type AppConfig struct {
-	Env     string
-	Port    string
-	Secret  []byte
-	BaseURL string
-	Host    string
+	Env         string
+	Port        string
+	Secret      []byte
+	BaseURL     string
+	FrontendURL string
+	Host        string
 }
 
 type DatabaseConfig struct {
@@ -79,6 +81,16 @@ type SMSConfig struct {
 	FromNumber string
 }
 
+type OAuthConfig struct {
+	GoogleClientID     string
+	GoogleClientSecret string
+	AppleClientID      string
+	AppleClientSecret  string
+	AppleTeamID        string
+	AppleKeyID         string
+	ApplePrivateKey    string
+}
+
 type TelemetryConfig struct {
 	OTLPEndpoint   string
 	PrometheusPort string
@@ -98,11 +110,12 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		App: AppConfig{
-			Env:     getEnv("APP_ENV", "development"),
-			Port:    getEnv("APP_PORT", "8080"),
-			Secret:  decodeHexSecret(getEnv("APP_SECRET", "")),
-			BaseURL: getEnv("APP_BASE_URL", "http://localhost:8080"),
-			Host:    getEnv("APP_HOST", "0.0.0.0"),
+			Env:         getEnv("APP_ENV", "development"),
+			Port:        getEnv("APP_PORT", "8080"),
+			Secret:      decodeHexSecret(getEnv("APP_SECRET", "")),
+			BaseURL:     getEnv("APP_BASE_URL", "http://localhost:8080"),
+			FrontendURL: getEnv("APP_FRONTEND_URL", "http://localhost:4321"),
+			Host:        getEnv("APP_HOST", "0.0.0.0"),
 		},
 		Database: DatabaseConfig{
 			URL:      getEnv("DATABASE_URL", ""),
@@ -146,6 +159,15 @@ func Load() (*Config, error) {
 			SMS:       getEnvBool("FEATURE_SMS", false),
 			WhatsApp:  getEnvBool("FEATURE_WHATSAPP", false),
 			APIKeys:   getEnvBool("FEATURE_API_KEYS", true),
+		},
+		OAuth: OAuthConfig{
+			GoogleClientID:     getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
+			GoogleClientSecret: getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			AppleClientID:      getEnv("OAUTH_APPLE_CLIENT_ID", ""),
+			AppleClientSecret:  getEnv("OAUTH_APPLE_CLIENT_SECRET", ""),
+			AppleTeamID:        getEnv("OAUTH_APPLE_TEAM_ID", ""),
+			AppleKeyID:         getEnv("OAUTH_APPLE_KEY_ID", ""),
+			ApplePrivateKey:    getEnv("OAUTH_APPLE_PRIVATE_KEY", ""),
 		},
 	}
 

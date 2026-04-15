@@ -165,12 +165,7 @@ func (h *UploadHandler) ConfirmAvatarUpload(c echo.Context) error {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	avatarURL, err := h.storage.GetPresignedURL(c.Request().Context(), finalKey, 7*24*time.Hour)
-	if err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
-
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"avatar_url": avatarURL,
+		"avatar_key": finalKey,
 	})
 }
