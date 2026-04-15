@@ -1,0 +1,306 @@
+---
+interface Props {
+  title?: string;
+}
+
+const { title = 'Oscar CRM' } = Astro.props;
+---
+
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-6 py-3 bg-background/80 backdrop-blur-xl border-b border-outline-variant/20 font-mono text-sm">
+  <div class="flex items-center gap-4 flex-1">
+    <div class="relative w-full max-w-lg group">
+      <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">search</span>
+      <input 
+        onclick="openCommandPalette()"
+        class="w-full bg-surface-container-low border border-transparent focus:border-primary focus:ring-1 focus:ring-primary/50 text-sm pl-11 pr-16 py-2.5 rounded-lg transition-all placeholder:text-gray-600 cursor-pointer"
+        placeholder="Search contacts, deals, or commands..."
+        type="text"
+        readonly
+      />
+      <kbd class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-600 bg-surface-container-highest px-2 py-1 rounded border border-outline-variant/30">
+        ⌘K
+      </kbd>
+    </div>
+  </div>
+  
+  <div class="flex items-center gap-4">
+    <div class="relative" id="notifications-dropdown-container">
+      <button id="notifications-btn" class="p-2.5 hover:bg-surface-container-low rounded-lg transition-colors active:opacity-80 relative text-gray-400 hover:text-primary">
+        <span class="material-symbols-outlined">notifications</span>
+        <span id="notification-dot" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-primary rounded-full hidden animate-pulse"></span>
+      </button>
+      
+      <div id="notifications-dropdown" class="hidden absolute right-0 top-full mt-2 w-80 bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-outline-variant/10 flex items-center justify-between">
+          <h3 class="font-semibold text-sm">Notifications</h3>
+          <button id="mark-all-read-btn" class="text-[10px] text-primary hover:underline">Mark all read</button>
+        </div>
+        <div id="notifications-list" class="max-h-80 overflow-y-auto">
+          <div class="p-4 text-center text-gray-500 text-sm">
+            <span class="material-symbols-outlined text-2xl">notifications_off</span>
+            <p class="mt-2">No notifications</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="h-8 w-[1px] bg-outline-variant/40"></div>
+    
+    <div class="relative" id="user-dropdown-container">
+      <button id="user-menu-btn" class="flex items-center gap-3 hover:bg-surface-container-low rounded-lg px-2 py-1.5 transition-colors">
+        <div class="text-right hidden md:block">
+          <p id="header-user-name" class="text-[11px] font-bold text-on-surface leading-tight">Loading...</p>
+          <p class="text-[9px] text-gray-500">USER</p>
+        </div>
+        <div id="header-user-avatar" class="w-9 h-9 rounded-full ring-1 ring-primary/20 flex items-center justify-center bg-surface-container-highest">
+          <span id="header-avatar-initials" class="text-xs font-bold text-gray-400">--</span>
+        </div>
+        <span class="material-symbols-outlined text-sm text-gray-500">expand_more</span>
+      </button>
+      
+      <div id="user-dropdown" class="hidden absolute right-0 top-full mt-2 w-56 bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-outline-variant/10">
+          <p id="dropdown-user-name" class="text-sm font-semibold">User</p>
+          <p id="dropdown-user-email" class="text-[10px] text-gray-500 truncate">email@...</p>
+        </div>
+        <div class="py-1">
+          <a href="/settings" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm">
+            <span class="material-symbols-outlined text-lg text-gray-400">settings</span>
+            Settings
+          </a>
+          <a href="/teams" class="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm">
+            <span class="material-symbols-outlined text-lg text-gray-400">group</span>
+            Team
+          </a>
+        </div>
+        <div class="py-1 border-t border-outline-variant/10">
+          <button id="logout-btn" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-error/10 transition-colors text-sm text-error">
+            <span class="material-symbols-outlined text-lg">logout</span>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  import { $auth, setAuth } from '../lib/stores';
+
+  let isPolling = true;
+
+  function parseCookies(): Record<string, string> {
+    return Object.fromEntries(
+      document.cookie.split('; ').map(c => {
+        const [key, ...rest] = c.split('=');
+        return [key, rest.join('=')];
+      })
+    );
+  }
+
+  function initAuthFromCookies() {
+    const cookies = parseCookies();
+    const token = cookies['oscar_token'];
+    const userStr = cookies['oscar_user'];
+    
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(decodeURIComponent(userStr));
+        if (token && user) {
+          setAuth(token, user);
+        }
+      } catch (e) {
+        console.error('Failed to parse user from cookie:', e);
+      }
+    }
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = parseCookies();
+    return cookies['oscar_token'] || null;
+  }
+
+  function updateUserDisplay() {
+    const auth = $auth.get();
+    let user = auth.user;
+    
+    if (!user) {
+      const cookies = parseCookies();
+      const userStr = cookies['oscar_user'];
+      if (userStr) {
+        try {
+          user = JSON.parse(decodeURIComponent(userStr));
+        } catch (e) {}
+      }
+    }
+    
+    if (user) {
+      const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
+      const userName = document.getElementById('header-user-name');
+      const dropdownUserName = document.getElementById('dropdown-user-name');
+      const dropdownUserEmail = document.getElementById('dropdown-user-email');
+      const avatarInitials = document.getElementById('header-avatar-initials');
+      const userAvatar = document.getElementById('header-user-avatar');
+
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+      
+      if (userName) userName.textContent = fullName || 'User';
+      if (dropdownUserName) dropdownUserName.textContent = fullName || 'User';
+      if (dropdownUserEmail) dropdownUserEmail.textContent = user.email || '';
+      if (avatarInitials) avatarInitials.textContent = initials || '--';
+
+      if (user.avatar_key && userAvatar) {
+        const img = document.createElement('img');
+        img.className = 'w-full h-full object-cover rounded-full';
+        img.src = `/api/v1/avatar/${user.id}`;
+        userAvatar.innerHTML = '';
+        userAvatar.appendChild(img);
+      }
+    }
+  }
+
+  initAuthFromCookies();
+  updateUserDisplay();
+  $auth.subscribe(() => updateUserDisplay());
+
+  async function loadNotifications() {
+    if (!isPolling) return;
+    
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/notifications?limit=10', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.status === 401) {
+        isPolling = false;
+        window.location.href = '/login?reason=session_expired';
+        return;
+      }
+      
+      if (res.status === 429) {
+        console.warn('Rate limited, skipping notification poll');
+        return;
+      }
+      
+      const data = await res.json();
+      const notifications = data.data || [];
+      const listEl = document.getElementById('notifications-list');
+      const dot = document.getElementById('notification-dot');
+      
+      if (notifications.length > 0 && listEl) {
+        const totalUnread = notifications.filter((n: any) => !n.read_at).length;
+        if (dot) {
+          if (totalUnread > 0) {
+            dot.classList.remove('hidden');
+          } else {
+            dot.classList.add('hidden');
+          }
+        }
+        
+        listEl.innerHTML = notifications.map((n: any) => `
+          <div class="px-4 py-3 hover:bg-surface-container-low transition-colors border-b border-outline-variant/5 ${!n.read_at ? 'bg-primary/5' : ''}">
+            <p class="text-sm font-medium">${n.title || 'Notification'}</p>
+            <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">${n.body || n.message || ''}</p>
+            <p class="text-[10px] text-gray-600 mt-1">${formatTimeAgo(n.created_at)}</p>
+          </div>
+        `).join('');
+      }
+    } catch (e) {
+      console.error('Failed to load notifications:', e);
+    }
+  }
+
+  function formatTimeAgo(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  async function markAllNotificationsRead() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      await fetch('/api/v1/notifications/read-all', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const dot = document.getElementById('notification-dot');
+      if (dot) dot.classList.add('hidden');
+      loadNotifications();
+    } catch (e) {}
+  }
+
+  document.getElementById('notifications-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('notifications-dropdown');
+    const userDropdown = document.getElementById('user-dropdown');
+    dropdown?.classList.toggle('hidden');
+    userDropdown?.classList.add('hidden');
+    loadNotifications();
+  });
+
+  document.getElementById('user-menu-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('user-dropdown');
+    const notificationsDropdown = document.getElementById('notifications-dropdown');
+    dropdown?.classList.toggle('hidden');
+    notificationsDropdown?.classList.add('hidden');
+  });
+
+  document.getElementById('mark-all-read-btn')?.addEventListener('click', markAllNotificationsRead);
+
+  document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    const token = getToken();
+    if (token) {
+      try {
+        await fetch('/api/v1/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {}
+    }
+    localStorage.removeItem('oscar_auth');
+    document.cookie = 'oscar_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'oscar_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'oscar_user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    window.location.href = '/login';
+  });
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('#notifications-dropdown-container')) {
+      document.getElementById('notifications-dropdown')?.classList.add('hidden');
+    }
+    if (!target.closest('#user-dropdown-container')) {
+      document.getElementById('user-dropdown')?.classList.add('hidden');
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      loadNotifications();
+    });
+  } else {
+    loadNotifications();
+  }
+  const notificationInterval = setInterval(() => {
+    if (isPolling) loadNotifications();
+  }, 60000);
+</script>

@@ -1,0 +1,277 @@
+---
+---
+
+<div id="command-palette" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeCommandPalette()"></div>
+
+  <div class="relative w-full max-w-2xl bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl shadow-black/80 overflow-hidden flex flex-col">
+    <!-- Search Input Area -->
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center gap-4">
+      <span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+      <input
+        id="command-input"
+        autofocus
+        class="flex-1 bg-transparent border-none focus:ring-0 text-xl font-body placeholder:text-gray-600 text-on-background"
+        placeholder="Type a command or search records..."
+        type="text"
+      />
+      <div class="flex items-center gap-1.5 px-2 py-1 bg-surface-container-highest border border-outline-variant/20 rounded text-[10px] font-mono text-gray-400">
+        <span>ESC</span>
+      </div>
+    </div>
+
+    <!-- Scrollable Results Area -->
+    <div class="flex-1 max-h-[614px] overflow-y-auto custom-scrollbar p-2">
+      <!-- Section: Recent -->
+      <div class="mb-4">
+        <div class="px-4 py-2 text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em]">Recent Items</div>
+        <div id="recent-items" class="space-y-0.5">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Section: Actions -->
+      <div class="mb-4">
+        <div class="px-4 py-2 text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em]">Quick Actions</div>
+        <div class="space-y-0.5">
+          <button onclick="executeCommand('new-deal')" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+            <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary text-lg">add_circle</span>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white">Create New Deal</div>
+              <div class="text-[10px] font-mono text-primary/60">CMD + N</div>
+            </div>
+          </button>
+          <button onclick="executeCommand('new-contact')" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+            <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary text-lg">person_add</span>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white">Add Contact</div>
+              <div class="text-[10px] font-mono text-primary/60">CMD + Shift + N</div>
+            </div>
+          </button>
+          <button onclick="executeCommand('goto-dashboard')" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+            <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary text-lg">dashboard</span>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white">Go to Dashboard</div>
+              <div class="text-[10px] font-mono text-primary/60">G</div>
+            </div>
+          </button>
+          <button onclick="executeCommand('goto-contacts')" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+            <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary text-lg">group</span>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white">Go to Contacts</div>
+              <div class="text-[10px] font-mono text-primary/60">C</div>
+            </div>
+          </button>
+          <button onclick="executeCommand('goto-deals')" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+            <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary text-lg">account_tree</span>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white">Go to Deals</div>
+              <div class="text-[10px] font-mono text-primary/60">D</div>
+            </div>
+          </button>
+          <button onclick="executeCommand('goto-settings')" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+            <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary text-lg">settings</span>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white">Go to Settings</div>
+              <div class="text-[10px] font-mono text-primary/60">, (comma)</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section: Search Results -->
+      <div id="search-results-section" class="hidden">
+        <div class="px-4 py-2 text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em]">Search Results</div>
+        <div id="search-results" class="space-y-0.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Stats/Help -->
+    <div class="px-6 py-3 bg-surface-container-low border-t border-outline-variant/10 flex justify-between items-center">
+      <div class="flex items-center gap-4 text-[10px] font-mono text-gray-500">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[14px]">keyboard_arrow_up</span>
+          <span class="material-symbols-outlined text-[14px]">keyboard_arrow_down</span>
+          <span>Navigate</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[14px]">keyboard_return</span>
+          <span>Open</span>
+        </div>
+      </div>
+      <div class="text-[10px] font-mono text-primary/40 uppercase tracking-widest">
+        OSCAR v0.1.0
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let recentItems: Array<{type: string, name: string, href: string, time: string}> = [];
+
+  function openCommandPalette() {
+    const palette = document.getElementById('command-palette')!;
+    palette.classList.remove('hidden');
+    document.getElementById('command-input')?.focus();
+    loadRecentItems();
+  }
+
+  function closeCommandPalette() {
+    const palette = document.getElementById('command-palette')!;
+    palette.classList.add('hidden');
+    const input = document.getElementById('command-input') as HTMLInputElement;
+    if (input) input.value = '';
+    document.getElementById('search-results-section')?.classList.add('hidden');
+  }
+
+  function executeCommand(command: string) {
+    closeCommandPalette();
+
+    const routes: Record<string, string> = {
+      'new-deal': '/deals',
+      'new-contact': '/contacts',
+      'goto-dashboard': '/dashboard',
+      'goto-contacts': '/contacts',
+      'goto-deals': '/deals',
+      'goto-settings': '/settings',
+    };
+
+    if (routes[command]) {
+      window.location.href = routes[command];
+    }
+  }
+
+  function addToRecent(type: string, name: string, href: string) {
+    const item = { type, name, href, time: new Date().toLocaleTimeString() };
+    recentItems = [item, ...recentItems.filter(i => i.name !== name)].slice(0, 5);
+    localStorage.setItem('oscar_recent', JSON.stringify(recentItems));
+  }
+
+  function loadRecentItems() {
+    try {
+      const stored = localStorage.getItem('oscar_recent');
+      if (stored) {
+        recentItems = JSON.parse(stored);
+      }
+    } catch (e) {}
+
+    const container = document.getElementById('recent-items')!;
+
+    if (recentItems.length === 0) {
+      container.innerHTML = `
+        <div class="px-4 py-3 text-sm text-gray-500 font-mono">
+          No recent items. Start by creating a deal or contact.
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = recentItems.map(item => `
+      <button onclick="window.location.href='${item.href}'" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+        <span class="material-symbols-outlined text-gray-500 group-hover:text-primary transition-colors">history</span>
+        <div class="flex-1">
+          <div class="text-sm font-medium text-white">${item.name}</div>
+          <div class="text-[10px] font-mono text-gray-500">${item.type} • ${item.time}</div>
+        </div>
+        <span class="font-mono text-[10px] text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity uppercase">↵ Enter</span>
+      </button>
+    `).join('');
+  }
+
+  // Keyboard shortcut
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      openCommandPalette();
+    }
+    if (e.key === 'Escape') {
+      closeCommandPalette();
+    }
+  });
+
+  // Search functionality
+  let searchTimeout: ReturnType<typeof setTimeout>;
+  document.getElementById('command-input')?.addEventListener('input', (e) => {
+    const query = (e.target as HTMLInputElement).value.trim();
+
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+      if (query.length < 2) {
+        document.getElementById('search-results-section')?.classList.add('hidden');
+        return;
+      }
+
+      function getToken(): string | null {
+        const stored = localStorage.getItem('oscar_auth');
+        if (stored) {
+          const { token } = JSON.parse(stored);
+          if (token) return token;
+        }
+        const cookies = Object.fromEntries(
+          document.cookie.split('; ').map(c => c.split('='))
+        );
+        return cookies['oscar_token'] || null;
+      }
+
+      const token = getToken();
+      if (!token) return;
+
+      try {
+        const [dealsRes, contactsRes, companiesRes] = await Promise.all([
+          fetch(`/api/v1/deals?search=${encodeURIComponent(query)}`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`/api/v1/persons?search=${encodeURIComponent(query)}`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch(`/api/v1/companies?search=${encodeURIComponent(query)}`, { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        const [deals, contacts, companies] = await Promise.all([
+          dealsRes.json(),
+          contactsRes.json(),
+          companiesRes.json(),
+        ]);
+
+        const results = [
+          ...(deals.data || []).map((d: any) => ({ type: 'Deal', name: d.name, href: '/deals', value: d.value })),
+          ...(contacts.data || []).map((c: any) => ({ type: 'Contact', name: `${c.first_name} ${c.last_name}`, href: '/contacts', value: null })),
+          ...(companies.data || []).map((c: any) => ({ type: 'Company', name: c.name, href: '/companies', value: null })),
+        ];
+
+        const container = document.getElementById('search-results')!;
+        document.getElementById('search-results-section')?.classList.remove('hidden');
+
+        if (results.length === 0) {
+          container.innerHTML = `<div class="px-4 py-3 text-sm text-gray-500 font-mono">No results found</div>`;
+          return;
+        }
+
+        container.innerHTML = results.slice(0, 10).map(item => `
+          <button onclick="window.location.href='${item.href}'" class="w-full flex items-center gap-4 px-4 py-3 rounded-lg hover:bg-white/5 group transition-all text-left">
+            <span class="material-symbols-outlined text-gray-500 group-hover:text-primary transition-colors">${item.type === 'Deal' ? 'attach_money' : item.type === 'Contact' ? 'person' : 'domain'}</span>
+            <div class="flex-1">
+              <div class="text-sm font-medium text-white">${item.name}</div>
+              <div class="text-[10px] font-mono text-gray-500">${item.type}${item.value ? ` • $${item.value.toLocaleString()}` : ''}</div>
+            </div>
+          </button>
+        `).join('');
+      } catch (err) {
+        console.error('Search failed:', err);
+      }
+    }, 300);
+  });
+
+  // Expose to window for other components to use
+  (window as any).openCommandPalette = openCommandPalette;
+  (window as any).addToRecent = addToRecent;
+</script>

@@ -1,0 +1,62 @@
+---
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const navItems = [
+  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/contacts', label: 'Contacts', icon: 'person' },
+  { href: '/companies', label: 'Companies', icon: 'domain' },
+  { href: '/deals', label: 'Deals', icon: 'account_tree' },
+  { href: '/activities', label: 'Activities', icon: 'event_note' },
+  { href: '/automations', label: 'Automations', icon: 'bolt' },
+  { href: '/teams', label: 'Team', icon: 'group' },
+  { href: '/settings', label: 'Settings', icon: 'settings' },
+];
+
+const isActive = (href: string) => currentPath.startsWith(href);
+---
+
+<aside class="h-screen w-[220px] flex-col sticky left-0 top-0 bg-surface-container-low border-r border-outline-variant/20 flex flex-col h-full py-6">
+  <div class="px-6 mb-8">
+    <div class="text-xl font-bold text-primary tracking-widest uppercase font-headline">oscar CRM</div>
+    <div class="text-[10px] text-gray-500 font-mono mt-1 tracking-widest">v0.1.0</div>
+  </div>
+
+  <nav class="flex-1 flex flex-col gap-1">
+    {navItems.map((item) => (
+      <a
+        href={item.href}
+        class:list={[
+          "flex items-center gap-3 px-4 py-2 transition-colors group",
+          isActive(item.href)
+            ? "bg-primary-container/10 text-primary border-r-2 border-primary"
+            : "text-gray-400 hover:text-white hover:bg-surface-container"
+        ]}
+      >
+        <span class="material-symbols-outlined text-lg">{item.icon}</span>
+        <span class="font-headline tracking-tight">{item.label}</span>
+      </a>
+    ))}
+  </nav>
+
+  <div class="px-4 mt-auto space-y-4">
+    <button class="w-full bg-gradient-to-br from-primary to-primary-container text-on-primary font-semibold py-2 rounded-lg text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg shadow-primary-container/20">
+      <span class="material-symbols-outlined text-lg">add</span>
+      New Record
+    </button>
+
+    <div class="mt-6 flex flex-col gap-1 border-t border-outline-variant/20 pt-4">
+      <a class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white transition-colors" href="#">
+        <span class="material-symbols-outlined text-lg">contact_support</span>
+        <span class="font-headline tracking-tight">Support</span>
+      </a>
+      <a class="flex items-center gap-3 px-4 py-2 text-gray-400 hover:text-white transition-colors" href="#">
+        <span class="material-symbols-outlined text-lg">help_outline</span>
+        <span class="font-headline tracking-tight">Help</span>
+      </a>
+    </div>
+  </div>
+</aside>
