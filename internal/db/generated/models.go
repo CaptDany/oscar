@@ -1018,6 +1018,7 @@ type Tenant struct {
 	Settings         []byte             `json:"settings"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	InviteOnly       bool               `json:"invite_only"`
 }
 
 type TenantBranding struct {
@@ -1037,20 +1038,24 @@ type TenantBranding struct {
 }
 
 type User struct {
-	ID           pgtype.UUID        `json:"id"`
-	TenantID     pgtype.UUID        `json:"tenant_id"`
-	Email        string             `json:"email"`
-	PasswordHash string             `json:"password_hash"`
-	FirstName    string             `json:"first_name"`
-	LastName     string             `json:"last_name"`
-	AvatarUrl    pgtype.Text        `json:"avatar_url"`
-	Timezone     pgtype.Text        `json:"timezone"`
-	Locale       pgtype.Text        `json:"locale"`
-	IsActive     bool               `json:"is_active"`
-	LastLoginAt  pgtype.Timestamptz `json:"last_login_at"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+	ID                      pgtype.UUID        `json:"id"`
+	TenantID                pgtype.UUID        `json:"tenant_id"`
+	Email                   string             `json:"email"`
+	PasswordHash            string             `json:"password_hash"`
+	FirstName               string             `json:"first_name"`
+	LastName                string             `json:"last_name"`
+	AvatarUrl               pgtype.Text        `json:"avatar_url"`
+	Timezone                pgtype.Text        `json:"timezone"`
+	Locale                  pgtype.Text        `json:"locale"`
+	IsActive                bool               `json:"is_active"`
+	LastLoginAt             pgtype.Timestamptz `json:"last_login_at"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
+	EmailVerifiedAt         pgtype.Timestamptz `json:"email_verified_at"`
+	EmailVerificationToken  pgtype.Text        `json:"email_verification_token"`
+	EmailVerificationSentAt pgtype.Timestamptz `json:"email_verification_sent_at"`
+	PendingInvitationID     pgtype.UUID        `json:"pending_invitation_id"`
 }
 
 type UserRole struct {
