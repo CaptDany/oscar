@@ -1,0 +1,206 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Automations">
+  <main class="flex-1 flex">
+    <!-- Node Canvas Area -->
+    <div class="flex-1 relative bg-dot-pattern bg-dot-sm flex flex-col items-center py-12 overflow-y-auto custom-scrollbar">
+      <!-- Step 1: Trigger -->
+      <div class="relative z-10 w-[400px]">
+        <div class="bg-surface-container-low p-[1px] rounded-xl bg-gradient-to-br from-primary/30 to-transparent">
+          <div class="bg-surface-container-lowest rounded-xl p-5 border border-outline-variant/10">
+            <div class="flex items-center justify-between mb-4">
+              <span class="bg-primary/10 text-primary px-2 py-1 rounded text-[10px] font-mono uppercase tracking-tighter">Trigger</span>
+              <span class="material-symbols-outlined text-slate-500 text-sm cursor-pointer hover:text-white">more_vert</span>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="p-3 bg-surface-container rounded-lg border border-outline-variant/20">
+                <span class="material-symbols-outlined text-primary">webhook</span>
+              </div>
+              <div>
+                <h3 class="font-headline font-bold text-on-background">Inbound Webhook</h3>
+                <p class="text-xs text-slate-400 font-mono mt-1">Listen for POST to /v1/lead-gen</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Vertical Line Connector -->
+      <div class="h-12 w-[2px] bg-gradient-to-b from-primary/60 to-primary/20 shadow-[0_0_10px_rgba(210,187,255,0.4)]"></div>
+      
+      <!-- Step 2: Condition -->
+      <div class="relative z-10 w-[400px]">
+        <div class="bg-surface-container-low p-[1px] rounded-xl">
+          <div class="bg-surface-container-lowest rounded-xl p-5 border border-outline-variant/10">
+            <div class="flex items-center justify-between mb-4">
+              <span class="bg-tertiary-container/10 text-tertiary px-2 py-1 rounded text-[10px] font-mono uppercase tracking-tighter">Condition</span>
+              <span class="material-symbols-outlined text-slate-500 text-sm cursor-pointer hover:text-white">more_vert</span>
+            </div>
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-mono text-slate-400">IF</span>
+                  <span class="text-xs font-headline font-semibold">budget_size</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-mono text-primary">&gt;</span>
+                  <span class="text-xs font-mono text-white">$50,000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="absolute -left-12 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <div class="text-[10px] font-mono text-red-400 uppercase tracking-widest opacity-50">False</div>
+          <div class="w-3 h-3 rounded-full bg-red-400 border-2 border-background"></div>
+        </div>
+        <div class="absolute -right-12 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-emerald-500 border-2 border-background"></div>
+          <div class="text-[10px] font-mono text-emerald-500 uppercase tracking-widest opacity-50">True</div>
+        </div>
+      </div>
+      
+      <!-- Vertical Line Connector -->
+      <div class="h-12 w-[2px] bg-gradient-to-b from-primary/20 to-primary/40 shadow-[0_0_8px_rgba(210,187,255,0.2)]"></div>
+      
+      <!-- Step 3: Action -->
+      <div class="relative z-10 w-[400px]">
+        <div class="bg-surface-container-low p-[1px] rounded-xl bg-gradient-to-tr from-secondary-container/20 to-transparent">
+          <div class="bg-surface-container-lowest rounded-xl p-5 border border-outline-variant/10">
+            <div class="flex items-center justify-between mb-4">
+              <span class="bg-secondary-container/10 text-secondary px-2 py-1 rounded text-[10px] font-mono uppercase tracking-tighter">Action</span>
+              <span class="material-symbols-outlined text-slate-500 text-sm cursor-pointer hover:text-white">more_vert</span>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="p-3 bg-surface-container rounded-lg border border-outline-variant/20">
+                <span class="material-symbols-outlined text-secondary">mail</span>
+              </div>
+              <div>
+                <h3 class="font-headline font-bold text-on-background">Send Email</h3>
+                <p class="text-xs text-slate-400 font-mono mt-1">Template: HIGH_VALUE_ONBOARD</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add Step Button -->
+      <div class="mt-8">
+        <button class="group flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-highest border border-primary/20 hover:border-primary/60 transition-all">
+          <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">add</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Node Library Sidebar -->
+    <aside class="w-80 bg-surface-container-low border-l border-outline-variant/10 flex flex-col">
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="font-headline font-bold text-sm tracking-widest uppercase">Node Library</h3>
+          <span class="material-symbols-outlined text-slate-500 text-sm cursor-pointer">search</span>
+        </div>
+        
+        <div class="space-y-8">
+          <!-- Triggers -->
+          <div>
+            <h4 class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-4">Triggers</h4>
+            <div class="space-y-2">
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-primary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-primary text-lg">webhook</span>
+                <span class="text-xs font-medium">Webhook</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-primary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-primary text-lg">schedule</span>
+                <span class="text-xs font-medium">Schedule</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-primary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-primary text-lg">database</span>
+                <span class="text-xs font-medium">Record Created</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Actions -->
+          <div>
+            <h4 class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-4">Actions</h4>
+            <div class="space-y-2">
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-secondary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-secondary text-lg">mail</span>
+                <span class="text-xs font-medium">Email Notification</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-secondary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-secondary text-lg">edit_note</span>
+                <span class="text-xs font-medium">Update Record</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-secondary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-secondary text-lg">hub</span>
+                <span class="text-xs font-medium">Slack Message</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Logic -->
+          <div>
+            <h4 class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-4">Logic</h4>
+            <div class="space-y-2">
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-tertiary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-tertiary text-lg">call_split</span>
+                <span class="text-xs font-medium">Conditional Branch</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg border border-outline-variant/5 hover:border-tertiary/30 cursor-pointer transition-all group">
+                <span class="material-symbols-outlined text-tertiary text-lg">timer</span>
+                <span class="text-xs font-medium">Delay</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-auto p-6 bg-surface-container-highest/20 border-t border-outline-variant/10">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-[10px] font-mono text-slate-400">WORKFLOW STACK</span>
+          <span class="text-[10px] font-mono text-primary">82% EFFICIENCY</span>
+        </div>
+        <div class="w-full bg-surface-container h-1 rounded-full overflow-hidden">
+          <div class="bg-primary h-full w-[82%]"></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+  
+  <!-- Utility Bar Footer -->
+  <footer class="h-12 bg-surface-container-lowest border-t border-outline-variant/10 flex items-center px-6 justify-between z-50">
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm text-slate-500">history</span>
+        <span class="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Last saved 2m ago</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm text-slate-500">check_circle</span>
+        <span class="text-[10px] font-mono text-slate-400 uppercase tracking-widest">No syntax errors</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <button class="text-[10px] font-mono text-slate-400 hover:text-white uppercase tracking-widest transition-colors">Discard changes</button>
+      <button class="bg-primary-container text-white px-4 py-1.5 rounded text-[10px] font-mono uppercase font-bold tracking-widest transition-all hover:brightness-110 active:scale-95">Publish Workflow</button>
+    </div>
+  </footer>
+  
+  <!-- Floating Controls -->
+  <div class="fixed bottom-20 left-24 flex items-center gap-2 z-50">
+    <div class="flex bg-surface-container-highest/80 backdrop-blur-md rounded-lg p-1 border border-outline-variant/20 shadow-2xl">
+      <button class="p-2 text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-lg">zoom_in</span></button>
+      <button class="p-2 text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-lg">zoom_out</span></button>
+      <div class="w-[1px] h-4 bg-outline-variant/40 self-center mx-1"></div>
+      <button class="p-2 text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-lg">center_focus_strong</span></button>
+    </div>
+    <div class="bg-surface-container-highest/80 backdrop-blur-md rounded-lg p-1 border border-outline-variant/20 shadow-2xl">
+      <button class="p-2 text-slate-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-lg">play_circle</span></button>
+    </div>
+  </div>
+</AppLayout>

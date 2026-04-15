@@ -1,0 +1,573 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+
+const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
+---
+
+<AppLayout title="Teams">
+  <section class="p-6 space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold font-headline tracking-tight text-white">Team Members</h1>
+        <p id="team-count-text" class="text-sm text-gray-500 font-mono mt-1">Manage your team and permissions.</p>
+      </div>
+      {isAdmin && (
+        <button onclick="openInviteModal()" class="flex items-center gap-2 px-4 py-2 bg-primary-container text-white text-xs font-mono rounded hover:opacity-90 transition-colors">
+          <span class="material-symbols-outlined text-[16px]">person_add</span>
+          Invite Member
+        </button>
+      )}
+    </div>
+
+    <!-- Pending Invitations -->
+    {isAdmin && (
+      <div id="pending-invitations-section" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-headline font-semibold text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">schedule_send</span>
+            Pending Invitations
+          </h2>
+        </div>
+        <div id="pending-invitations-list" class="bg-surface-container-low rounded-lg border border-outline-variant/10 overflow-hidden">
+          <!-- Pending invitations loaded here -->
+        </div>
+      </div>
+    )}
+
+    <!-- Team Grid -->
+    <div id="team-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="col-span-full">
+        <div id="team-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Team members will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Invite Modal -->
+  <div id="invite-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeInviteModal()"></div>
+    <div class="relative w-full max-w-md bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+        <h2 class="text-lg font-headline font-bold text-white">Invite Team Member</h2>
+        <button onclick="closeInviteModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+          <span class="material-symbols-outlined text-gray-400">close</span>
+        </button>
+      </div>
+      <form id="invite-form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">First Name</label>
+          <input type="text" id="invite-first-name" name="first_name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="John" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Last Name</label>
+          <input type="text" id="invite-last-name" name="last_name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Doe" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Email Address</label>
+          <input type="email" id="invite-email" name="email" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="john.doe@company.com" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Role</label>
+          <select id="invite-role" name="role_name" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
+            <option value="Member">Member</option>
+            <option value="Admin">Admin</option>
+            <option value="Manager">Manager</option>
+            <option value="Sales Rep">Sales Rep</option>
+            <option value="Read Only">Read Only</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeInviteModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity">Send Invite</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div id="edit-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeEditModal()"></div>
+    <div class="relative w-full max-w-md bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+        <h2 class="text-lg font-headline font-bold text-white">Edit User</h2>
+        <button onclick="closeEditModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+          <span class="material-symbols-outlined text-gray-400">close</span>
+        </button>
+      </div>
+      <form id="edit-form" class="p-6 space-y-4">
+        <input type="hidden" id="edit-user-id" name="user_id" />
+        <div class="flex justify-center mb-4">
+          <div class="relative">
+            <div id="edit-avatar-preview" class="w-20 h-20 rounded-full bg-surface-container-highest flex items-center justify-center text-2xl font-bold text-gray-400">
+              ??
+            </div>
+            <label class="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/80 transition-colors">
+              <span class="material-symbols-outlined text-white text-sm">camera_alt</span>
+              <input type="file" id="edit-avatar-input" class="hidden" accept="image/*" />
+            </label>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">First Name</label>
+            <input type="text" id="edit-first-name" name="first_name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Last Name</label>
+            <input type="text" id="edit-last-name" name="last_name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+        </div>
+        <div id="edit-role-section" class="hidden">
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Role</label>
+          <select id="edit-role" name="role_name" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
+            <option value="Member">Member</option>
+            <option value="Admin">Admin</option>
+            <option value="Manager">Manager</option>
+            <option value="Sales Rep">Sales Rep</option>
+            <option value="Read Only">Read Only</option>
+          </select>
+        </div>
+        <div id="edit-active-section" class="hidden">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" id="edit-is-active" name="is_active" class="w-5 h-5 rounded bg-surface-container-highest border-none text-primary focus:ring-primary" />
+            <span class="text-sm text-white">Active</span>
+          </label>
+        </div>
+        <div id="edit-error" class="hidden text-error text-sm bg-error/10 p-3 rounded-lg"></div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  let teamMembers: any[] = [];
+  let pendingInvitations: any[] = [];
+  let currentUser: any = null;
+  let isAdmin = false;
+  let editingAvatarUrl: string | null = null;
+
+  const roleMap: Record<string, string> = {
+    'Owner': 'Owner',
+    'Admin': 'Admin',
+    'Manager': 'Manager',
+    'Sales Rep': 'Sales Rep',
+    'Member': 'Member',
+    'Read Only': 'Read Only',
+  };
+
+  (window as any).openInviteModal = function() {
+    document.getElementById('invite-modal')!.classList.remove('hidden');
+  };
+
+  (window as any).closeInviteModal = function() {
+    document.getElementById('invite-modal')!.classList.add('hidden');
+    (document.getElementById('invite-form') as HTMLFormElement).reset();
+  };
+
+  (window as any).openEditModal = function(userId: string) {
+    const user = teamMembers.find(m => m.id === userId);
+    if (!user) return;
+    
+    currentUser = user;
+    
+    document.getElementById('edit-user-id')!.setAttribute('value', user.id);
+    (document.getElementById('edit-first-name') as HTMLInputElement).value = user.first_name || '';
+    (document.getElementById('edit-last-name') as HTMLInputElement).value = user.last_name || '';
+    
+    const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || '??';
+    document.getElementById('edit-avatar-preview')!.textContent = initials;
+    
+    const roleSelect = document.getElementById('edit-role') as HTMLSelectElement;
+    roleSelect.value = user.roles?.[0] || 'Member';
+    
+    const isActiveCheckbox = document.getElementById('edit-is-active') as HTMLInputElement;
+    isActiveCheckbox.checked = user.is_active !== false;
+    
+    const roleSection = document.getElementById('edit-role-section')!;
+    const activeSection = document.getElementById('edit-active-section')!;
+    if (isAdmin) {
+      roleSection.classList.remove('hidden');
+      activeSection.classList.remove('hidden');
+    } else {
+      roleSection.classList.add('hidden');
+      activeSection.classList.add('hidden');
+    }
+    
+    const errorEl = document.getElementById('edit-error')!;
+    errorEl.classList.add('hidden');
+    
+    document.getElementById('edit-modal')!.classList.remove('hidden');
+  };
+
+  (window as any).closeEditModal = function() {
+    document.getElementById('edit-modal')!.classList.add('hidden');
+    (document.getElementById('edit-form') as HTMLFormElement).reset();
+    currentUser = null;
+    editingAvatarUrl = null;
+  };
+
+  function getRoleBadge(role: string): { bg: string, text: string } {
+    const roles: Record<string, { bg: string, text: string }> = {
+      'Owner': { bg: 'bg-primary/10 text-primary border-primary/20', text: 'Owner' },
+      'Admin': { bg: 'bg-secondary/10 text-secondary border-secondary/20', text: 'Admin' },
+      'Manager': { bg: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20', text: 'Manager' },
+      'Sales Rep': { bg: 'bg-green-500/10 text-green-500 border-green-500/20', text: 'Sales Rep' },
+      'Member': { bg: 'bg-surface-container text-gray-400 border-outline-variant/20', text: 'Member' },
+      'Read Only': { bg: 'bg-gray-500/10 text-gray-400 border-gray-500/20', text: 'Read Only' },
+    };
+    return roles[role] || roles['Member'];
+  }
+
+  function getRoleBadgeDisplay(roleName: string): { bg: string, text: string } {
+    return getRoleBadge(roleName);
+  }
+
+  function renderTeamMembers() {
+    const list = document.getElementById('team-list')!;
+    document.getElementById('team-count-text')!.textContent = `${teamMembers.length} team members.`;
+
+    if (teamMembers.length === 0) {
+      list.innerHTML = `
+        <div class="col-span-full flex flex-col items-center justify-center py-16">
+          <span class="material-symbols-outlined text-5xl text-gray-600 mb-4">group</span>
+          <p class="text-gray-500 font-mono text-sm mb-4">No team members found</p>
+          <p class="text-gray-600 font-mono text-xs">Invite colleagues to collaborate on deals and contacts</p>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = teamMembers.map((member: any) => {
+      const roleBadge = getRoleBadge(member.roles?.[0] || 'Member');
+      const initials = `${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase() || '??';
+      
+      return `
+        <div class="bg-surface-container-low p-5 rounded-lg border border-outline-variant/10 hover:border-primary/40 transition-all group">
+          <div class="flex items-start gap-4">
+            ${member.avatar_url 
+              ? `<img src="${member.avatar_url}" alt="${member.first_name}" class="w-12 h-12 rounded-full object-cover" />`
+              : `<div class="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center text-lg font-bold text-gray-400">${initials}</div>`
+            }
+            <div class="flex-1 min-w-0">
+              <h3 class="font-headline font-semibold text-white truncate">${member.first_name} ${member.last_name}</h3>
+              <p class="text-xs text-gray-500 font-mono truncate">${member.email}</p>
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border mt-2 ${roleBadge.bg}">${roleBadge.text}</span>
+            </div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-outline-variant/10 flex items-center justify-between">
+            <div class="text-[10px] font-mono text-gray-500">
+              Joined ${new Date(member.created_at || Date.now()).toLocaleDateString()}
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="openEditModal('${member.id}')" class="p-1.5 hover:bg-surface-container-high rounded transition-colors text-gray-400 opacity-0 group-hover:opacity-100">
+                <span class="material-symbols-outlined text-[18px]">edit</span>
+              </button>
+              <button class="p-1.5 hover:bg-surface-container-high rounded transition-colors text-gray-400 opacity-0 group-hover:opacity-100">
+                <span class="material-symbols-outlined text-[18px]">more_vert</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderPendingInvitations() {
+    const section = document.getElementById('pending-invitations-section')!;
+    const list = document.getElementById('pending-invitations-list')!;
+
+    const pending = pendingInvitations.filter(inv => !inv.accepted_at);
+    
+    if (pending.length === 0) {
+      section.classList.add('hidden');
+      return;
+    }
+
+    section.classList.remove('hidden');
+
+    list.innerHTML = pending.map((inv: any) => {
+      const roleBadge = getRoleBadgeDisplay(inv.role_name);
+      const expiresAt = new Date(inv.expires_at);
+      const isExpired = expiresAt < new Date();
+      const inviterName = inv.inviter?.name || 'Unknown';
+
+      return `
+        <div class="flex items-center justify-between p-4 hover:bg-surface-container transition-colors">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-sm font-bold text-gray-400">
+              ${inv.first_name?.[0] || ''}${inv.last_name?.[0] || ''}
+            </div>
+            <div>
+              <p class="text-sm font-medium text-white">${inv.first_name} ${inv.last_name}</p>
+              <p class="text-xs text-gray-500 font-mono">${inv.email}</p>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${roleBadge.bg}">${roleBadge.text}</span>
+          </div>
+          <div class="flex items-center gap-6">
+            <div class="text-right">
+              <p class="text-[10px] font-mono text-gray-500 uppercase">Invited by</p>
+              <p class="text-xs text-gray-400">${inviterName}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] font-mono text-gray-500 uppercase">Expires</p>
+              <p class="text-xs ${isExpired ? 'text-red-400' : 'text-gray-400'}">${expiresAt.toLocaleDateString()}</p>
+            </div>
+            <button onclick="revokeInvitation('${inv.id}')" class="p-2 hover:bg-surface-container-high rounded transition-colors text-gray-400 hover:text-red-400">
+              <span class="material-symbols-outlined text-[18px]">cancel</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  function getCurrentUserId(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const data = JSON.parse(stored);
+      if (data.user?.id) return data.user.id;
+    }
+    return null;
+  }
+
+  async function loadTeamMembers() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const { data } = await res.json();
+      teamMembers = data || [];
+      renderTeamMembers();
+    } catch (err) {
+      console.error('Failed to load team members:', err);
+    }
+  }
+
+  async function loadPendingInvitations() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/invitations', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const { data } = await res.json();
+        pendingInvitations = data || [];
+        renderPendingInvitations();
+      }
+    } catch (err) {
+      console.error('Failed to load invitations:', err);
+    }
+  }
+
+  async function revokeInvitation(id: string) {
+    if (!confirm('Are you sure you want to revoke this invitation?')) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`/api/v1/invitations/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        loadPendingInvitations();
+      } else {
+        const error = await res.json();
+        alert('Failed to revoke invitation: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to revoke invitation:', err);
+    }
+  }
+
+  document.getElementById('invite-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          email: formData.get('email'),
+          first_name: formData.get('first_name'),
+          last_name: formData.get('last_name'),
+          role_name: formData.get('role_name'),
+        })
+      });
+
+      if (res.ok) {
+        closeInviteModal();
+        loadPendingInvitations();
+      } else {
+        const error = await res.json();
+        alert('Failed to send invitation: ' + (error.error?.message || error.error?.code || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to send invitation:', err);
+    }
+  });
+
+  document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('edit-error')!;
+    errorEl.classList.add('hidden');
+
+    const token = getToken();
+    if (!token || !currentUser) return;
+
+    const userId = (document.getElementById('edit-user-id') as HTMLInputElement).value;
+    const firstName = (document.getElementById('edit-first-name') as HTMLInputElement).value;
+    const lastName = (document.getElementById('edit-last-name') as HTMLInputElement).value;
+    const roleName = (document.getElementById('edit-role') as HTMLSelectElement).value;
+    const isActive = (document.getElementById('edit-is-active') as HTMLInputElement).checked;
+
+    try {
+      const updateData: any = {
+        first_name: firstName,
+        last_name: lastName,
+      };
+
+      const res = await fetch(`/api/v1/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        errorEl.textContent = error.error?.message || 'Failed to update user';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      if (isAdmin && roleName !== currentUser.roles?.[0]) {
+        const roleRes = await fetch(`/api/v1/users/${userId}/roles`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ role_ids: [] })
+        });
+
+        if (roleRes.ok) {
+          const roleData = await roleRes.json();
+        }
+      }
+
+      closeEditModal();
+      loadTeamMembers();
+    } catch (err) {
+      console.error('Failed to update user:', err);
+      errorEl.textContent = 'An error occurred while updating the user';
+      errorEl.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('edit-avatar-input')?.addEventListener('change', async (e) => {
+    const input = e.target as HTMLInputElement;
+    if (!input.files?.[0]) return;
+
+    const file = input.files[0];
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const presignedRes = await fetch('/api/v1/upload/avatar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          filename: file.name,
+          content_type: file.type
+        })
+      });
+
+      if (!presignedRes.ok) {
+        console.error('Failed to get presigned URL');
+        return;
+      }
+
+      const { upload_url, object_key, final_url } = await presignedRes.json();
+
+      await fetch(upload_url, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type
+        }
+      });
+
+      await fetch('/api/v1/upload/avatar/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ object_key })
+      });
+
+      editingAvatarUrl = final_url;
+
+      const preview = document.getElementById('edit-avatar-preview')!;
+      preview.innerHTML = `<img src="${final_url}" class="w-full h-full object-cover rounded-full" />`;
+
+    } catch (err) {
+      console.error('Failed to upload avatar:', err);
+    }
+  });
+
+  function initPage() {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const data = JSON.parse(stored);
+      const userRoles = data.user?.roles || [];
+      isAdmin = userRoles.includes('Owner') || userRoles.includes('Admin');
+    }
+  }
+
+  initPage();
+  loadTeamMembers();
+  loadPendingInvitations();
+</script>

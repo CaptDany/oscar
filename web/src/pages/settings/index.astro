@@ -1,0 +1,415 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+
+const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
+---
+
+<AppLayout title="Settings">
+  <main class="ml-[220px] pt-10 px-8 pb-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="mb-12">
+        <h2 class="text-4xl font-headline font-bold text-on-background tracking-tight mb-2">Settings</h2>
+        <p class="text-on-surface-variant font-mono text-sm max-w-2xl uppercase tracking-wider">Manage your Oscar CRM configuration</p>
+      </div>
+
+      <!-- Settings Navigation -->
+      <div class="flex gap-6 mb-8 border-b border-outline-variant/20 pb-4">
+        <a href="/settings" class="text-primary border-b-2 border-primary pb-2 font-mono text-sm uppercase tracking-widest">Branding</a>
+        <a href="/settings/users" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Users</a>
+        <a href="/settings/security" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Security</a>
+        <a href="/settings/pipelines" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Pipelines</a>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <!-- Left Column: Settings Form -->
+        <div class="lg:col-span-5 flex flex-col gap-8">
+          <!-- Color Picker Section -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="font-headline text-lg font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">palette</span>
+                Accent Architecture
+              </h3>
+              <span class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Global Accent</span>
+            </div>
+            <div class="space-y-6">
+              <div class="grid grid-cols-5 gap-3">
+                <button class="aspect-square bg-[#d2bbff] rounded border-2 border-white ring-2 ring-primary ring-offset-4 ring-offset-surface-container-low" data-color="#d2bbff"></button>
+                <button class="aspect-square bg-[#7c3aed] rounded hover:scale-105 transition-transform" data-color="#7c3aed"></button>
+                <button class="aspect-square bg-[#0044fe] rounded hover:scale-105 transition-transform" data-color="#0044fe"></button>
+                <button class="aspect-square bg-[#cebdff] rounded hover:scale-105 transition-transform" data-color="#cebdff"></button>
+                <div class="aspect-square bg-surface-container-highest rounded border-2 border-outline-variant flex items-center justify-center cursor-pointer hover:bg-surface-container-high transition-colors">
+                  <span class="material-symbols-outlined text-sm">add</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-2 block">Primary</label>
+                  <input id="primary-color" class="w-full bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm font-mono" type="text" value="#D2BBFF"/>
+                </div>
+                <div>
+                  <label class="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-2 block">Secondary</label>
+                  <input id="secondary-color" class="w-full bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm font-mono" type="text" value="#7c3aed"/>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Logo Upload Section -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="font-headline text-lg font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">token</span>
+                Brand Assets
+              </h3>
+              <span class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">SVG / PNG / WEBP</span>
+            </div>
+            <div id="logo-upload-area" class="border-2 border-dashed border-outline-variant rounded-xl p-8 flex flex-col items-center justify-center gap-4 bg-surface-container-lowest hover:bg-surface-container transition-all group cursor-pointer">
+              <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors">
+                <span class="material-symbols-outlined text-3xl">upload_file</span>
+              </div>
+              <div class="text-center">
+                <p class="text-sm font-medium text-on-surface">Drag and drop logo file</p>
+                <p class="text-xs font-mono text-slate-500 mt-1 uppercase tracking-wider">or <span class="text-primary hover:underline cursor-pointer">browse filesystem</span></p>
+              </div>
+              <input type="file" id="logo-input" class="hidden" accept="image/*" />
+            </div>
+            <div id="logo-preview" class="hidden mt-4 p-4 bg-surface-container rounded-lg flex items-center gap-4">
+              <div id="logo-preview-img" class="w-12 h-12 bg-primary-container rounded-lg flex items-center justify-center overflow-hidden">
+                <span class="text-white font-bold">O</span>
+              </div>
+              <div class="flex-1">
+                <p id="logo-name" class="text-sm font-medium text-on-surface">logo.png</p>
+                <p class="text-xs text-slate-500">Upload successful</p>
+              </div>
+              <button onclick="removeLogo()" class="p-1 hover:bg-surface-container-high rounded transition-colors text-gray-400">
+                <span class="material-symbols-outlined text-lg">delete</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Font Selector -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="font-headline text-lg font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">format_size</span>
+                Typography Matrix
+              </h3>
+            </div>
+            <div class="space-y-4">
+              <div class="flex flex-col gap-1">
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Headline Font</label>
+                <select id="headline-font" class="bg-surface-container-highest border-none focus:ring-1 focus:ring-primary text-sm p-3 rounded-lg">
+                  <option value="Space Grotesk">Space Grotesk</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Geist Mono">Geist Mono</option>
+                </select>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Mono Font</label>
+                <select id="mono-font" class="bg-surface-container-highest border-none focus:ring-1 focus:ring-primary text-sm p-3 rounded-lg font-mono">
+                  <option value="Geist Mono">Geist Mono</option>
+                  <option value="Fira Code">Fira Code</option>
+                  <option value="JetBrains Mono">JetBrains Mono</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <!-- Organization -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="font-headline text-lg font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">business</span>
+                Organization
+              </h3>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Tenant Name</label>
+                <input id="tenant-name" class="w-full bg-surface-container-highest border-none focus:ring-1 focus:ring-primary text-sm p-3 rounded-lg mt-2" type="text" placeholder="My Company"/>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Currency</label>
+                  <select id="currency" class="w-full bg-surface-container-highest border-none focus:ring-1 focus:ring-primary text-sm p-3 rounded-lg mt-2">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CAD">CAD ($)</option>
+                    <option value="MXN">MXN ($)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Timezone</label>
+                  <select id="timezone" class="w-full bg-surface-container-highest border-none focus:ring-1 focus:ring-primary text-sm p-3 rounded-lg mt-2">
+                    <option value="America/New_York">Eastern (ET)</option>
+                    <option value="America/Chicago">Central (CT)</option>
+                    <option value="America/Denver">Mountain (MT)</option>
+                    <option value="America/Los_Angeles">Pacific (PT)</option>
+                    <option value="America/Mexico_City">Mexico City</option>
+                    <option value="Europe/London">London</option>
+                    <option value="Europe/Paris">Paris</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {isAdmin && (
+            <button onclick="saveSettings()" class="w-full py-3 bg-primary-container text-white font-mono rounded-lg hover:opacity-90 transition-opacity shadow-lg shadow-primary-container/20">
+              Save Changes
+            </button>
+          )}
+        </div>
+
+        <!-- Right Column: Live Preview -->
+        <div class="lg:col-span-7 sticky top-24">
+          <div class="relative">
+            <div class="absolute -top-3 left-6 bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-mono uppercase font-bold tracking-tighter z-10 shadow-lg shadow-primary-container/20">
+              Realtime Canvas Preview
+            </div>
+            <div class="bg-surface-container rounded-xl overflow-hidden shadow-2xl border border-outline-variant/10">
+              <div class="flex h-[600px] bg-background">
+                <div class="w-16 h-full bg-surface-container-low flex flex-col items-center py-6 gap-6">
+                  <div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'FILL' 1;">architecture</span>
+                  </div>
+                  <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border-r-2 border-primary">
+                    <span class="material-symbols-outlined text-sm">grid_view</span>
+                  </div>
+                  <div class="w-8 h-8 flex items-center justify-center text-slate-600"><span class="material-symbols-outlined text-sm">dataset</span></div>
+                  <div class="w-8 h-8 flex items-center justify-center text-slate-600"><span class="material-symbols-outlined text-sm">settings_input_component</span></div>
+                </div>
+                <div class="flex-1 p-8 space-y-8 overflow-hidden">
+                  <div class="flex items-center justify-between border-b border-outline-variant/10 pb-4">
+                    <div class="h-4 w-32 bg-surface-container-highest rounded-full"></div>
+                    <div class="flex gap-3">
+                      <div class="h-8 w-8 bg-surface-container-highest rounded"></div>
+                      <div class="h-8 w-24 bg-primary text-on-primary rounded flex items-center justify-center text-[10px] font-bold">COMMIT CHANGES</div>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-surface-container-low p-4 rounded-lg h-40 flex flex-col justify-between">
+                      <div class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Active Node</div>
+                      <div id="preview-primary-text" class="text-2xl font-headline font-bold text-primary">02.X-STABLE</div>
+                      <div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                        <div class="h-full w-2/3 bg-primary"></div>
+                      </div>
+                    </div>
+                    <div class="bg-surface-container-low p-4 rounded-lg h-40">
+                      <div class="flex justify-between items-start mb-4">
+                        <div class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Traffic flow</div>
+                        <span class="material-symbols-outlined text-xs text-primary">show_chart</span>
+                      </div>
+                      <div class="space-y-2">
+                        <div class="h-2 w-full bg-surface-container-highest rounded-full"></div>
+                        <div class="h-2 w-3/4 bg-surface-container-highest rounded-full opacity-50"></div>
+                        <div class="h-2 w-1/2 bg-surface-container-highest rounded-full opacity-30"></div>
+                      </div>
+                    </div>
+                    <div class="col-span-2 bg-gradient-to-br from-primary-container/20 to-surface-container-low p-6 rounded-lg h-48 border border-primary/20 relative overflow-hidden">
+                      <div class="relative z-10">
+                        <h4 id="preview-headline-font" class="text-xl font-headline font-bold mb-2">Oscar UI Ready</h4>
+                        <p class="text-xs text-on-surface-variant max-w-sm mb-6">Component libraries successfully synchronized with primary brand tokens.</p>
+                        <button class="px-4 py-2 bg-primary text-on-primary rounded text-[10px] font-bold shadow-lg shadow-primary/25 hover:scale-95 transition-transform">INITIALIZE DEPLOY</button>
+                      </div>
+                      <div class="absolute -right-8 -bottom-8 opacity-10">
+                        <span class="material-symbols-outlined text-[160px]">terminal</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="absolute -right-4 top-1/2 -translate-y-1/2 flex flex-col gap-32">
+              <div class="bg-surface-container-highest border border-outline-variant p-2 rounded flex items-center gap-2 shadow-xl whitespace-nowrap">
+                <span id="preview-color-dot" class="w-3 h-3 rounded-full bg-primary animate-pulse"></span>
+                <span id="preview-color-label" class="text-[9px] font-mono uppercase tracking-widest">Global Primary: #D2BBFF</span>
+              </div>
+              <div class="bg-surface-container-highest border border-outline-variant p-2 rounded flex items-center gap-2 shadow-xl whitespace-nowrap">
+                <span class="w-3 h-3 rounded-full bg-surface-container-low"></span>
+                <span class="text-[9px] font-mono uppercase tracking-widest">Base Layer: #131315</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<script>
+  let logoFile: File | null = null;
+  let logoPreviewUrl: string | null = null;
+
+  document.getElementById('logo-upload-area')?.addEventListener('click', () => {
+    document.getElementById('logo-input')?.click();
+  });
+
+  document.getElementById('logo-upload-area')?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    (e.target as HTMLElement).closest('.border-dashed')?.classList.add('border-primary');
+  });
+
+  document.getElementById('logo-input')?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0]) {
+      handleLogoUpload(input.files[0]);
+    }
+  });
+
+  function handleLogoUpload(file: File) {
+    logoFile = file;
+    document.getElementById('logo-name')!.textContent = file.name;
+    document.getElementById('logo-upload-area')!.classList.add('hidden');
+    document.getElementById('logo-preview')!.classList.remove('hidden');
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      logoPreviewUrl = e.target?.result as string;
+      const previewImg = document.getElementById('logo-preview-img');
+      if (previewImg) {
+        previewImg.innerHTML = `<img src="${logoPreviewUrl}" class="w-full h-full object-cover" alt="Logo" />`;
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeLogo() {
+    logoFile = null;
+    logoPreviewUrl = null;
+    document.getElementById('logo-input')!.value = '';
+    document.getElementById('logo-upload-area')!.classList.remove('hidden');
+    document.getElementById('logo-preview')!.classList.add('hidden');
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function saveSettings() {
+    const token = getToken();
+    if (!token) return;
+
+    const primaryColor = (document.getElementById('primary-color') as HTMLInputElement).value;
+    const secondaryColor = (document.getElementById('secondary-color') as HTMLInputElement).value;
+    const tenantName = (document.getElementById('tenant-name') as HTMLInputElement).value;
+    const currency = (document.getElementById('currency') as HTMLSelectElement).value;
+    const timezone = (document.getElementById('timezone') as HTMLSelectElement).value;
+    const headlineFont = (document.getElementById('headline-font') as HTMLSelectElement).value;
+    const monoFont = (document.getElementById('mono-font') as HTMLSelectElement).value;
+
+    try {
+      const res = await fetch('/api/v1/settings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: tenantName || undefined,
+          currency: currency || undefined,
+          timezone: timezone || undefined,
+          primary_color: primaryColor || undefined,
+          secondary_color: secondaryColor || undefined,
+          font_family: headlineFont || undefined,
+          logo_light_url: logoPreviewUrl || undefined,
+        })
+      });
+
+      if (res.ok) {
+        updatePreview();
+        alert('Settings saved successfully!');
+      } else {
+        const error = await res.json();
+        alert('Failed to save settings: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    }
+  }
+
+  function updatePreview() {
+    const primaryColor = (document.getElementById('primary-color') as HTMLInputElement).value;
+    const secondaryColor = (document.getElementById('secondary-color') as HTMLInputElement).value;
+    const headlineFont = (document.getElementById('headline-font') as HTMLSelectElement).value;
+    
+    const previewDot = document.getElementById('preview-color-dot');
+    const previewLabel = document.getElementById('preview-color-label');
+    const previewPrimaryText = document.getElementById('preview-primary-text');
+    const previewHeadlineFont = document.getElementById('preview-headline-font');
+    
+    if (previewDot) previewDot.style.backgroundColor = primaryColor;
+    if (previewLabel) previewLabel.textContent = `Global Primary: ${primaryColor}`;
+    if (previewPrimaryText) previewPrimaryText.style.color = primaryColor;
+    if (previewHeadlineFont) previewHeadlineFont.style.fontFamily = headlineFont;
+  }
+
+  async function loadSettings() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/settings', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const { data } = await res.json();
+      
+      if (data) {
+        if (data.primary_color) (document.getElementById('primary-color') as HTMLInputElement).value = data.primary_color;
+        if (data.secondary_color) (document.getElementById('secondary-color') as HTMLInputElement).value = data.secondary_color;
+        if (data.tenant_name || data.name) (document.getElementById('tenant-name') as HTMLInputElement).value = data.tenant_name || data.name;
+        if (data.currency) (document.getElementById('currency') as HTMLSelectElement).value = data.currency;
+        if (data.timezone) (document.getElementById('timezone') as HTMLSelectElement).value = data.timezone;
+        if (data.font_family) (document.getElementById('headline-font') as HTMLSelectElement).value = data.font_family;
+        
+        if (data.logo_light_url) {
+          logoPreviewUrl = data.logo_light_url;
+          document.getElementById('logo-upload-area')!.classList.add('hidden');
+          document.getElementById('logo-preview')!.classList.remove('hidden');
+          const previewImg = document.getElementById('logo-preview-img');
+          if (previewImg) {
+            previewImg.innerHTML = `<img src="${data.logo_light_url}" class="w-full h-full object-cover" alt="Logo" />`;
+          }
+        }
+        
+        updatePreview();
+      }
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+    }
+  }
+
+  document.querySelectorAll('[data-color]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const color = btn.getAttribute('data-color');
+      if (color) {
+        (document.getElementById('primary-color') as HTMLInputElement).value = color;
+        updatePreview();
+      }
+    });
+  });
+
+  const primaryColorInput = document.getElementById('primary-color') as HTMLInputElement;
+  primaryColorInput?.addEventListener('input', updatePreview);
+
+  loadSettings();
+</script>
+
+<style>
+  main {
+    margin-left: 220px;
+  }
+</style>

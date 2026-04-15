@@ -1,0 +1,103 @@
+---
+import '../../styles/global.css';
+
+const { user } = Astro.locals;
+const token = Astro.params.token;
+
+if (user) {
+  return Astro.redirect('/dashboard');
+}
+
+if (!token) {
+  return Astro.redirect('/login');
+}
+---
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Email | oscar</title>
+</head>
+<body class="min-h-screen bg-[#131315] flex items-center justify-center p-4">
+  <div class="w-full max-w-md relative">
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#d2bbff] to-[#7c3aed] mb-4" style="box-shadow: 0 0 30px rgba(210, 187, 255, 0.3);">
+        <span class="text-[#131315] font-bold text-2xl" style="font-family: 'Space Grotesk', sans-serif;">O</span>
+      </a>
+      <h1 class="text-3xl font-bold text-[#e5e1e4] mb-2" style="font-family: 'Space Grotesk', sans-serif;" id="title">Verifying your email</h1>
+      <p class="text-lg text-[#ccc3d8]" id="subtitle">Please wait while we verify your email address...</p>
+    </div>
+
+    <div class="bg-[#201f22] rounded-2xl p-8 text-center" style="box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+      <div id="loading-spinner" class="inline-block w-12 h-12 border-4 border-[#d2bbff]/30 border-t-[#d2bbff] rounded-full animate-spin mb-6"></div>
+
+      <div id="success-content" style="display: none;">
+        <div class="w-16 h-16 rounded-full bg-[#2e7d32]/20 flex items-center justify-center mx-auto mb-6">
+          <span class="material-symbols-outlined text-[#4caf50] text-3xl">check_circle</span>
+        </div>
+        <p class="text-[#e5e1e4] font-medium mb-4">Your email has been verified successfully!</p>
+        <a href="/login" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[#3f008e] font-semibold transition-all hover:opacity-90" style="background: linear-gradient(135deg, #d2bbff 0%, #b794f4 100%);">
+          <span class="material-symbols-outlined text-sm">login</span>
+          Go to Login
+        </a>
+      </div>
+
+      <div id="error-content" style="display: none;">
+        <div class="w-16 h-16 rounded-full bg-[#ffb4ab]/20 flex items-center justify-center mx-auto mb-6">
+          <span class="material-symbols-outlined text-[#ffb4ab] text-3xl">error</span>
+        </div>
+        <p class="text-[#e5e1e4] font-medium mb-2" id="error-title">Verification failed</p>
+        <p class="text-[#ccc3d8] text-sm mb-6" id="error-message">This verification link may have expired or already been used.</p>
+        <a href="/register" class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[#3f008e] font-semibold transition-all hover:opacity-90" style="background: linear-gradient(135deg, #d2bbff 0%, #b794f4 100%);">
+          <span class="material-symbols-outlined text-sm">person_add</span>
+          Create Account
+        </a>
+      </div>
+    </div>
+
+    <p class="mt-8 text-center text-sm text-[#ccc3d8]">
+      <span class="material-symbols-outlined text-sm align-text-bottom">shield</span>
+      Secured with end-to-end encryption
+    </p>
+  </div>
+
+  <script define:vars={{ token }}>
+    function showElement(id) {
+      document.getElementById(id).style.display = 'block';
+    }
+
+    function hideElement(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    async function verifyEmail() {
+      try {
+        const res = await fetch(`/api/v1/auth/verify-email/${token}`);
+        const data = await res.json();
+
+        hideElement('loading-spinner');
+
+        if (res.ok) {
+          showElement('success-content');
+          document.getElementById('title').textContent = 'Email verified!';
+          document.getElementById('subtitle').textContent = 'You can now sign in to your account.';
+        } else {
+          showElement('error-content');
+          document.getElementById('title').textContent = 'Verification failed';
+          document.getElementById('error-message').textContent = data.error?.message || data.message || 'This verification link may have expired or already been used.';
+        }
+      } catch (err) {
+        hideElement('loading-spinner');
+        showElement('error-content');
+        document.getElementById('title').textContent = 'Connection error';
+        document.getElementById('error-title').textContent = 'Connection error';
+        document.getElementById('error-message').textContent = 'Unable to connect to the server. Please try again later.';
+      }
+    }
+
+    verifyEmail();
+  </script>
+</body>
+</html>

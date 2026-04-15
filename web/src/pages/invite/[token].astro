@@ -1,0 +1,211 @@
+---
+import '../../styles/global.css';
+
+const { user } = Astro.locals;
+const token = Astro.params.token;
+
+if (user) {
+  return Astro.redirect('/dashboard');
+}
+---
+
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Team | oscar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-bg flex items-center justify-center p-4 grain">
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="w-full max-w-md relative z-10">
+    <div class="text-center mb-8">
+      <a href="/" class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-container mb-4 shadow-glow hover:scale-105 transition-transform">
+        <span class="text-bg font-display font-bold text-2xl">O</span>
+      </a>
+      <h1 class="text-display-sm font-display text-on-surface" id="title">Verifying invitation...</h1>
+      <p class="text-body-lg text-on-surface-variant mt-2" id="subtitle">Please wait</p>
+    </div>
+
+    <div class="card-elevated p-8" id="content">
+      <div class="flex items-center justify-center py-8">
+        <div class="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ token }}>
+    let invitationData = null;
+
+    async function validateInvitation() {
+      try {
+        const res = await fetch(`/api/v1/invitations/${token}/validate`);
+
+        if (!res.ok) {
+          showError('This invitation is invalid or has expired.');
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!data.valid) {
+          if (data.accepted) {
+            showError('This invitation has already been used.');
+          } else if (data.expired) {
+            showError('This invitation has expired.');
+          } else {
+            showError('This invitation is no longer valid.');
+          }
+          return;
+        }
+
+        invitationData = data;
+        showRegistrationForm(data);
+      } catch (err) {
+        showError('Failed to verify invitation. Please try again.');
+      }
+    }
+
+    function showError(message) {
+      document.getElementById('title').textContent = 'Invitation Invalid';
+      document.getElementById('subtitle').textContent = '';
+      document.getElementById('content').innerHTML = `
+        <div class="text-center py-8">
+          <div class="w-16 h-16 rounded-full bg-error/10 flex items-center justify-center mx-auto mb-4">
+            <span class="material-symbols-outlined text-3xl text-error">error</span>
+          </div>
+          <p class="text-on-surface mb-4">${message}</p>
+          <a href="/login" class="btn-primary inline-block py-3 px-6 rounded-lg">Go to Login</a>
+        </div>
+      `;
+    }
+
+    function showRegistrationForm(data) {
+      document.getElementById('title').textContent = 'Join ' + data.org_name;
+      document.getElementById('subtitle').textContent = `You've been invited as ${data.role_name}`;
+      document.getElementById('content').innerHTML = `
+        <form id="register-form" class="space-y-5">
+          <div class="flex items-center gap-3 p-4 bg-surface-container-low rounded-lg mb-6">
+            <div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+              ${data.first_name?.[0] || ''}${data.last_name?.[0] || ''}
+            </div>
+            <div>
+              <p class="text-sm font-medium text-on-surface">${data.first_name} ${data.last_name}</p>
+              <p class="text-xs text-on-surface-variant">${data.email}</p>
+            </div>
+            <span class="ml-auto px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold uppercase rounded">${data.role_name}</span>
+          </div>
+
+          <div id="error-message" class="hidden text-error text-sm bg-error/10 p-3 rounded-lg"></div>
+
+          <div>
+            <label for="password" class="block text-label-lg text-on-surface mb-2">Create Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              required
+              minlength="8"
+              class="input w-full"
+              placeholder="Minimum 8 characters"
+            />
+          </div>
+
+          <div>
+            <label for="confirm-password" class="block text-label-lg text-on-surface mb-2">Confirm Password</label>
+            <input
+              type="password"
+              id="confirm-password"
+              name="confirm_password"
+              required
+              class="input w-full"
+              placeholder="Confirm your password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            id="submit-btn"
+            class="btn-primary w-full py-3 text-base"
+          >
+            Create Account
+          </button>
+
+          <p class="mt-4 text-center text-body-sm text-on-surface-variant">
+            Already have an account?
+            <a href="/login" class="text-primary hover:text-primary/80 font-medium transition-colors">Sign in</a>
+          </p>
+        </form>
+      `;
+
+      document.getElementById('register-form').addEventListener('submit', handleRegistration);
+    }
+
+    async function handleRegistration(e) {
+      e.preventDefault();
+      const errorEl = document.getElementById('error-message');
+      const submitBtn = document.getElementById('submit-btn');
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      errorEl.classList.add('hidden');
+
+      if (password !== confirmPassword) {
+        errorEl.textContent = 'Passwords do not match';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      if (password.length < 8) {
+        errorEl.textContent = 'Password must be at least 8 characters';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      submitBtn.setAttribute('disabled', 'true');
+      submitBtn.textContent = 'Creating account...';
+
+      try {
+        const res = await fetch('/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: invitationData.email,
+            password: password,
+            first_name: invitationData.first_name,
+            last_name: invitationData.last_name,
+            invitation_token: token,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error?.message || data.error?.code || 'Registration failed');
+        }
+
+        localStorage.setItem('oscar_auth', JSON.stringify({
+          token: data.token,
+          user: data.user,
+        }));
+
+        window.location.href = '/dashboard';
+      } catch (err) {
+        errorEl.textContent = err.message || 'An error occurred';
+        errorEl.classList.remove('hidden');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.textContent = 'Create Account';
+      }
+    }
+
+    validateInvitation();
+  </script>
+</body>
+</html>

@@ -1,0 +1,600 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Deal Pipeline">
+  <section class="p-6 pb-0 flex items-end justify-between">
+    <div>
+      <h1 class="text-3xl font-bold font-headline tracking-tight text-white">Deal Pipeline</h1>
+      <p class="text-gray-500 font-mono text-sm mt-1">Enterprise B2B Stream</p>
+    </div>
+    <div class="flex gap-4">
+      <div class="bg-surface-container-low px-4 py-2 rounded-lg border-b border-primary/40">
+        <div class="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-1">Pipeline Value</div>
+        <div id="pipeline-value" class="text-xl font-bold font-headline text-primary">$0</div>
+      </div>
+      <div class="bg-surface-container-low px-4 py-2 rounded-lg">
+        <div class="text-[10px] text-gray-500 font-mono uppercase tracking-widest mb-1">Active Deals</div>
+        <div id="deals-count" class="text-xl font-bold font-headline text-on-surface">0</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kanban Board -->
+  <div id="kanban-board" class="flex-1 overflow-x-auto p-6 flex gap-6 items-start">
+    <!-- Stage 1: Prospecting -->
+    <div class="flex-none w-80 flex flex-col gap-4">
+      <div class="flex items-center justify-between px-2">
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-semibold font-headline text-gray-300 uppercase tracking-wider">Prospecting</h3>
+          <span id="prospecting-count" class="bg-surface-container-highest text-[10px] px-1.5 py-0.5 rounded font-mono text-gray-400">0</span>
+        </div>
+        <span id="prospecting-value" class="text-xs font-mono text-gray-500">$0</span>
+      </div>
+      <div id="prospecting-deals" class="space-y-3 min-h-[200px] drag-target" data-stage="prospecting">
+        <!-- Deal cards will be inserted here -->
+      </div>
+      <button class="w-full py-2 border border-dashed border-outline-variant/30 text-gray-600 hover:text-gray-400 hover:border-outline-variant/60 rounded-lg text-sm flex items-center justify-center gap-2 transition-all" onclick="openDealModal('prospecting')">
+        <span class="material-symbols-outlined text-sm">add</span>
+        Add Deal
+      </button>
+    </div>
+
+    <!-- Stage 2: Qualified -->
+    <div class="flex-none w-80 flex flex-col gap-4">
+      <div class="flex items-center justify-between px-2">
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-semibold font-headline text-gray-300 uppercase tracking-wider">Qualified</h3>
+          <span id="qualified-count" class="bg-surface-container-highest text-[10px] px-1.5 py-0.5 rounded font-mono text-gray-400">0</span>
+        </div>
+        <span id="qualified-value" class="text-xs font-mono text-gray-500">$0</span>
+      </div>
+      <div id="qualified-deals" class="space-y-3 min-h-[200px] drag-target" data-stage="qualified">
+      </div>
+      <button class="w-full py-2 border border-dashed border-outline-variant/30 text-gray-600 hover:text-gray-400 hover:border-outline-variant/60 rounded-lg text-sm flex items-center justify-center gap-2 transition-all" onclick="openDealModal('qualified')">
+        <span class="material-symbols-outlined text-sm">add</span>
+        Add Deal
+      </button>
+    </div>
+
+    <!-- Stage 3: Negotiation -->
+    <div class="flex-none w-80 flex flex-col gap-4">
+      <div class="flex items-center justify-between px-2">
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-semibold font-headline text-gray-300 uppercase tracking-wider">Negotiation</h3>
+          <span id="negotiation-count" class="bg-surface-container-highest text-[10px] px-1.5 py-0.5 rounded font-mono text-gray-400">0</span>
+        </div>
+        <span id="negotiation-value" class="text-xs font-mono text-gray-500">$0</span>
+      </div>
+      <div id="negotiation-deals" class="space-y-3 min-h-[200px] drag-target" data-stage="negotiation">
+      </div>
+      <button class="w-full py-2 border border-dashed border-outline-variant/30 text-gray-600 hover:text-gray-400 hover:border-outline-variant/60 rounded-lg text-sm flex items-center justify-center gap-2 transition-all" onclick="openDealModal('negotiation')">
+        <span class="material-symbols-outlined text-sm">add</span>
+        Add Deal
+      </button>
+    </div>
+
+    <!-- Stage 4: Won -->
+    <div class="flex-none w-80 flex flex-col gap-4">
+      <div class="flex items-center justify-between px-2">
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-semibold font-headline text-green-400 uppercase tracking-wider">Closed Won</h3>
+          <span id="won-count" class="bg-green-400/10 text-[10px] px-1.5 py-0.5 rounded font-mono text-green-400">0</span>
+        </div>
+        <span id="won-value" class="text-xs font-mono text-green-400 font-bold">$0</span>
+      </div>
+      <div id="won-deals" class="space-y-3 min-h-[200px] drag-target" data-stage="closed_won">
+      </div>
+    </div>
+
+    <!-- Stage 5: Lost -->
+    <div class="flex-none w-80 flex flex-col gap-4">
+      <div class="flex items-center justify-between px-2">
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-semibold font-headline text-gray-500 uppercase tracking-wider">Closed Lost</h3>
+          <span id="lost-count" class="bg-surface-container-highest text-[10px] px-1.5 py-0.5 rounded font-mono text-gray-500">0</span>
+        </div>
+        <span id="lost-value" class="text-xs font-mono text-gray-500">$0</span>
+      </div>
+      <div id="lost-deals" class="space-y-3 min-h-[200px] drag-target grayscale opacity-60" data-stage="closed_lost">
+      </div>
+    </div>
+  </div>
+
+  <!-- Deal Modal -->
+  <div id="deal-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeDealModal()"></div>
+    <div class="relative w-full max-w-lg bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+        <h2 id="deal-modal-title" class="text-lg font-headline font-bold text-white">New Deal</h2>
+        <div class="flex items-center gap-2">
+          <button id="delete-deal-btn" type="button" onclick="deleteDeal()" class="hidden px-3 py-1.5 text-sm font-mono text-error hover:bg-error/10 rounded transition-colors">
+            Delete
+          </button>
+          <button onclick="closeDealModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+            <span class="material-symbols-outlined text-gray-400">close</span>
+          </button>
+        </div>
+      </div>
+      <form id="deal-form" class="p-6 space-y-4">
+        <input type="hidden" id="deal-id" name="deal_id" />
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Deal Title *</label>
+          <input type="text" id="deal-title" name="title" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Enterprise SaaS Deal" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Value ($)</label>
+            <input type="number" id="deal-value" name="value" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="50000" value="0" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Stage</label>
+            <select id="deal-stage-select" name="stage" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
+              <option value="qualification">Prospecting</option>
+              <option value="discovery">Discovery</option>
+              <option value="proposal">Proposal</option>
+              <option value="negotiation">Negotiation</option>
+              <option value="closed_won">Closed Won</option>
+              <option value="closed_lost">Closed Lost</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Expected Close</label>
+            <input type="date" id="deal-expected-close-date" name="expected_close_date" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Probability (%)</label>
+            <input type="number" id="deal-probability" name="probability" min="0" max="100" value="20" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Tags (comma separated)</label>
+          <input type="text" id="deal-tags" name="tags" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="hot-lead, enterprise" />
+        </div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeDealModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  let currentStage = 'qualification';
+  let draggedDealId: string | null = null;
+  let editingDealId: string | null = null;
+  let stageIdMap: Record<string, string> = {};
+  let pipelineId: string | null = null;
+  let allStages: any[] = [];
+  
+  const uiToBackendStage: Record<string, string> = {
+    'prospecting': 'qualification',
+    'qualified': 'discovery',
+    'negotiation': 'negotiation',
+    'won': 'closed_won',
+    'lost': 'closed_lost'
+  };
+
+  (window as any).openDealModal = function(stage: string, deal?: any) {
+    editingDealId = deal?.id || null;
+    currentStage = stage;
+    
+    const modalTitle = document.getElementById('deal-modal-title');
+    const deleteBtn = document.getElementById('delete-deal-btn');
+    const titleInput = document.getElementById('deal-title') as HTMLInputElement;
+    const valueInput = document.getElementById('deal-value') as HTMLInputElement;
+    const stageSelect = document.getElementById('deal-stage-select') as HTMLSelectElement;
+    const dateInput = document.getElementById('deal-expected-close-date') as HTMLInputElement;
+    const probabilityInput = document.getElementById('deal-probability') as HTMLInputElement;
+    const tagsInput = document.getElementById('deal-tags') as HTMLInputElement;
+    
+    if (deal) {
+      modalTitle!.textContent = 'Edit Deal';
+      deleteBtn?.classList.remove('hidden');
+      titleInput.value = deal.title || '';
+      valueInput.value = deal.value || 0;
+      dateInput.value = deal.expected_close_date ? deal.expected_close_date.split('T')[0] : '';
+      probabilityInput.value = deal.probability || 20;
+      tagsInput.value = (deal.tags || []).join(', ');
+      
+      const stageKey = Object.keys(stageIdMap).find(k => stageIdMap[k] === deal.stage_id);
+      if (stageKey) {
+        stageSelect.value = stageKey;
+      }
+    } else {
+      modalTitle!.textContent = 'New Deal';
+      deleteBtn?.classList.add('hidden');
+      (document.getElementById('deal-form') as HTMLFormElement).reset();
+      stageSelect.value = stage || 'qualification';
+      probabilityInput.value = '20';
+      valueInput.value = '0';
+    }
+    
+    document.getElementById('deal-modal')!.classList.remove('hidden');
+  };
+
+  (window as any).closeDealModal = function() {
+    document.getElementById('deal-modal')!.classList.add('hidden');
+    editingDealId = null;
+  };
+
+  (window as any).deleteDeal = async function() {
+    if (!editingDealId) return;
+    if (!confirm('Delete this deal?')) return;
+    
+    const token = getToken();
+    if (!token) return;
+    
+    try {
+      const res = await fetch(`/api/v1/deals/${editingDealId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        closeDealModal();
+        loadDeals();
+      }
+    } catch (err) {
+      console.error('Failed to delete deal:', err);
+    }
+  };
+
+  function openDealModal(stage: string, deal?: any) {
+    (window as any).openDealModal(stage, deal);
+  }
+
+  function closeDealModal() {
+    (window as any).closeDealModal();
+  }
+
+  (window as any).openEditModal = function(dealId: string) {
+    const token = getToken();
+    if (!token) return;
+    
+    fetch(`/api/v1/deals/${dealId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(({ data: deal }) => {
+      if (deal) {
+        const stageIdToUI: Record<string, string> = {};
+        allStages.forEach((s: any) => {
+          const name = s.name.toLowerCase();
+          let uiStage = 'prospecting';
+          if (name.includes('won')) uiStage = 'won';
+          else if (name.includes('lost')) uiStage = 'lost';
+          else if (name.includes('qualif') || name.includes('discovery')) uiStage = 'qualified';
+          else if (name.includes('negotiat') || name.includes('proposal')) uiStage = 'negotiation';
+          stageIdToUI[s.id] = uiStage;
+        });
+        const uiStage = deal.stage_id ? (stageIdToUI[deal.stage_id] || 'prospecting') : 'prospecting';
+        openDealModal(uiStage, deal);
+      }
+    })
+    .catch(err => console.error('Failed to load deal:', err));
+  };
+
+  function openEditModal(dealId: string) {
+    (window as any).openEditModal(dealId);
+  }
+
+  async function loadPipeline() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/pipelines?limit=1', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const { data: pipelines } = await res.json();
+      
+      if (pipelines && pipelines.length > 0) {
+        pipelineId = pipelines[0].id;
+        
+        const stagesRes = await fetch(`/api/v1/pipelines/${pipelineId}/stages`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const { data: stages } = await stagesRes.json();
+        
+        allStages = stages || [];
+        stageIdMap = {};
+        
+        allStages.forEach((stage: any) => {
+          const normalizedName = stage.name.toLowerCase().replace(/\s+/g, '_');
+          stageIdMap[normalizedName] = stage.id;
+          
+          if (normalizedName.includes('qualification')) stageIdMap['qualification'] = stage.id;
+          if (normalizedName.includes('discovery')) stageIdMap['discovery'] = stage.id;
+          if (normalizedName.includes('proposal')) stageIdMap['proposal'] = stage.id;
+          if (normalizedName.includes('negotiation')) stageIdMap['negotiation'] = stage.id;
+          if (normalizedName.includes('won')) stageIdMap['closed_won'] = stage.id;
+          if (normalizedName.includes('lost')) stageIdMap['closed_lost'] = stage.id;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load pipeline:', err);
+    }
+  }
+
+  function createDealCard(deal: any) {
+    const probability = deal.probability || 0;
+    const won = deal.stage_type === 'won' || deal.stage_name?.toLowerCase().includes('won');
+    const lost = deal.stage_type === 'lost' || deal.stage_name?.toLowerCase().includes('lost');
+    const borderColor = won ? 'border-green-400' : lost ? 'border-gray-500' : 'border-primary/20';
+    const hoverClass = won ? 'hover:bg-green-400/10' : lost ? 'hover:grayscale-0 hover:opacity-100' : 'hover:bg-surface-container-high hover:-translate-y-1';
+    const textClass = won ? 'group-hover:text-green-400' : 'group-hover:text-primary';
+    
+    const stageIdToUI: Record<string, string> = {};
+    allStages.forEach((s: any) => {
+      const name = s.name.toLowerCase();
+      let uiStage = 'prospecting';
+      if (name.includes('won')) uiStage = 'won';
+      else if (name.includes('lost')) uiStage = 'lost';
+      else if (name.includes('qualif') || name.includes('discovery')) uiStage = 'qualified';
+      else if (name.includes('negotiat') || name.includes('proposal')) uiStage = 'negotiation';
+      stageIdToUI[s.id] = uiStage;
+    });
+    const currentUIStage = deal.stage_id ? (stageIdToUI[deal.stage_id] || 'prospecting') : 'prospecting';
+    
+    return `
+      <div 
+        class="bg-surface-container-low p-4 rounded-lg border-l-2 ${borderColor} ${hoverClass} transition-all cursor-grab active:cursor-grabbing group draggable-card"
+        draggable="true"
+        data-deal-id="${deal.id}"
+        data-stage="${currentUIStage}"
+        onclick="openEditModal('${deal.id}')"
+      >
+        <div class="flex justify-between items-start mb-2">
+          <h4 class="font-medium text-white ${textClass} transition-colors">${deal.title || deal.name || 'Untitled'}</h4>
+          <span class="${won ? 'bg-green-400/20 text-green-400' : 'bg-primary/10 text-primary'} text-[10px] px-2 py-0.5 rounded-full font-mono">${probability}%</span>
+        </div>
+        <div class="text-lg font-bold font-headline mb-4">$${(deal.value || 0).toLocaleString()}</div>
+        <div class="flex justify-between items-center">
+          <span class="text-[10px] font-mono text-gray-500">Updated ${formatTimeAgo(deal.updated_at)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function formatTimeAgo(dateStr?: string): string {
+    if (!dateStr) return 'never';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(hours / 24);
+    if (hours < 1) return 'just now';
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function loadDeals() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/deals?limit=100', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const { data: deals } = await res.json();
+
+      const stages = ['prospecting', 'qualified', 'negotiation', 'won', 'lost'];
+      const stageData: Record<string, any[]> = { prospecting: [], qualified: [], negotiation: [], won: [], lost: [] };
+      const stageValues: Record<string, number> = { prospecting: 0, qualified: 0, negotiation: 0, won: 0, lost: 0 };
+
+      const stageIdToStage: Record<string, string> = {};
+      allStages.forEach((stage: any) => {
+        const name = stage.name.toLowerCase();
+        let uiStage = 'prospecting';
+        if (name.includes('won')) {
+          uiStage = 'won';
+        } else if (name.includes('lost')) {
+          uiStage = 'lost';
+        } else if (name.includes('qualif') || name.includes('discovery')) {
+          uiStage = 'qualified';
+        } else if (name.includes('negotiat') || name.includes('proposal')) {
+          uiStage = 'negotiation';
+        }
+        stageIdToStage[stage.id] = uiStage;
+      });
+
+      (deals || []).forEach((deal: any) => {
+        let stage = 'prospecting';
+        
+        if (deal.stage_id && stageIdToStage[deal.stage_id]) {
+          stage = stageIdToStage[deal.stage_id];
+        }
+        
+        stageData[stage].push(deal);
+        stageValues[stage] += deal.value || 0;
+      });
+
+      document.getElementById('deals-count')!.textContent = deals?.length?.toString() || '0';
+      const totalPipelineValue = stageValues.prospecting + stageValues.qualified + stageValues.negotiation;
+      document.getElementById('pipeline-value')!.textContent = `$${totalPipelineValue.toLocaleString()}`;
+
+      stages.forEach(stage => {
+        const countEl = document.getElementById(`${stage}-count`);
+        const valueEl = document.getElementById(`${stage}-value`);
+        const dealsEl = document.getElementById(`${stage}-deals`);
+        
+        if (countEl) countEl.textContent = stageData[stage].length.toString();
+        if (valueEl) {
+          if (stage === 'won') {
+            valueEl.className = 'text-xs font-mono text-green-400 font-bold';
+          } else {
+            valueEl.className = 'text-xs font-mono text-gray-500';
+          }
+          valueEl.textContent = `$${stageValues[stage].toLocaleString()}`;
+        }
+        if (dealsEl) dealsEl.innerHTML = stageData[stage].map(createDealCard).join('') || '<p class="text-center text-gray-600 text-sm py-8">No deals</p>';
+      });
+
+      // Re-attach drag handlers
+      initDragAndDrop();
+    } catch (err) {
+      console.error('Failed to load deals:', err);
+    }
+  }
+
+  function initDragAndDrop() {
+    const cards = document.querySelectorAll('.draggable-card');
+    const targets = document.querySelectorAll('.drag-target');
+
+    cards.forEach(card => {
+      card.addEventListener('dragstart', (e) => {
+        draggedDealId = (card as HTMLElement).dataset.dealId || null;
+        (card as HTMLElement).classList.add('opacity-50');
+        e.dataTransfer!.effectAllowed = 'move';
+      });
+
+      card.addEventListener('dragend', () => {
+        (card as HTMLElement).classList.remove('opacity-50');
+        draggedDealId = null;
+      });
+    });
+
+    targets.forEach(target => {
+      target.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        (target as HTMLElement).classList.add('ring-2', 'ring-primary', 'ring-opacity-50');
+      });
+
+      target.addEventListener('dragleave', () => {
+        (target as HTMLElement).classList.remove('ring-2', 'ring-primary', 'ring-opacity-50');
+      });
+
+      target.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        (target as HTMLElement).classList.remove('ring-2', 'ring-primary', 'ring-opacity-50');
+        
+        if (!draggedDealId) return;
+        
+        const newStage = (target as HTMLElement).dataset.stage || 'prospecting';
+        await updateDealStage(draggedDealId, newStage);
+      });
+    });
+  }
+
+  async function updateDealStage(dealId: string, uiStage: string) {
+    const token = getToken();
+    if (!token) return;
+
+    const backendStage = uiToBackendStage[uiStage] || uiStage;
+    const stageId = stageIdMap[backendStage];
+    
+    if (!stageId) {
+      console.error('Stage ID not found for:', uiStage, backendStage, stageIdMap);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/deals/${dealId}/stage`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          stage_id: stageId,
+        })
+      });
+
+      if (res.ok) {
+        loadDeals();
+        
+        if ((window as any).addToRecent) {
+          (window as any).addToRecent('Deal', 'Moved deal', '/deals');
+        }
+      } else {
+        const error = await res.json();
+        console.error('Failed to update deal stage:', error);
+      }
+    } catch (err) {
+      console.error('Failed to update deal stage:', err);
+    }
+  }
+
+  document.getElementById('deal-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const token = getToken();
+    if (!token) return;
+
+    const selectedStage = formData.get('stage') as string;
+    const backendStage = uiToBackendStage[selectedStage] || selectedStage;
+    const stageId = stageIdMap[backendStage];
+    
+    const title = formData.get('title') as string;
+    if (!title || !title.trim()) {
+      alert('Please enter a deal title');
+      return;
+    }
+    
+    const tagsStr = formData.get('tags') as string;
+    const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+
+    const payload = {
+      title: title.trim(),
+      value: parseFloat(formData.get('value') as string) || 0,
+      currency: 'USD',
+      expected_close_date: formData.get('expected_close_date') || null,
+      probability: parseInt(formData.get('probability') as string) || 20,
+      stage_id: stageId || null,
+      tags: tags,
+    };
+
+    try {
+      const isEdit = editingDealId !== null;
+      const url = isEdit ? `/api/v1/deals/${editingDealId}` : '/api/v1/deals';
+      const method = isEdit ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(isEdit ? { ...payload, id: editingDealId } : payload)
+      });
+
+      if (res.ok) {
+        closeDealModal();
+        loadDeals();
+        
+        if ((window as any).addToRecent) {
+          (window as any).addToRecent('Deal', isEdit ? 'Updated deal' : title, '/deals');
+        }
+      } else {
+        const error = await res.json();
+        alert('Failed to save deal: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to save deal:', err);
+    }
+  });
+
+  loadPipeline().then(() => loadDeals());
+</script>
