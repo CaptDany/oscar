@@ -26,7 +26,7 @@ func (r *TenantRepository) Create(ctx context.Context, req *tenant.CreateTenantR
 	query := `
 		INSERT INTO tenants (slug, name, status, subscription_tier)
 		VALUES ($1, $2, $3, $4)
-		RETURNING *
+		RETURNING id, slug, name, status, subscription_tier, settings, created_at, updated_at, invite_only
 	`
 
 	status := "active"
@@ -40,7 +40,7 @@ func (r *TenantRepository) Create(ctx context.Context, req *tenant.CreateTenantR
 		req.Slug, req.Name, status, tier,
 	).Scan(
 		&row.ID, &row.Slug, &row.Name, &row.Status, &row.SubscriptionTier, &row.Settings,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.InviteOnly,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("tenant.Create: %w", err)
@@ -53,7 +53,7 @@ func (r *TenantRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *tenant.
 	query := `
 		INSERT INTO tenants (slug, name, status, subscription_tier)
 		VALUES ($1, $2, $3, $4)
-		RETURNING *
+		RETURNING id, slug, name, status, subscription_tier, settings, created_at, updated_at, invite_only
 	`
 
 	status := "active"
@@ -67,7 +67,7 @@ func (r *TenantRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *tenant.
 		req.Slug, req.Name, status, tier,
 	).Scan(
 		&row.ID, &row.Slug, &row.Name, &row.Status, &row.SubscriptionTier, &row.Settings,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.InviteOnly,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("tenant.Create: %w", err)
@@ -77,12 +77,12 @@ func (r *TenantRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *tenant.
 }
 
 func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*tenant.Tenant, error) {
-	query := `SELECT * FROM tenants WHERE id = $1`
+	query := `SELECT id, slug, name, status, subscription_tier, settings, created_at, updated_at, invite_only FROM tenants WHERE id = $1`
 
 	var row generated.Tenant
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&row.ID, &row.Slug, &row.Name, &row.Status, &row.SubscriptionTier, &row.Settings,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.InviteOnly,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -95,12 +95,12 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*tenant.T
 }
 
 func (r *TenantRepository) GetBySlug(ctx context.Context, slug string) (*tenant.Tenant, error) {
-	query := `SELECT * FROM tenants WHERE slug = $1`
+	query := `SELECT id, slug, name, status, subscription_tier, settings, created_at, updated_at, invite_only FROM tenants WHERE slug = $1`
 
 	var row generated.Tenant
 	err := r.pool.QueryRow(ctx, query, slug).Scan(
 		&row.ID, &row.Slug, &row.Name, &row.Status, &row.SubscriptionTier, &row.Settings,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.InviteOnly,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -120,7 +120,7 @@ func (r *TenantRepository) Update(ctx context.Context, id uuid.UUID, req *tenant
 			subscription_tier = COALESCE($4, subscription_tier),
 			settings = COALESCE($5, settings)
 		WHERE id = $1
-		RETURNING *
+		RETURNING id, slug, name, status, subscription_tier, settings, created_at, updated_at, invite_only
 	`
 
 	var settings []byte
@@ -133,7 +133,7 @@ func (r *TenantRepository) Update(ctx context.Context, id uuid.UUID, req *tenant
 		id, req.Name, req.Status, req.SubscriptionTier, settings,
 	).Scan(
 		&row.ID, &row.Slug, &row.Name, &row.Status, &row.SubscriptionTier, &row.Settings,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.InviteOnly,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("tenant.Update: %w", err)

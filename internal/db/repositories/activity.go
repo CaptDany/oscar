@@ -34,9 +34,13 @@ func (r *ActivityRepository) Create(ctx context.Context, tenantID uuid.UUID, req
 	}
 
 	row := &generated.Activity{}
+	createdBy := req.CreatedBy
+	if createdBy == nil {
+		createdBy = req.OwnerID
+	}
 	err := r.pool.QueryRow(ctx, query,
 		tenantID, req.Type, req.Subject, req.Body, req.Outcome, req.Direction,
-		status, req.DueAt, req.DurationSeconds, req.OwnerID, req.OwnerID, req.CustomFields,
+		status, req.DueAt, req.DurationSeconds, req.OwnerID, createdBy, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Subject, &row.Body, &row.Outcome,
 		&row.Direction, &row.Status, &row.DueAt, &row.CompletedAt, &row.DurationSeconds,

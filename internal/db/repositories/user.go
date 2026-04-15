@@ -26,7 +26,7 @@ func (r *UserRepository) Create(ctx context.Context, tenantID uuid.UUID, req *us
 	query := `
 		INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, timezone, locale)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING *
+		RETURNING id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id
 	`
 
 	var row generated.User
@@ -37,6 +37,7 @@ func (r *UserRepository) Create(ctx context.Context, tenantID uuid.UUID, req *us
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
 		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("user.Create: %w", err)
@@ -49,7 +50,7 @@ func (r *UserRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID uuid.
 	query := `
 		INSERT INTO users (tenant_id, email, password_hash, first_name, last_name, timezone, locale)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING *
+		RETURNING id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id
 	`
 
 	var row generated.User
@@ -60,6 +61,7 @@ func (r *UserRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID uuid.
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
 		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("user.Create: %w", err)
@@ -69,13 +71,14 @@ func (r *UserRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID uuid.
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
-	query := `SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id FROM users WHERE id = $1 AND deleted_at IS NULL`
 
 	var row generated.User
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
 		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -92,10 +95,10 @@ func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 	var args []interface{}
 
 	if tenantID == uuid.Nil {
-		query = `SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
+		query = `SELECT id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id FROM users WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
 		args = []interface{}{email}
 	} else {
-		query = `SELECT * FROM users WHERE tenant_id = $1 AND email = $2 AND deleted_at IS NULL`
+		query = `SELECT id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id FROM users WHERE tenant_id = $1 AND email = $2 AND deleted_at IS NULL`
 		args = []interface{}{tenantID, email}
 	}
 
@@ -104,6 +107,7 @@ func (r *UserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, ema
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
 		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -126,7 +130,7 @@ func (r *UserRepository) Update(ctx context.Context, id uuid.UUID, req *user.Upd
 			locale = COALESCE($7, locale),
 			is_active = COALESCE($8, is_active)
 		WHERE id = $1 AND deleted_at IS NULL
-		RETURNING *
+		RETURNING id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id
 	`
 
 	var row generated.User
@@ -136,6 +140,7 @@ func (r *UserRepository) Update(ctx context.Context, id uuid.UUID, req *user.Upd
 		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
 		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("user.Update: %w", err)
@@ -179,7 +184,7 @@ func (r *UserRepository) List(ctx context.Context, tenantID uuid.UUID, limit, of
 	}
 
 	query := `
-		SELECT * FROM users 
+		SELECT id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id FROM users 
 		WHERE tenant_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
@@ -198,6 +203,7 @@ func (r *UserRepository) List(ctx context.Context, tenantID uuid.UUID, limit, of
 			&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
 			&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
 			&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+			&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("user.List scan: %w", err)
@@ -217,6 +223,105 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID) erro
 	return nil
 }
 
+func (r *UserRepository) GetByVerificationToken(ctx context.Context, token string) (*user.User, error) {
+	query := `SELECT id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id FROM users WHERE email_verification_token = $1 AND deleted_at IS NULL`
+
+	var row generated.User
+	err := r.pool.QueryRow(ctx, query, token).Scan(
+		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
+		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("user.GetByVerificationToken: user not found")
+		}
+		return nil, fmt.Errorf("user.GetByVerificationToken: %w", err)
+	}
+
+	return mapUserRowToDomain(&row), nil
+}
+
+func (r *UserRepository) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
+	query := `UPDATE users SET email_verified_at = NOW(), email_verification_token = NULL WHERE id = $1 AND deleted_at IS NULL`
+	_, err := r.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("user.VerifyEmail: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepository) SetEmailVerificationToken(ctx context.Context, userID uuid.UUID, token string) error {
+	query := `UPDATE users SET email_verification_token = $2, email_verification_sent_at = NOW() WHERE id = $1 AND deleted_at IS NULL`
+	_, err := r.pool.Exec(ctx, query, userID, token)
+	if err != nil {
+		return fmt.Errorf("user.SetEmailVerificationToken: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepository) GetByOAuthProvider(ctx context.Context, provider, providerUserID string) (*user.OAuthUser, error) {
+	query := `SELECT user_id, provider, provider_user_id FROM oauth_users WHERE provider = $1 AND provider_user_id = $2`
+
+	var oauthUser user.OAuthUser
+	err := r.pool.QueryRow(ctx, query, provider, providerUserID).Scan(
+		&oauthUser.UserID, &oauthUser.Provider, &oauthUser.ProviderUserID,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, user.ErrOAuthUserNotFound
+		}
+		return nil, fmt.Errorf("user.GetByOAuthProvider: %w", err)
+	}
+	return &oauthUser, nil
+}
+
+func (r *UserRepository) LinkOAuth(ctx context.Context, userID uuid.UUID, provider, providerUserID string) error {
+	query := `INSERT INTO oauth_users (user_id, provider, provider_user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`
+	_, err := r.pool.Exec(ctx, query, userID, provider, providerUserID)
+	if err != nil {
+		return fmt.Errorf("user.LinkOAuth: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepository) CreateOAuthUser(ctx context.Context, req *user.CreateOAuthUserRequest, provider, providerUserID string) (*user.User, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("user.CreateOAuthUser begin: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	userQuery := `
+		INSERT INTO users (tenant_id, email, first_name, last_name, email_verified_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		RETURNING id, tenant_id, email, password_hash, first_name, last_name, avatar_url, timezone, locale, is_active, last_login_at, created_at, updated_at, deleted_at, email_verified_at, email_verification_token, email_verification_sent_at, pending_invitation_id
+	`
+	var row generated.User
+	err = tx.QueryRow(ctx, userQuery, req.TenantID, req.Email, req.FirstName, req.LastName).Scan(
+		&row.ID, &row.TenantID, &row.Email, &row.PasswordHash, &row.FirstName, &row.LastName,
+		&row.AvatarUrl, &row.Timezone, &row.Locale, &row.IsActive, &row.LastLoginAt,
+		&row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		&row.EmailVerifiedAt, &row.EmailVerificationToken, &row.EmailVerificationSentAt, &row.PendingInvitationID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("user.CreateOAuthUser: %w", err)
+	}
+
+	oauthQuery := `INSERT INTO oauth_users (user_id, provider, provider_user_id) VALUES ($1, $2, $3)`
+	_, err = tx.Exec(ctx, oauthQuery, row.ID, provider, providerUserID)
+	if err != nil {
+		return nil, fmt.Errorf("user.CreateOAuthUser oauth: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("user.CreateOAuthUser commit: %w", err)
+	}
+
+	return mapUserRowToDomain(&row), nil
+}
+
 func mapUserRowToDomain(row *generated.User) *user.User {
 	avatarUrl := pgTextToStr(row.AvatarUrl)
 	timezone := pgTextToStrStr(row.Timezone)
@@ -225,6 +330,7 @@ func mapUserRowToDomain(row *generated.User) *user.User {
 	createdAt := pgTimestamptzToTime(row.CreatedAt)
 	updatedAt := pgTimestamptzToTime(row.UpdatedAt)
 	deletedAt := pgTimestamptzToTime(row.DeletedAt)
+	emailVerifiedAt := pgTimestamptzToTime(row.EmailVerifiedAt)
 	if createdAt == nil {
 		t := time.Time{}
 		createdAt = &t
@@ -234,20 +340,21 @@ func mapUserRowToDomain(row *generated.User) *user.User {
 		updatedAt = &t
 	}
 	return &user.User{
-		ID:           pgUUIDToUUID(row.ID),
-		TenantID:     pgUUIDToUUID(row.TenantID),
-		Email:        row.Email,
-		PasswordHash: row.PasswordHash,
-		FirstName:    row.FirstName,
-		LastName:     row.LastName,
-		AvatarURL:    avatarUrl,
-		Timezone:     timezone,
-		Locale:       locale,
-		IsActive:     row.IsActive,
-		LastLoginAt:  lastLoginAt,
-		CreatedAt:    *createdAt,
-		UpdatedAt:    *updatedAt,
-		DeletedAt:    deletedAt,
+		ID:              pgUUIDToUUID(row.ID),
+		TenantID:        pgUUIDToUUID(row.TenantID),
+		Email:           row.Email,
+		PasswordHash:    row.PasswordHash,
+		FirstName:       row.FirstName,
+		LastName:        row.LastName,
+		AvatarURL:       avatarUrl,
+		Timezone:        timezone,
+		Locale:          locale,
+		IsActive:        row.IsActive,
+		EmailVerifiedAt: emailVerifiedAt,
+		LastLoginAt:     lastLoginAt,
+		CreatedAt:       *createdAt,
+		UpdatedAt:       *updatedAt,
+		DeletedAt:       deletedAt,
 	}
 }
 
