@@ -21,25 +21,29 @@ func NewCompanyHandler(repo company.Repository) *CompanyHandler {
 }
 
 type CreateCompanyRequest struct {
-	Name          string   `json:"name" validate:"required"`
-	Domain        *string  `json:"domain"`
-	Industry      *string  `json:"industry"`
-	Size          *string  `json:"size"`
-	AnnualRevenue *float64 `json:"annual_revenue"`
-	Website       *string  `json:"website"`
-	OwnerID       *string  `json:"owner_id"`
-	Tags          []string `json:"tags"`
+	Name          string      `json:"name" validate:"required"`
+	Domain        *string     `json:"domain"`
+	Industry      *string     `json:"industry"`
+	Size          *string     `json:"size"`
+	AnnualRevenue *float64    `json:"annual_revenue"`
+	Website       *string     `json:"website"`
+	Address       interface{} `json:"address"`
+	OwnerID       *string     `json:"owner_id"`
+	ParentCompany *string     `json:"parent_company_id"`
+	Tags          []string    `json:"tags"`
 }
 
 type UpdateCompanyRequest struct {
-	Name          *string  `json:"name"`
-	Domain        *string  `json:"domain"`
-	Industry      *string  `json:"industry"`
-	Size          *string  `json:"size"`
-	AnnualRevenue *float64 `json:"annual_revenue"`
-	Website       *string  `json:"website"`
-	OwnerID       *string  `json:"owner_id"`
-	Tags          []string `json:"tags"`
+	Name          *string     `json:"name"`
+	Domain        *string     `json:"domain"`
+	Industry      *string     `json:"industry"`
+	Size          *string     `json:"size"`
+	AnnualRevenue *float64    `json:"annual_revenue"`
+	Website       *string     `json:"website"`
+	Address       interface{} `json:"address"`
+	OwnerID       *string     `json:"owner_id"`
+	ParentCompany *string     `json:"parent_company_id"`
+	Tags          []string    `json:"tags"`
 }
 
 type ListCompaniesQuery struct {
@@ -128,6 +132,7 @@ func (h *CompanyHandler) Create(c echo.Context) error {
 		Industry:      req.Industry,
 		AnnualRevenue: req.AnnualRevenue,
 		Website:       req.Website,
+		Address:       req.Address,
 		Tags:          req.Tags,
 	}
 
@@ -137,6 +142,14 @@ func (h *CompanyHandler) Create(c echo.Context) error {
 			return errs.BadRequest("Invalid owner_id").HTTPError(c)
 		}
 		createReq.OwnerID = &id
+	}
+
+	if req.ParentCompany != nil {
+		id, err := uuid.Parse(*req.ParentCompany)
+		if err != nil {
+			return errs.BadRequest("Invalid parent_company_id").HTTPError(c)
+		}
+		createReq.ParentCompanyID = &id
 	}
 
 	comp, err := h.repo.Create(c.Request().Context(), tenantID, createReq)
@@ -182,6 +195,7 @@ func (h *CompanyHandler) Update(c echo.Context) error {
 		Industry:      req.Industry,
 		AnnualRevenue: req.AnnualRevenue,
 		Website:       req.Website,
+		Address:       req.Address,
 		Tags:          req.Tags,
 	}
 
@@ -191,6 +205,14 @@ func (h *CompanyHandler) Update(c echo.Context) error {
 			return errs.BadRequest("Invalid owner_id").HTTPError(c)
 		}
 		updateReq.OwnerID = &ownerID
+	}
+
+	if req.ParentCompany != nil {
+		id, err := uuid.Parse(*req.ParentCompany)
+		if err != nil {
+			return errs.BadRequest("Invalid parent_company_id").HTTPError(c)
+		}
+		updateReq.ParentCompanyID = &id
 	}
 
 	comp, err := h.repo.Update(c.Request().Context(), id, updateReq)
