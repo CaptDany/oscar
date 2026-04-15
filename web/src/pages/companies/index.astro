@@ -1,0 +1,591 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+
+const googleMapsApiKey = import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY || '';
+---
+
+<AppLayout title="Companies">
+  <section class="px-6 py-6 space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold font-headline tracking-tight text-white">Companies</h1>
+        <p id="companies-count-text" class="text-sm text-gray-500 font-mono mt-1">Found 0 companies in database.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-xs font-mono text-white rounded border border-outline-variant/10 hover:bg-surface-container-high transition-colors">
+          <span class="material-symbols-outlined text-[16px]">filter_list</span>
+          Filters
+        </button>
+        <button onclick="openCompanyModal()" class="flex items-center gap-2 px-4 py-2 bg-primary-container text-white text-xs font-mono rounded hover:opacity-90 transition-colors">
+          <span class="material-symbols-outlined text-[16px]">add</span>
+          Add Company
+        </button>
+      </div>
+    </div>
+
+    <!-- Companies Grid -->
+    <div id="companies-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="col-span-full flex flex-col items-center justify-center py-16">
+        <span class="material-symbols-outlined text-5xl text-gray-600 mb-4">domain</span>
+        <p class="text-gray-500 font-mono text-sm mb-4">No companies yet</p>
+        <button onclick="openCompanyModal()" class="text-primary hover:text-primary/80 font-mono text-sm transition-colors">Add your first company</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- New Company Modal -->
+  <div id="company-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeCompanyModal()"></div>
+    <div class="relative w-full max-w-lg bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between sticky top-0 bg-surface-container z-10">
+        <h2 class="text-lg font-headline font-bold text-white">New Company</h2>
+        <button onclick="closeCompanyModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+          <span class="material-symbols-outlined text-gray-400">close</span>
+        </button>
+      </div>
+      <form id="company-form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Company Name <span class="text-red-400">*</span></label>
+          <input type="text" id="company-name" name="name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Acme Corporation" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Industry</label>
+            <input type="text" id="company-industry" name="industry" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Technology" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Domain</label>
+            <input type="text" id="company-domain" name="domain" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="acme.com" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Size</label>
+            <select id="company-size" name="size" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+              <option value="">Select size</option>
+              <option value="startup">Startup</option>
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Annual Revenue</label>
+            <input type="number" id="company-revenue" name="annual_revenue" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="1000000" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Website</label>
+          <input type="url" id="company-website" name="website" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="https://acme.com" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Parent Company</label>
+          <select id="company-parent" name="parent_company_id" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="">None</option>
+          </select>
+        </div>
+        <div class="border-t border-outline-variant/10 pt-4">
+          <p class="text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-3">Address</p>
+
+          <!-- Google Places Autocomplete Search -->
+          <div id="address-search-container" class="mb-3 hidden">
+            <div class="relative">
+              <input
+                type="text"
+                id="address-autocomplete"
+                class="w-full bg-surface-container-high border border-outline-variant/30 rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary"
+                placeholder="Search for an address..."
+                autocomplete="off"
+              />
+              <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">search</span>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-1">Start typing to search or fill manually below</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <input type="text" id="company-street" name="street" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Street Address" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <input type="text" id="company-city" name="city" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="City" />
+              </div>
+              <div>
+                <input type="text" id="company-state" name="state" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="State" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <input type="text" id="company-postal" name="postal_code" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Postal Code" />
+              </div>
+              <div>
+                <input type="text" id="company-country" name="country" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Country" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Tags</label>
+          <input type="text" id="company-tags" name="tags" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="enterprise, partner, tech" />
+          <p class="text-[10px] text-gray-500 mt-1">Separate multiple tags with commas</p>
+        </div>
+        <div id="company-form-error" class="hidden text-red-400 text-sm bg-red-400/10 p-3 rounded-lg"></div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeCompanyModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" id="company-submit-btn" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity">Create Company</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<script is:inline define:vars={{ googleMapsApiKey }}>
+  window.__GOOGLE_MAPS_KEY__ = googleMapsApiKey;
+</script>
+
+<script>
+  let companies: any[] = [];
+  let autocomplete: any = null;
+
+  function populateParentCompanyDropdown() {
+    const select = document.getElementById('company-parent') as HTMLSelectElement;
+    select.innerHTML = '<option value="">None</option>';
+    companies.forEach(company => {
+      const option = document.createElement('option');
+      option.value = company.id;
+      option.textContent = company.name;
+      select.appendChild(option);
+    });
+  }
+
+  function initAddressAutocomplete() {
+    const container = document.getElementById('address-search-container');
+    const input = document.getElementById('address-autocomplete') as HTMLInputElement;
+
+    if (!container || !input) return;
+    if (typeof google === 'undefined' || !google.maps?.places) return;
+
+    container.classList.remove('hidden');
+
+    // Skip if already initialized
+    if (container.dataset.autocompleteReady) return;
+    container.dataset.autocompleteReady = 'true';
+
+    // Always use the legacy Autocomplete API to keep custom styling
+    autocomplete = new google.maps.places.Autocomplete(input, {
+      types: ['address'],
+      fields: ['address_components']
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (place.address_components) {
+        fillAddressFieldsFromComponents(place.address_components);
+        input.value = '';
+      }
+    });
+  }
+
+  function fillAddressFieldsFromComponents(components: any[]) {
+    const streetNumber = components[0]?.long_name || '';
+    const route = components[1]?.long_name || '';
+    const city = components[3]?.long_name || '';
+    const state = components[4]?.short_name || '';
+    const country = components[5]?.short_name || '';
+    const postal = components[6]?.long_name || '';
+
+    (document.getElementById('company-street') as HTMLInputElement).value =
+      `${streetNumber} ${route}`.trim();
+    (document.getElementById('company-city') as HTMLInputElement).value = city;
+    (document.getElementById('company-state') as HTMLInputElement).value = state;
+    (document.getElementById('company-postal') as HTMLInputElement).value = postal;
+    (document.getElementById('company-country') as HTMLInputElement).value = country;
+  }
+
+  function openCompanyModal() {
+    populateParentCompanyDropdown();
+    document.getElementById('company-modal')!.classList.remove('hidden');
+
+    // Initialize Google Places autocomplete if API key is available
+    setTimeout(() => {
+      initAddressAutocomplete();
+    }, 100);
+  }
+
+  function closeCompanyModal() {
+    document.getElementById('company-modal')!.classList.add('hidden');
+    const form = document.getElementById('company-form') as HTMLFormElement;
+    form.reset();
+    delete form.dataset.editId;
+    document.querySelector('#company-modal h2')!.textContent = 'New Company';
+    document.getElementById('company-form-error')!.classList.add('hidden');
+    document.getElementById('company-submit-btn')!.textContent = 'Create Company';
+
+    // Clear autocomplete
+    const autocompleteInput = document.getElementById('address-autocomplete') as HTMLInputElement;
+    if (autocompleteInput) autocompleteInput.value = '';
+    autocomplete = null;
+
+    // Hide autocomplete container and reset init flag
+    const container = document.getElementById('address-search-container');
+    if (container) {
+      container.classList.add('hidden');
+      delete container.dataset.autocompleteReady;
+    }
+  }
+
+  function formatSize(size: string): string {
+    const sizeMap: Record<string, string> = {
+      'startup': 'Startup',
+      'small': 'Small',
+      'medium': 'Medium',
+      'large': 'Large',
+      'enterprise': 'Enterprise',
+    };
+    return sizeMap[size] || size || '';
+  }
+
+  function formatAddress(address: any): string {
+    if (!address) return '';
+    const parts = [];
+    if (address.street) parts.push(address.street);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.postal_code) parts.push(address.postal_code);
+    if (address.country) parts.push(address.country);
+    return parts.join(', ');
+  }
+
+  function formatRevenue(revenue: number): string {
+    if (!revenue) return '';
+    if (revenue >= 1000000000) return `$${(revenue / 1000000000).toFixed(1)}B`;
+    if (revenue >= 1000000) return `$${(revenue / 1000000).toFixed(1)}M`;
+    if (revenue >= 1000) return `$${(revenue / 1000).toFixed(1)}K`;
+    return `$${revenue}`;
+  }
+
+  function renderCompanies() {
+    const grid = document.getElementById('companies-grid')!;
+    document.getElementById('companies-count-text')!.textContent = `Found ${companies.length} companies in database.`;
+
+    if (companies.length === 0) {
+      grid.innerHTML = `
+        <div class="col-span-full flex flex-col items-center justify-center py-16">
+          <span class="material-symbols-outlined text-5xl text-gray-600 mb-4">domain</span>
+          <p class="text-gray-500 font-mono text-sm mb-4">No companies yet</p>
+          <button onclick="openCompanyModal()" class="text-primary hover:text-primary/80 font-mono text-sm transition-colors">Add your first company</button>
+        </div>
+      `;
+      return;
+    }
+
+    const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500'];
+
+    grid.innerHTML = companies.map((company: any, i: number) => `
+      <div onclick="openEditCompanyModal('${company.id}')" class="bg-surface-container-low p-5 rounded-lg border border-outline-variant/10 hover:border-primary/40 transition-all group cursor-pointer">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-lg ${colors[i % colors.length]} flex items-center justify-center text-white font-bold text-lg">
+            ${company.name?.[0]?.toUpperCase() || 'C'}
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-headline font-semibold text-white group-hover:text-primary transition-colors truncate">${company.name}</h3>
+            <p class="text-xs text-gray-500 font-mono mt-1">${company.industry || 'No industry'}</p>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-outline-variant/10">
+          <div class="flex items-center gap-4 flex-wrap">
+            ${company.size ? `
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-gray-500">group</span>
+                <span class="text-xs font-mono text-gray-400">${formatSize(company.size)}</span>
+              </div>
+            ` : ''}
+            ${company.annual_revenue ? `
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-sm text-gray-500">attach_money</span>
+                <span class="text-xs font-mono text-gray-400">${formatRevenue(company.annual_revenue)}</span>
+              </div>
+            ` : ''}
+            ${company.website ? `
+              <a href="${company.website}" target="_blank" class="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors">
+                <span class="material-symbols-outlined text-sm">link</span>
+                <span class="text-xs font-mono">Website</span>
+              </a>
+            ` : ''}
+          </div>
+          ${company.address ? `
+            <div class="flex items-center gap-1.5 mt-2">
+              <span class="material-symbols-outlined text-sm text-gray-500">location_on</span>
+              <span class="text-xs font-mono text-gray-500">${formatAddress(company.address)}</span>
+            </div>
+          ` : ''}
+        </div>
+        <div class="mt-3 flex items-center justify-between">
+          ${company.tags && company.tags.length > 0 ? `
+            <div class="flex flex-wrap gap-1">
+              ${company.tags.map((tag: string) => `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-surface-container-high text-gray-400">${tag}</span>`).join('')}
+            </div>
+          ` : '<div></div>'}
+          <button onclick="event.stopPropagation(); openCompanyMenu('${company.id}')" class="p-1.5 hover:bg-surface-container-high rounded transition-colors text-gray-400 opacity-0 group-hover:opacity-100">
+            <span class="material-symbols-outlined text-[18px]">more_vert</span>
+          </button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openCompanyMenu(id: string, event: Event) {
+    event.stopPropagation();
+
+    // Close any existing menu
+    document.querySelectorAll('.company-menu').forEach(m => m.remove());
+
+    const menu = document.createElement('div');
+    menu.className = 'company-menu absolute right-0 top-full mt-1 bg-surface-container-highest border border-outline-variant/20 rounded-lg shadow-xl py-1 min-w-[140px] z-50';
+    menu.innerHTML = `
+      <button onclick="openEditCompanyModal('${id}')" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[16px]">edit</span> Edit
+      </button>
+      <button onclick="window.location.href='/companies/${id}'" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[16px]">open_in_new</span> View Details
+      </button>
+      <hr class="my-1 border-outline-variant/20" />
+      <button onclick="deleteCompany('${id}')" class="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[16px]">delete</span> Delete
+      </button>
+    `;
+
+    const btn = (event.target as HTMLElement).closest('button')!;
+    btn.style.position = 'relative';
+    btn.appendChild(menu);
+
+    // Close on click outside
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu() {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      });
+    }, 0);
+  }
+
+  function openEditCompanyModal(id: string) {
+    const company = companies.find(c => c.id === id);
+    if (!company) return;
+
+    // Fill form fields
+    (document.getElementById('company-name') as HTMLInputElement).value = company.name || '';
+    (document.getElementById('company-industry') as HTMLInputElement).value = company.industry || '';
+    (document.getElementById('company-domain') as HTMLInputElement).value = company.domain || '';
+    (document.getElementById('company-size') as HTMLSelectElement).value = company.size || '';
+    (document.getElementById('company-revenue') as HTMLInputElement).value = company.annual_revenue || '';
+    (document.getElementById('company-website') as HTMLInputElement).value = company.website || '';
+    (document.getElementById('company-tags') as HTMLInputElement).value = (company.tags || []).join(', ');
+
+    // Fill address fields
+    if (company.address) {
+      (document.getElementById('company-street') as HTMLInputElement).value = company.address.street || '';
+      (document.getElementById('company-city') as HTMLInputElement).value = company.address.city || '';
+      (document.getElementById('company-state') as HTMLInputElement).value = company.address.state || '';
+      (document.getElementById('company-postal') as HTMLInputElement).value = company.address.postal_code || '';
+      (document.getElementById('company-country') as HTMLInputElement).value = company.address.country || '';
+    }
+
+    // Set parent company (exclude current company)
+    populateParentCompanyDropdown(company.id);
+
+    const parentSelect = document.getElementById('company-parent') as HTMLSelectElement;
+    parentSelect.value = company.parent_company_id || '';
+
+    // Update form for editing
+    const form = document.getElementById('company-form') as HTMLFormElement;
+    form.dataset.editId = id;
+
+    document.querySelector('#company-modal h2')!.textContent = 'Edit Company';
+    document.getElementById('company-submit-btn')!.textContent = 'Save Changes';
+
+    document.getElementById('company-modal')!.classList.remove('hidden');
+
+    // Initialize Google Places autocomplete if API key is available
+    setTimeout(() => {
+      initAddressAutocomplete();
+    }, 100);
+  }
+
+  async function deleteCompany(id: string) {
+    if (!confirm('Delete this company? This action cannot be undone.')) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`/api/v1/companies/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        loadCompanies();
+      } else {
+        const error = await res.json();
+        alert('Failed to delete company: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to delete company:', err);
+      alert('Failed to delete company');
+    }
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function loadCompanies() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/companies?limit=100', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const { data } = await res.json();
+      companies = data || [];
+      renderCompanies();
+    } catch (err) {
+      console.error('Failed to load companies:', err);
+    }
+  }
+
+  document.getElementById('company-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('company-submit-btn')!;
+    const errorEl = document.getElementById('company-form-error')!;
+    const isEdit = !!form.dataset.editId;
+    const editId = form.dataset.editId;
+
+    const token = getToken();
+    if (!token) return;
+
+    errorEl.classList.add('hidden');
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.textContent = isEdit ? 'Saving...' : 'Creating...';
+
+    const payload: any = {
+      name: formData.get('name'),
+    };
+
+    const industry = formData.get('industry') as string;
+    const domain = formData.get('domain') as string;
+    const size = formData.get('size') as string;
+    const revenue = formData.get('annual_revenue') as string;
+    const website = formData.get('website') as string;
+    const tagsInput = formData.get('tags') as string;
+    const parentCompanyId = formData.get('parent_company_id') as string;
+    const street = formData.get('street') as string;
+    const city = formData.get('city') as string;
+    const state = formData.get('state') as string;
+    const postal = formData.get('postal_code') as string;
+    const country = formData.get('country') as string;
+
+    if (industry) payload.industry = industry;
+    if (domain) payload.domain = domain;
+    if (size) payload.size = size;
+    if (revenue) payload.annual_revenue = parseFloat(revenue);
+    if (website) payload.website = website;
+    if (tagsInput) {
+      payload.tags = tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
+    }
+    if (parentCompanyId) payload.parent_company_id = parentCompanyId;
+
+    if (street || city || state || postal || country) {
+      payload.address = {};
+      if (street) payload.address.street = street;
+      if (city) payload.address.city = city;
+      if (state) payload.address.state = state;
+      if (postal) payload.address.postal_code = postal;
+      if (country) payload.address.country = country;
+    }
+
+    try {
+      const url = isEdit ? `/api/v1/companies/${editId}` : '/api/v1/companies';
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeCompanyModal();
+        loadCompanies();
+      } else {
+        const error = await res.json();
+        let errorMsg = isEdit ? 'Failed to update company' : 'Failed to create company';
+        if (error.error?.details) {
+          errorMsg = error.error.details.map((d: any) => d.message || d.field).join(', ');
+        } else if (error.error?.message) {
+          errorMsg = error.error.message;
+        }
+        errorEl.textContent = errorMsg;
+        errorEl.classList.remove('hidden');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.textContent = isEdit ? 'Save Changes' : 'Create Company';
+      }
+    } catch (err) {
+      console.error(isEdit ? 'Failed to update company:' : 'Failed to create company:', err);
+      errorEl.textContent = 'An unexpected error occurred';
+      errorEl.classList.remove('hidden');
+      submitBtn.removeAttribute('disabled');
+      submitBtn.textContent = isEdit ? 'Save Changes' : 'Create Company';
+    }
+  });
+
+  // Load Google Maps API if PUBLIC_GOOGLE_MAPS_API_KEY is set
+  const apiKey = (window as any).__GOOGLE_MAPS_KEY__;
+  if (apiKey && typeof google === 'undefined') {
+    console.log('Loading Google Maps API with key:', apiKey.substring(0, 10) + '...');
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.onload = () => {
+      console.log('Google Maps loaded successfully');
+      initAddressAutocomplete();
+    };
+    document.head.appendChild(script);
+  } else if (apiKey && typeof google !== 'undefined') {
+    // Already loaded
+    initAddressAutocomplete();
+  } else {
+    console.log('No Google Maps API key found');
+  }
+
+  // Global callback for Google Maps
+  (window as any).initGoogleMaps = function() {
+    console.log('Google Maps loaded successfully');
+    initAddressAutocomplete();
+  };
+
+  // Expose functions globally for inline onclick handlers
+  (window as any).openCompanyModal = openCompanyModal;
+  (window as any).closeCompanyModal = closeCompanyModal;
+  (window as any).openCompanyMenu = openCompanyMenu;
+  (window as any).openEditCompanyModal = openEditCompanyModal;
+
+  loadCompanies();
+</script>
