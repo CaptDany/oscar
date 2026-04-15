@@ -10,14 +10,20 @@ import (
 )
 
 type Handlers struct {
-	Auth     *handlers.AuthHandler
-	Person   *handlers.PersonHandler
-	Company  *handlers.CompanyHandler
-	Deal     *handlers.DealHandler
-	Pipeline *handlers.PipelineHandler
-	Activity *handlers.ActivityHandler
-	User     *handlers.UserHandler
-	Upload   *handlers.UploadHandler
+	Auth         *handlers.AuthHandler
+	OAuth        *handlers.OAuthHandler
+	Person       *handlers.PersonHandler
+	Company      *handlers.CompanyHandler
+	Deal         *handlers.DealHandler
+	Pipeline     *handlers.PipelineHandler
+	Activity     *handlers.ActivityHandler
+	User         *handlers.UserHandler
+	Upload       *handlers.UploadHandler
+	Notification *handlers.NotificationHandler
+	Team         *handlers.TeamHandler
+	Product      *handlers.ProductHandler
+	Settings     *handlers.SettingsHandler
+	Invitation   *handlers.InvitationHandler
 }
 
 func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
@@ -26,6 +32,15 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	api.POST("/auth/register", h.Auth.Register)
 	api.POST("/auth/login", h.Auth.Login)
 	api.POST("/auth/refresh", h.Auth.Refresh)
+	api.GET("/auth/verify-email/:token", h.Auth.VerifyEmail)
+	api.POST("/auth/resend-verification", h.Auth.ResendVerification)
+
+	api.GET("/auth/oauth/google", h.OAuth.GoogleLogin)
+	api.GET("/auth/oauth/google/callback", h.OAuth.GoogleCallback)
+	api.GET("/auth/oauth/apple", h.OAuth.AppleLogin)
+	api.GET("/auth/oauth/apple/callback", h.OAuth.AppleCallback)
+
+	api.GET("/invitations/:token/validate", h.Invitation.Validate)
 
 	auth := api.Group("", authMiddleware)
 	auth.POST("/auth/logout", h.Auth.Logout)
@@ -35,6 +50,10 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 
 	tenantScoped := auth.Group("", authMiddlewareWithTenant)
 	tenantScoped.GET("/avatar/:user_id", h.Upload.GetAvatarURL)
+
+	settings := tenantScoped.Group("/settings")
+	settings.GET("", h.Settings.GetSettings)
+	settings.PATCH("", h.Settings.UpdateSettings)
 
 	persons := tenantScoped.Group("/persons")
 	persons.GET("", h.Person.List)
@@ -91,7 +110,39 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	users := tenantScoped.Group("/users")
 	users.GET("", h.User.List, RequirePermission("users", "view"))
 	users.GET("/:id", h.User.Get, RequirePermission("users", "view"))
+	users.PATCH("/:id", h.User.Update)
 	users.PUT("/:id/roles", h.User.UpdateRoles, RequirePermission("users", "edit"))
+
+	notifications := tenantScoped.Group("/notifications")
+	notifications.GET("", h.Notification.List)
+	notifications.GET("/count", h.Notification.CountUnread)
+	notifications.GET("/:id", h.Notification.Get)
+	notifications.POST("/:id/read", h.Notification.MarkAsRead)
+	notifications.POST("/read-all", h.Notification.MarkAllAsRead)
+	notifications.DELETE("/:id", h.Notification.Delete)
+
+	teams := tenantScoped.Group("/teams")
+	teams.GET("", h.Team.List)
+	teams.POST("", h.Team.Create)
+	teams.GET("/:id", h.Team.Get)
+	teams.PATCH("/:id", h.Team.Update)
+	teams.DELETE("/:id", h.Team.Delete)
+	teams.GET("/:id/members", h.Team.ListMembers)
+	teams.POST("/:id/members", h.Team.AddMember)
+	teams.DELETE("/:id/members/:user_id", h.Team.RemoveMember)
+	teams.POST("/:id/lead/:user_id", h.Team.SetLead)
+
+	products := tenantScoped.Group("/products")
+	products.GET("", h.Product.List)
+	products.POST("", h.Product.Create)
+	products.GET("/:id", h.Product.Get)
+	products.PATCH("/:id", h.Product.Update)
+	products.DELETE("/:id", h.Product.Delete)
+
+	invitations := tenantScoped.Group("/invitations")
+	invitations.GET("", h.Invitation.List, RequirePermission("users", "edit"))
+	invitations.POST("", h.Invitation.Create, RequirePermission("users", "edit"))
+	invitations.DELETE("/:id", h.Invitation.Delete, RequirePermission("users", "edit"))
 }
 
 func GetTenantID(c echo.Context) uuid.UUID {
