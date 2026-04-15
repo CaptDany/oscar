@@ -1,34 +1,43 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/oscar/oscar/internal/domain/invitation"
 	"github.com/oscar/oscar/internal/domain/tenant"
 	"github.com/oscar/oscar/internal/domain/user"
+	"github.com/oscar/oscar/internal/email"
 	"github.com/oscar/oscar/pkg/crypto"
 	"github.com/oscar/oscar/pkg/errs"
 	"github.com/oscar/oscar/pkg/validator"
 )
 
 type AuthHandler struct {
-	userRepo     user.Repository
-	tenantRepo   tenant.Repository
-	roleRepo     user.RoleRepository
-	crypto       *crypto.Crypto
-	tokenManager *crypto.TokenManager
+	userRepo       user.Repository
+	tenantRepo     tenant.Repository
+	roleRepo       user.RoleRepository
+	invitationRepo invitation.Repository
+	crypto         *crypto.Crypto
+	tokenManager   *crypto.TokenManager
+	emailClient    *email.EmailClient
+	baseURL        string
+	frontendURL    string
 }
 
 type RegisterRequest struct {
-	Email      string `json:"email" validate:"required,email"`
-	Password   string `json:"password" validate:"required,min=8"`
-	FirstName  string `json:"first_name" validate:"required,min=1"`
-	LastName   string `json:"last_name"`
-	TenantName string `json:"tenant_name" validate:"required,min=2"`
-	TenantSlug string `json:"tenant_slug" validate:"required,min=2,max=63"`
+	Email           string `json:"email" validate:"required,email"`
+	Password        string `json:"password" validate:"required,min=8"`
+	FirstName       string `json:"first_name" validate:"required,min=1"`
+	LastName        string `json:"last_name"`
+	TenantName      string `json:"tenant_name" validate:"omitempty,min=2"`
+	TenantSlug      string `json:"tenant_slug" validate:"omitempty,min=2,max=63"`
+	InvitationToken string `json:"invitation_token"`
 }
 
 type LoginRequest struct {
@@ -73,6 +82,30 @@ func NewAuthHandler(
 	}
 }
 
+func NewAuthHandlerWithInvitations(
+	userRepo user.Repository,
+	tenantRepo tenant.Repository,
+	roleRepo user.RoleRepository,
+	invitationRepo invitation.Repository,
+	cryptoSvc *crypto.Crypto,
+	tokenManager *crypto.TokenManager,
+	emailClient *email.EmailClient,
+	baseURL string,
+	frontendURL string,
+) *AuthHandler {
+	return &AuthHandler{
+		userRepo:       userRepo,
+		tenantRepo:     tenantRepo,
+		roleRepo:       roleRepo,
+		invitationRepo: invitationRepo,
+		crypto:         cryptoSvc,
+		tokenManager:   tokenManager,
+		emailClient:    emailClient,
+		baseURL:        baseURL,
+		frontendURL:    frontendURL,
+	}
+}
+
 func (h *AuthHandler) Register(c echo.Context) error {
 	var req RegisterRequest
 	if err := c.Bind(&req); err != nil {
@@ -93,6 +126,14 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	var t *tenant.Tenant
 	var err error
 	var isNewTenant bool
+
+	if req.InvitationToken != "" {
+		return h.registerWithInvitation(c, req)
+	}
+
+	if req.TenantSlug == "" || req.TenantName == "" {
+		return errs.BadRequest("Tenant name and slug are required for new registrations").HTTPError(c)
+	}
 
 	existingTenant, err := h.tenantRepo.GetBySlug(c.Request().Context(), req.TenantSlug)
 	if err != nil {
@@ -151,8 +192,129 @@ func (h *AuthHandler) Register(c echo.Context) error {
 
 	_ = h.roleRepo.AssignToUser(c.Request().Context(), u.ID, []uuid.UUID{defaultRole.ID})
 
-	return c.JSON(http.StatusCreated, map[string]interface{}{
-		"message": "Registration successful",
+	verificationToken, _ := crypto.GenerateSecureToken(32)
+
+	verifyURL := fmt.Sprintf("%s/verify-email/%s", h.frontendURL, verificationToken)
+
+	if h.emailClient != nil {
+		go func() {
+			ctx := context.Background()
+			if err := h.userRepo.SetEmailVerificationToken(ctx, u.ID, verificationToken); err != nil {
+				fmt.Printf("Failed to set verification token: %v\n", err)
+				return
+			}
+			if err := h.emailClient.SendEmailVerification(u.Email, req.FirstName, verifyURL); err != nil {
+				fmt.Printf("Failed to send verification email to %s: %v\n", u.Email, err)
+				return
+			}
+			fmt.Printf("Verification email sent to %s\n", u.Email)
+		}()
+	}
+
+	payload := crypto.TokenPayload{
+		UserID:   u.ID.String(),
+		TenantID: t.ID.String(),
+		Email:    u.Email,
+		Roles:    []string{defaultRole.Name},
+	}
+
+	tokens, err := h.tokenManager.GenerateTokenPair(payload, 15*time.Minute, 7*24*time.Hour)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return c.JSON(http.StatusCreated, &AuthResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresAt:    tokens.ExpiresAt,
+		TokenType:    tokens.TokenType,
+		User: &UserResponse{
+			ID:        u.ID,
+			TenantID:  u.TenantID,
+			Email:     u.Email,
+			FirstName: u.FirstName,
+			LastName:  u.LastName,
+			Roles:     []string{defaultRole.Name},
+		},
+	})
+}
+
+func (h *AuthHandler) registerWithInvitation(c echo.Context, req RegisterRequest) error {
+	if h.invitationRepo == nil {
+		return errs.Internal(nil).HTTPError(c)
+	}
+
+	inv, err := h.invitationRepo.GetByToken(c.Request().Context(), req.InvitationToken)
+	if err != nil {
+		return errs.NotFound("Invitation not found").HTTPError(c)
+	}
+
+	if !inv.IsValid() {
+		if inv.IsExpired() {
+			return errs.BadRequest("Invitation has expired").HTTPError(c)
+		}
+		if inv.IsAccepted() {
+			return errs.BadRequest("Invitation has already been used").HTTPError(c)
+		}
+		return errs.BadRequest("Invitation is no longer valid").HTTPError(c)
+	}
+
+	if inv.Email != req.Email {
+		return errs.BadRequest("Email does not match invitation").HTTPError(c)
+	}
+
+	t, err := h.tenantRepo.GetByID(c.Request().Context(), inv.TenantID)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	passwordHash, err := h.crypto.HashPassword(req.Password)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	createUserReq := &user.CreateUserRequest{
+		Email: req.Email,
+	}
+	u, err := h.userRepo.Create(c.Request().Context(), inv.TenantID, createUserReq, passwordHash)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	assignedRole, err := h.roleRepo.GetByName(c.Request().Context(), inv.TenantID, inv.RoleName)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	_ = h.roleRepo.AssignToUser(c.Request().Context(), u.ID, []uuid.UUID{assignedRole.ID})
+
+	_ = h.invitationRepo.MarkAccepted(c.Request().Context(), inv.ID)
+
+	payload := crypto.TokenPayload{
+		UserID:   u.ID.String(),
+		TenantID: t.ID.String(),
+		Email:    u.Email,
+		Roles:    []string{assignedRole.Name},
+	}
+
+	tokens, err := h.tokenManager.GenerateTokenPair(payload, 15*time.Minute, 7*24*time.Hour)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return c.JSON(http.StatusCreated, &AuthResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresAt:    tokens.ExpiresAt,
+		TokenType:    tokens.TokenType,
+		User: &UserResponse{
+			ID:        u.ID,
+			TenantID:  u.TenantID,
+			Email:     u.Email,
+			FirstName: req.FirstName,
+			LastName:  req.LastName,
+			Roles:     []string{assignedRole.Name},
+		},
 	})
 }
 
@@ -180,6 +342,15 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	if !h.crypto.VerifyPassword(req.Password, u.PasswordHash) {
 		return errs.Unauthorized("Invalid credentials").HTTPError(c)
+	}
+
+	if u.EmailVerifiedAt == nil {
+		return c.JSON(http.StatusForbidden, map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    "EMAIL_NOT_VERIFIED",
+				"message": "Please verify your email address before logging in",
+			},
+		})
 	}
 
 	roleNames, _ := h.roleRepo.GetUserRoleNames(c.Request().Context(), u.ID)
@@ -282,5 +453,88 @@ func (h *AuthHandler) Me(c echo.Context) error {
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
 		Roles:     payload.Roles,
+	})
+}
+
+func (h *AuthHandler) VerifyEmail(c echo.Context) error {
+	token := c.Param("token")
+	if token == "" {
+		return errs.BadRequest("Verification token is required").HTTPError(c)
+	}
+
+	u, err := h.userRepo.GetByVerificationToken(c.Request().Context(), token)
+	if err != nil {
+		return errs.BadRequest("Invalid or expired verification link").HTTPError(c)
+	}
+
+	if u.EmailVerifiedAt != nil {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Email already verified",
+		})
+	}
+
+	if err := h.userRepo.VerifyEmail(c.Request().Context(), u.ID); err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Email verified successfully",
+	})
+}
+
+type ResendVerificationRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+func (h *AuthHandler) ResendVerification(c echo.Context) error {
+	var req ResendVerificationRequest
+	if err := c.Bind(&req); err != nil {
+		return errs.BadRequest("Invalid request body").HTTPError(c)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		validationErrors := validator.FormatValidationErrors(err)
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": map[string]interface{}{
+				"code":    "VALIDATION_FAILED",
+				"message": "Validation failed",
+				"details": validationErrors,
+			},
+		})
+	}
+
+	u, err := h.userRepo.GetByEmail(c.Request().Context(), uuid.Nil, req.Email)
+	if err != nil {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "If an account with that email exists, a verification email has been sent",
+		})
+	}
+
+	if u.EmailVerifiedAt != nil {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"message": "Email already verified",
+		})
+	}
+
+	verificationToken, _ := crypto.GenerateSecureToken(32)
+	verifyURL := fmt.Sprintf("%s/verify-email/%s", h.frontendURL, verificationToken)
+
+	if h.emailClient != nil {
+		go func() {
+			ctx := context.Background()
+			if err := h.userRepo.SetEmailVerificationToken(ctx, u.ID, verificationToken); err != nil {
+				fmt.Printf("Failed to set verification token: %v\n", err)
+				return
+			}
+			if err := h.emailClient.SendEmailVerification(u.Email, u.FirstName, verifyURL); err != nil {
+				fmt.Printf("Failed to send verification email to %s: %v\n", u.Email, err)
+				return
+			}
+			fmt.Printf("Verification email sent to %s\n", u.Email)
+		}()
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "If an account with that email exists, a verification email has been sent",
 	})
 }
