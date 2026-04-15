@@ -1,293 +1,838 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
 ---
 
 <AppLayout title="Dashboard">
-  <div class="mb-8">
-    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-    <p class="text-gray-500">Overview of your sales pipeline</p>
+  <section class="p-8 max-w-[1400px] mx-auto w-full space-y-8">
+    <!-- Header Section -->
+    <div class="flex items-end justify-between">
+      <div>
+        <h1 class="font-headline text-3xl font-bold tracking-tight text-white mb-1">
+          Good morning, {user.first_name || 'User'}
+        </h1>
+        <p class="font-mono text-xs text-outline tracking-wider uppercase">
+          ARCHITECT DASHBOARD // SESSION ACTIVE
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <button id="export-csv-btn" class="px-4 py-2 bg-surface-container text-on-surface text-xs font-mono rounded hover:bg-surface-container-high transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export CSV
+        </button>
+        <button class="px-4 py-2 bg-primary-container text-white text-xs font-mono rounded hover:opacity-90 transition-opacity">
+          Customize Layout
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Card 1: Total Deals -->
+      <div class="bg-surface-container-low p-5 rounded-lg border-b border-transparent hover:border-primary/40 transition-all group relative overflow-hidden">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-[10px] font-mono text-outline uppercase tracking-widest">Total Deals</span>
+          <span id="deals-change" class="text-xs font-mono text-primary">+0%</span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-4">
+          <span id="deals-count" class="font-headline text-2xl font-bold text-white">0</span>
+          <span class="text-xs text-outline">closed YTD</span>
+        </div>
+        <div class="h-10 flex items-end gap-1">
+          <div class="w-full bg-primary/10 h-2 rounded-t-sm group-hover:bg-primary/20 transition-colors" style="height: 40%"></div>
+          <div class="w-full bg-primary/10 h-2 rounded-t-sm group-hover:bg-primary/20 transition-colors" style="height: 60%"></div>
+          <div class="w-full bg-primary/10 h-2 rounded-t-sm group-hover:bg-primary/20 transition-colors" style="height: 55%"></div>
+          <div class="w-full bg-primary/20 h-2 rounded-t-sm group-hover:bg-primary/30 transition-colors" style="height: 80%"></div>
+          <div class="w-full bg-primary/30 h-2 rounded-t-sm group-hover:bg-primary/40 transition-colors" style="height: 100%"></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Open Activities -->
+      <div class="bg-surface-container-low p-5 rounded-lg border-b border-transparent hover:border-primary/40 transition-all group">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-[10px] font-mono text-outline uppercase tracking-widest">Open Activities</span>
+          <span class="material-symbols-outlined text-outline text-lg">pending_actions</span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="activities-count" class="font-headline text-2xl font-bold text-white">0</span>
+          <span class="text-xs text-outline">pending</span>
+        </div>
+        <div class="flex gap-2">
+          <div class="flex-1 h-1 bg-surface-container rounded-full overflow-hidden">
+            <div id="activities-progress" class="h-full bg-primary" style="width: 0%"></div>
+          </div>
+          <span class="text-[10px] font-mono text-outline">0% CAP</span>
+        </div>
+      </div>
+
+      <!-- Card 3: New Contacts -->
+      <div class="bg-surface-container-low p-5 rounded-lg border-b border-transparent hover:border-primary/40 transition-all group">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-[10px] font-mono text-outline uppercase tracking-widest">Contacts</span>
+          <span id="contacts-change" class="text-xs font-mono text-error">-0%</span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="contacts-count" class="font-headline text-2xl font-bold text-white">0</span>
+          <span class="text-xs text-outline">active records</span>
+        </div>
+        <div id="contacts-avatars" class="mt-4 flex -space-x-2">
+          <div class="w-6 h-6 rounded-full border border-surface-container-low bg-surface-container text-[8px] flex items-center justify-center font-mono">+0</div>
+        </div>
+      </div>
+
+      <!-- Card 4: Pipeline Value -->
+      <div class="bg-surface-container-low p-5 rounded-lg border-b border-transparent hover:border-primary/40 transition-all group">
+        <div class="flex justify-between items-start mb-4">
+          <span class="text-[10px] font-mono text-outline uppercase tracking-widest">Pipeline Value</span>
+          <span class="material-symbols-outlined text-primary text-lg">account_balance_wallet</span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="pipeline-value" class="font-headline text-2xl font-bold text-white">$0</span>
+          <span class="text-xs text-outline">weighted</span>
+        </div>
+        <div class="mt-4 flex items-center gap-1.5">
+          <span class="text-[10px] font-mono py-0.5 px-2 bg-primary/10 text-primary rounded">STABLE</span>
+          <span class="text-[10px] font-mono py-0.5 px-2 bg-surface-container text-outline rounded">Q3 FORECAST</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts and Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Close Rate Chart -->
+      <div class="lg:col-span-8 bg-surface-container-low rounded-lg p-6 flex flex-col">
+        <div class="flex justify-between items-center mb-8">
+          <div>
+            <h3 class="text-white font-medium text-sm">Deal Close Rate</h3>
+            <p class="text-[10px] font-mono text-outline uppercase tracking-wider">Performance Metrics // 12 Month Window</p>
+          </div>
+          <div class="flex items-center gap-4 font-mono text-[10px]">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-0.5 bg-primary"></span>
+              <span class="text-on-surface">Target (82%)</span>
+            </div>
+            <select class="bg-surface-container border-none text-[10px] rounded focus:ring-0">
+              <option>Last 12 Months</option>
+              <option>Year to Date</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex-1 relative min-h-[300px] flex items-end justify-between px-2">
+          <svg class="absolute inset-0 w-full h-full px-8 py-4" preserveaspectratio="none" viewbox="0 0 100 100">
+            <path class="text-primary" d="M0 80 Q 15 70, 25 75 T 45 50 T 65 60 T 85 30 T 100 20" fill="none" stroke="currentColor" stroke-width="2"></path>
+            <path class="opacity-10" d="M0 80 Q 15 70, 25 75 T 45 50 T 65 60 T 85 30 T 100 20 L 100 100 L 0 100 Z" fill="url(#gradient)"></path>
+            <defs>
+              <lineargradient id="gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#d2bbff"></stop>
+                <stop offset="100%" stop-color="transparent"></stop>
+              </lineargradient>
+            </defs>
+          </svg>
+          <div class="w-full flex justify-between pl-10 pr-2 pt-4 border-t border-outline-variant/10 font-mono text-[10px] text-outline-variant">
+            <span>JAN</span><span>FEB</span><span>MAR</span><span>APR</span><span>MAY</span><span>JUN</span><span>JUL</span><span>AUG</span><span>SEP</span><span>OCT</span><span>NOV</span><span>DEC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Timeline -->
+      <div class="lg:col-span-4 bg-surface-container-low rounded-lg flex flex-col overflow-hidden">
+        <div class="p-4 border-b border-outline-variant/10 flex justify-between items-center bg-surface-container/30">
+          <h3 class="text-white font-medium text-sm">Real-time Feed</h3>
+          <div class="flex items-center gap-2">
+            <span class="flex h-2 w-2 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            <span class="text-[10px] font-mono text-primary uppercase font-bold tracking-tighter">Live</span>
+          </div>
+        </div>
+        <div id="activity-feed" class="flex-1 overflow-y-auto p-4 space-y-6">
+          <div class="flex gap-4 group">
+            <div class="relative">
+              <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center border border-outline-variant/20">
+                <span class="material-symbols-outlined text-sm text-primary">schedule</span>
+              </div>
+            </div>
+            <div>
+              <p class="text-xs text-on-surface leading-snug">
+                <span class="font-bold">Welcome to oscar</span>
+                <br/>
+                <span class="text-on-surface-variant">Start by adding deals and contacts</span>
+              </p>
+              <p class="text-[10px] font-mono text-outline mt-1 uppercase">Now // SYSTEM</p>
+            </div>
+          </div>
+        </div>
+        <button class="p-3 text-[10px] font-mono text-center text-outline hover:text-white transition-colors border-t border-outline-variant/10 uppercase tracking-widest bg-surface-container/20">
+          View All History
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer Grid: Tasks & Map -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Upcoming Tasks -->
+      <div class="lg:col-span-1 bg-surface-container-low rounded-lg p-6">
+        <h3 class="text-white font-medium text-sm mb-6 flex justify-between items-center">
+          Upcoming Tasks
+          <span onclick="openTaskMenu(event)" class="material-symbols-outlined text-outline cursor-pointer hover:text-primary transition-colors">more_horiz</span>
+        </h3>
+        <div id="tasks-list" class="space-y-3">
+          <div class="p-3 bg-surface-container rounded border-l-2 border-outline-variant group hover:bg-surface-container-high transition-colors cursor-pointer">
+            <div class="flex justify-between items-start mb-1">
+              <span class="text-xs font-bold text-white">No upcoming tasks</span>
+              <span class="text-[10px] font-mono text-outline">LOW</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[14px] text-outline">schedule</span>
+              <span class="text-[10px] font-mono text-outline uppercase">Schedule a follow-up</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Glassmorphism Stats Overlay -->
+      <div class="lg:col-span-2 relative min-h-[300px] rounded-lg overflow-hidden group">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary-container/20 to-surface-container-low rounded-lg"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+        <div class="absolute bottom-6 left-6 right-6">
+          <div class="glass p-6 rounded-lg border border-white/10 flex flex-wrap items-center justify-between gap-6">
+            <div>
+              <h4 class="text-white text-lg font-bold mb-1">Get Started with oscar</h4>
+              <p class="text-xs text-white/60">Add your first deals and contacts to see metrics here.</p>
+            </div>
+            <div class="flex gap-8">
+              <div class="text-center">
+                <span id="total-contacts-stat" class="block text-2xl font-headline font-bold text-primary">0</span>
+                <span class="block text-[8px] font-mono text-white/40 uppercase tracking-widest">Contacts</span>
+              </div>
+              <div class="text-center">
+                <span id="total-companies-stat" class="block text-2xl font-headline font-bold text-white">0</span>
+                <span class="block text-[8px] font-mono text-white/40 uppercase tracking-widest">Companies</span>
+              </div>
+              <div class="text-center">
+                <span id="total-deals-stat" class="block text-2xl font-headline font-bold text-secondary">0</span>
+                <span class="block text-[8px] font-mono text-white/40 uppercase tracking-widest">Deals</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Task Modal -->
+  <div id="task-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeTaskModal()"></div>
+    <div class="relative w-full max-w-md bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+        <h2 class="text-lg font-headline font-bold text-white">Log Activity</h2>
+        <button onclick="closeTaskModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+          <span class="material-symbols-outlined text-gray-400">close</span>
+        </button>
+      </div>
+      <form id="task-form" class="p-6 space-y-4">
+        <input type="hidden" id="edit-activity-id" name="id" />
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Activity Type *</label>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" class="activity-type-btn selected" data-type="call" onclick="selectActivityType('call', this)">
+              <span class="material-symbols-outlined text-xl">call</span>
+              <span>Call</span>
+            </button>
+            <button type="button" class="activity-type-btn" data-type="email" onclick="selectActivityType('email', this)">
+              <span class="material-symbols-outlined text-xl">mail</span>
+              <span>Email</span>
+            </button>
+            <button type="button" class="activity-type-btn" data-type="meeting" onclick="selectActivityType('meeting', this)">
+              <span class="material-symbols-outlined text-xl">groups</span>
+              <span>Meeting</span>
+            </button>
+            <button type="button" class="activity-type-btn" data-type="note" onclick="selectActivityType('note', this)">
+              <span class="material-symbols-outlined text-xl">note</span>
+              <span>Note</span>
+            </button>
+          </div>
+          <input type="hidden" id="activity-type" name="type" value="call" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Subject *</label>
+          <input type="text" id="activity-title" name="title" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Brief description of the activity" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Notes</label>
+          <textarea id="activity-body" name="body" rows="3" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary resize-none" placeholder="Additional details..."></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Due Date</label>
+            <input type="datetime-local" id="activity-due-at" name="due_at" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Direction</label>
+            <select id="activity-direction" name="direction" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+              <option value="">-- Select --</option>
+              <option value="inbound">Inbound</option>
+              <option value="outbound">Outbound</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeTaskModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">save</span>
+            <span id="activity-modal-submit-text">Save Activity</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <!-- Stats Grid -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-500">Total Deals</p>
-          <p id="stats-deals" class="text-2xl font-bold text-gray-900">-</p>
-        </div>
-        <div class="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center">
-          <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-      </div>
-      <p id="stats-deals-loading" class="text-sm text-gray-400 mt-2 hidden">Loading...</p>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-500">Total Value</p>
-          <p id="stats-value" class="text-2xl font-bold text-gray-900">-</p>
-        </div>
-        <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-        </div>
-      </div>
-      <p id="stats-value-loading" class="text-sm text-gray-400 mt-2 hidden">Loading...</p>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-500">Persons</p>
-          <p id="stats-persons" class="text-2xl font-bold text-gray-900">-</p>
-        </div>
-        <div class="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center">
-          <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </div>
-      </div>
-      <p id="stats-persons-loading" class="text-sm text-gray-400 mt-2 hidden">Loading...</p>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <p class="text-sm text-gray-500">Companies</p>
-          <p id="stats-companies" class="text-2xl font-bold text-gray-900">-</p>
-        </div>
-        <div class="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-          <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-        </div>
-      </div>
-      <p id="stats-companies-loading" class="text-sm text-gray-400 mt-2 hidden">Loading...</p>
-    </div>
-  </div>
-
-  <!-- Recent Activity & Deals Pipeline -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Recent Activity -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">Recent Activity</h2>
-        <a href="/activities" class="text-sm text-primary-600 hover:text-primary-700">View all</a>
-      </div>
-      <div id="activities-list" class="space-y-4">
-        <div class="text-center py-8 text-gray-400">
-          <svg class="w-8 h-8 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p>Loading activities...</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent Deals -->
-    <div class="bg-white rounded-xl shadow-sm p-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">Recent Deals</h2>
-        <a href="/deals" class="text-sm text-primary-600 hover:text-primary-700">View all</a>
-      </div>
-      <div id="deals-list" class="space-y-4">
-        <div class="text-center py-8 text-gray-400">
-          <svg class="w-8 h-8 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p>Loading deals...</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pipeline Overview -->
-  <div class="mt-6 bg-white rounded-xl shadow-sm p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-gray-900">Pipeline Overview</h2>
-      <a href="/pipeline" class="text-sm text-primary-600 hover:text-primary-700">View pipeline</a>
-    </div>
-    <div id="pipeline-overview" class="overflow-x-auto">
-      <div class="text-center py-8 text-gray-400">
-        <svg class="w-8 h-8 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <p>Loading pipeline...</p>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    import { auth, api } from '../lib/api';
-
-    function formatCurrency(value: number): string {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(value);
+  <style>
+    .activity-type-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 12px 8px;
+      background: var(--color-surface-container-high);
+      border: 1px solid var(--color-outline-variant);
+      border-radius: 8px;
+      color: var(--color-on-surface-variant);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
     }
-
-    function timeAgo(date: string): string {
-      const now = new Date();
-      const then = new Date(date);
-      const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
-
-      if (seconds < 60) return 'just now';
-      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-      if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-      return then.toLocaleDateString();
+    .activity-type-btn:hover {
+      background: var(--color-surface-container-highest);
+      border-color: var(--color-primary);
+      color: var(--color-primary);
     }
+    .activity-type-btn.selected {
+      background: var(--color-primary-container);
+      border-color: var(--color-primary);
+      color: var(--color-on-primary-container);
+    }
+    .activity-type-btn .material-symbols-outlined {
+      font-size: 20px;
+    }
+  </style>
 
-(window as any).toggleActivity = async function(id: string, currentStatus: string) {
-      const token = auth.token;
-      if (!token) return;
-      
-      try {
-        if (currentStatus === 'completed') {
-          await api.activities.uncomplete(auth.token!, id);
-        } else {
-          await api.activities.complete(auth.token!, id);
+  <!-- Task Menu -->
+  <div id="task-menu" class="hidden fixed bg-surface-container-highest border border-outline-variant/20 rounded-lg shadow-xl py-1 min-w-[180px] z-50">
+    <button onclick="openNewTaskModal()" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2">
+      <span class="material-symbols-outlined text-[16px]">add_task</span> New Task
+    </button>
+    <button onclick="window.location.href='/activities'" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2">
+      <span class="material-symbols-outlined text-[16px]">list</span> View All Tasks
+    </button>
+    <hr class="my-1 border-outline-variant/20" />
+    <button onclick="markAllTasksComplete()" class="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-white/10 flex items-center gap-2">
+      <span class="material-symbols-outlined text-[16px]">check_circle</span> Mark All Complete
+    </button>
+  </div>
+</AppLayout>
+
+<script>
+  import { resetApiAuthState } from '../lib/api';
+
+  let isPolling = true;
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function loadDashboardStats() {
+    if (!isPolling) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [dealsRes, contactsRes, activitiesRes] = await Promise.all([
+        fetch('/api/v1/deals?limit=100', { headers }),
+        fetch('/api/v1/persons?limit=100', { headers }),
+        fetch('/api/v1/activities?limit=10', { headers }),
+      ]);
+
+      if (!dealsRes.ok) {
+        if (dealsRes.status === 401) {
+          isPolling = false;
+          window.location.href = '/login?reason=session_expired';
+          return;
         }
-        loadDashboard();
-      } catch (error) {
-        console.error('Failed to toggle activity:', error);
+        if (dealsRes.status === 429) {
+          console.warn('Rate limited, skipping this poll cycle');
+          return;
+        }
       }
+
+      const [deals, contacts, activities] = await Promise.all([
+        dealsRes.json(),
+        contactsRes.json(),
+        activitiesRes.json(),
+      ]);
+
+      const dealCount = deals.data?.length || 0;
+      const contactCount = contacts.data?.length || 0;
+      const activitiesData = activities.data;
+      const allActivities = Array.isArray(activitiesData) ? activitiesData : Object.values(activitiesData || {});
+
+      const pendingActivities = allActivities.filter((a: any) => {
+        const status = a.status?.toLowerCase();
+        return status === 'planned' || status === 'in_progress' || !status;
+      });
+      const completedActivities = allActivities.filter((a: any) => {
+        const status = a.status?.toLowerCase();
+        return status === 'completed' || status === 'done';
+      });
+      const pendingCount = pendingActivities.length;
+      const completedCount = completedActivities.length;
+      const totalActivities = pendingCount + completedCount;
+      const completionPercent = totalActivities > 0 ? Math.round((completedCount / totalActivities) * 100) : 0;
+
+      const pipelineValue = deals.data?.reduce((sum: number, d: any) => sum + (d.value || 0), 0) || 0;
+
+      document.getElementById('deals-count')!.textContent = dealCount.toString();
+      document.getElementById('contacts-count')!.textContent = contactCount.toString();
+      document.getElementById('activities-count')!.textContent = pendingCount.toString();
+      document.getElementById('activities-progress')!.style.width = `${completionPercent}%`;
+      const activitiesProgressLabel = document.querySelector('#activities-progress')?.parentElement?.nextElementSibling;
+      if (activitiesProgressLabel) activitiesProgressLabel.textContent = `${completionPercent}% CAP`;
+      document.getElementById('pipeline-value')!.textContent = `$${pipelineValue.toLocaleString()}`;
+      document.getElementById('total-contacts-stat')!.textContent = contactCount.toString();
+      document.getElementById('total-deals-stat')!.textContent = dealCount.toString();
+      document.getElementById('total-companies-stat')!.textContent = '0';
+
+      if (allActivities.length > 0) {
+        const feed = document.getElementById('activity-feed');
+        if (feed) {
+          feed.innerHTML = allActivities.slice(0, 5).map((a: any) => `
+            <div class="flex gap-4 group">
+              <div class="relative">
+                <div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center border border-outline-variant/20">
+                  <span class="material-symbols-outlined text-sm text-primary">${getActivityIcon(a.type)}</span>
+                </div>
+              </div>
+              <div>
+                <p class="text-xs text-on-surface leading-snug">
+                  <span class="font-bold">${a.subject || 'Activity'}</span>
+                  ${a.body ? `<br/><span class="text-on-surface-variant">${a.body}</span>` : ''}
+                </p>
+                <p class="text-[10px] font-mono text-outline mt-1 uppercase">${formatTimeAgo(a.created_at)} // SYSTEM</p>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // Sort pending tasks by due date and take soonest 3
+      const sortedTasks = [...pendingActivities].sort((a, b) => {
+        if (!a.due_at) return 1;
+        if (!b.due_at) return -1;
+        return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
+      });
+      renderTasks(sortedTasks.slice(0, 3));
+    } catch (err) {
+      console.error('Failed to load dashboard stats:', err);
+    }
+  }
+
+  function renderTasks(pendingTasks: any[]) {
+    const tasksList = document.getElementById('tasks-list');
+    if (!tasksList) return;
+
+    if (pendingTasks.length === 0) {
+      tasksList.innerHTML = `
+        <div class="p-3 bg-surface-container rounded border-l-2 border-outline-variant group hover:bg-surface-container-high transition-colors cursor-pointer">
+          <div class="flex justify-between items-start mb-1">
+            <span class="text-xs font-bold text-white">No upcoming tasks</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px] text-outline">schedule</span>
+            <span class="text-[10px] font-mono text-outline uppercase">Schedule a follow-up</span>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    tasksList.innerHTML = pendingTasks.slice(0, 5).map((task: any) => `
+      <div class="p-3 bg-surface-container rounded border-l-2 border-primary group hover:bg-surface-container-high transition-colors">
+        <div class="flex justify-between items-start mb-1">
+          <span class="text-xs font-bold text-white">${task.subject || 'Task'}</span>
+          ${task.due_at ? `<span class="text-[10px] font-mono text-primary uppercase">${formatDueDate(task.due_at)}</span>` : ''}
+        </div>
+        ${task.body ? `<p class="text-[10px] text-gray-400 font-mono truncate">${task.body}</p>` : ''}
+        <div class="flex items-center gap-2 mt-1">
+          <span class="material-symbols-outlined text-[14px] text-outline">${getActivityIcon(task.type)}</span>
+          <span class="text-[10px] font-mono text-outline uppercase">${task.type || 'task'}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function formatDueDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = date.getTime() - now.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days < 0) return 'Overdue';
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Tomorrow';
+    if (days < 7) return `${days} days`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function getActivityIcon(type: string): string {
+    const icons: Record<string, string> = {
+      'deal_created': 'attach_money',
+      'deal_updated': 'trending_up',
+      'deal_won': 'emoji_events',
+      'deal_lost': 'cancel',
+      'contact_added': 'person_add',
+      'email': 'mail',
+      'call': 'call',
+      'meeting': 'event',
+      'note': 'note',
     };
+    return icons[type] || 'circle';
+  }
 
+  function formatTimeAgo(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+  }
 
-    async function loadDashboard() {
-      const token = auth.token;
-      if (!token) {
-        window.location.href = '/login';
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      loadDashboardStats();
+    });
+  } else {
+    loadDashboardStats();
+  }
+
+  let statsInterval: ReturnType<typeof setInterval>;
+  let activitiesInterval: ReturnType<typeof setInterval>;
+
+  statsInterval = setInterval(() => {
+    if (isPolling) loadDashboardStats();
+  }, 30000);
+
+  let lastActivityId: string | null = null;
+
+  async function pollActivities() {
+    if (!isPolling) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/activities?limit=5', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          isPolling = false;
+          clearInterval(statsInterval);
+          clearInterval(activitiesInterval);
+          window.location.href = '/login?reason=session_expired';
+          return;
+        }
         return;
       }
 
-      // Show loading indicators
-      document.getElementById('stats-deals-loading')?.classList.remove('hidden');
-      document.getElementById('stats-value-loading')?.classList.remove('hidden');
-      document.getElementById('stats-persons-loading')?.classList.remove('hidden');
-      document.getElementById('stats-companies-loading')?.classList.remove('hidden');
+      const { data: activities } = await res.json();
 
-      try {
-        const [personsData, companiesData, dealsData, activitiesData] = await Promise.all([
-          api.persons.list(token, { limit: 1 }),
-          api.companies.list(token, { limit: 1, includeTotal: true }),
-          api.deals.list(token, { limit: 100 }),
-          api.activities.list(token, { limit: 5 }),
-        ]);
+      if (activities && activities.length > 0) {
+        const latestActivity = activities[0];
 
-        document.getElementById('stats-persons')!.textContent = personsData.meta?.total?.toString() || '0';
-        document.getElementById('stats-companies')!.textContent = companiesData.meta?.total?.toString() || '0';
-        document.getElementById('stats-deals')!.textContent = dealsData.meta?.total?.toString() || '0';
-        document.getElementById('stats-persons-loading')?.classList.add('hidden');
-        document.getElementById('stats-companies-loading')?.classList.add('hidden');
-        document.getElementById('stats-deals-loading')?.classList.add('hidden');
-
-        let totalValue = 0;
-        dealsData.data?.forEach((deal: any) => {
-          totalValue += deal.value || 0;
-        });
-        document.getElementById('stats-value')!.textContent = formatCurrency(totalValue);
-        document.getElementById('stats-value-loading')?.classList.add('hidden');
-
-        const activitiesList = document.getElementById('activities-list')!;
-        if (activitiesData.data && activitiesData.data.length > 0) {
-          activitiesList.innerHTML = activitiesData.data.map((activity: any) => `
-            <div class="flex items-center gap-4 pb-4 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors" onclick="window.location.href='/activities?highlight=${activity.id}'">
-              <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                <span class="text-primary-600 font-medium">${activity.type?.[0]?.toUpperCase() || 'A'}</span>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm text-gray-900 truncate">${activity.subject || 'Activity'}</p>
-                <p class="text-xs text-gray-500">${timeAgo(activity.due_at || activity.created_at)}</p>
-              </div>
-              <button onclick="event.stopPropagation(); toggleActivity('${activity.id}', '${activity.status}')" class="px-3 py-1 text-xs font-medium rounded-lg border ${activity.status === 'completed' ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100' : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'}">
-                ${activity.status === 'completed' ? 'Completed' : 'Mark as completed'}
-              </button>
-            </div>
-          `).join('');
-        } else {
-          activitiesList.innerHTML = '<p class="text-gray-400 text-center py-4">No recent activities</p>';
-        }
-
-        const dealsList = document.getElementById('deals-list')!;
-        if (dealsData.data && dealsData.data.length > 0) {
-          dealsList.innerHTML = dealsData.data.slice(0, 5).map((deal: any) => `
-            <div class="flex items-center justify-between pb-4 border-b border-gray-100 last:border-0">
-              <div>
-                <p class="text-sm font-medium text-gray-900">${deal.title || 'Untitled Deal'}</p>
-                <p class="text-xs text-gray-500">${deal.stage_name || 'No stage'}</p>
-              </div>
-              <div class="text-right">
-                <p class="text-sm font-medium text-gray-900">${formatCurrency(deal.value || 0)}</p>
-                <p class="text-xs text-gray-500">${deal.status || 'open'}</p>
-              </div>
-            </div>
-          `).join('');
-        } else {
-          dealsList.innerHTML = '<p class="text-gray-400 text-center py-4">No deals found</p>';
-        }
-
-        try {
-          const pipelinesData = await api.pipelines.list(token);
-          const pipelineOverview = document.getElementById('pipeline-overview')!;
-
-          if (pipelinesData.data && pipelinesData.data.length > 0) {
-            const pipeline = pipelinesData.data[0];
-            const stagesData = await api.pipelines.getStages(token, pipeline.id);
-
-            if (stagesData && stagesData.length > 0) {
-              pipelineOverview.innerHTML = `
-                <div class="flex gap-4 overflow-x-auto pb-2">
-                  ${stagesData.map((stage: any) => {
-                    const stageDeals = dealsData.data?.filter((d: any) => d.stage_id === stage.id) || [];
-                    const stageValue = stageDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
-                    return `
-                      <div class="flex-shrink-0 w-64 p-4 bg-gray-50 rounded-lg">
-                        <div class="flex items-center justify-between mb-3">
-                          <h3 class="font-medium text-gray-900">${stage.name}</h3>
-                          <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">${stageDeals.length}</span>
-                        </div>
-                        <p class="text-lg font-semibold text-primary-600">${formatCurrency(stageValue)}</p>
-                        <div class="mt-2 space-y-1">
-                          ${stageDeals.slice(0, 3).map((deal: any) => `
-                            <div class="text-xs text-gray-600 truncate">${deal.title || 'Untitled'}</div>
-                          `).join('')}
-                          ${stageDeals.length > 3 ? `<div class="text-xs text-gray-400">+${stageDeals.length - 3} more</div>` : ''}
-                        </div>
-                      </div>
-                    `;
-                  }).join('')}
+        if (lastActivityId && latestActivity.id !== lastActivityId) {
+          const feed = document.getElementById('activity-feed');
+          if (feed) {
+            const newItem = document.createElement('div');
+            newItem.className = 'flex gap-4 group animate-in';
+            newItem.innerHTML = `
+              <div class="relative">
+                <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
+                  <span class="material-symbols-outlined text-sm text-primary">${getActivityIcon(latestActivity.type)}</span>
                 </div>
-              `;
-            } else {
-              pipelineOverview.innerHTML = '<p class="text-gray-400 text-center py-4">No stages found</p>';
-            }
-          } else {
-            pipelineOverview.innerHTML = '<p class="text-gray-400 text-center py-4">No pipelines found</p>';
-          }
-        } catch {}
+              </div>
+              <div>
+                <p class="text-xs text-on-surface leading-snug">
+                  <span class="font-bold">${latestActivity.title || 'New Activity'}</span>
+                </p>
+                <p class="text-[10px] font-mono text-primary mt-1 uppercase">Just now // LIVE</p>
+              </div>
+            `;
 
-      } catch (error: any) {
-        console.error('Failed to load dashboard:', error);
-        if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
-          auth.clear();
-          window.location.href = '/login';
+            feed.insertBefore(newItem, feed.firstChild);
+
+            while (feed.children.length > 5) {
+              feed.removeChild(feed.lastChild!);
+            }
+
+            const liveIndicator = document.querySelector('.bg-primary');
+            if (liveIndicator) {
+              liveIndicator.classList.add('animate-pulse');
+              setTimeout(() => liveIndicator.classList.remove('animate-pulse'), 2000);
+            }
+          }
         }
+
+        lastActivityId = latestActivity.id;
       }
+    } catch (err) {
+      // Silently fail polling
+    }
+  }
+
+  activitiesInterval = setInterval(pollActivities, 10000);
+
+  // Export CSV
+  document.getElementById('export-csv-btn')?.addEventListener('click', async () => {
+    const token = getToken();
+    if (!token) return;
+
+    const btn = document.getElementById('export-csv-btn');
+    btn?.setAttribute('disabled', 'true');
+    btn!.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Exporting...';
+
+    try {
+      // Fetch pipeline to get stage names
+      const pipelineRes = await fetch('/api/v1/pipelines?limit=1', { headers: { Authorization: `Bearer ${token}` } });
+      const pipelineData = await pipelineRes.json();
+      const pipelineId = pipelineData.data?.[0]?.id;
+
+      let stageMap: Record<string, string> = {};
+      if (pipelineId) {
+        const stagesRes = await fetch(`/api/v1/pipelines/${pipelineId}/stages`, { headers: { Authorization: `Bearer ${token}` } });
+        const stagesData = await stagesRes.json();
+        (stagesData.data || []).forEach((s: any) => {
+          stageMap[s.id] = s.name;
+        });
+      }
+
+      const dealsRes = await fetch('/api/v1/deals?limit=500', { headers: { Authorization: `Bearer ${token}` } });
+      const deals = await dealsRes.json();
+
+      const dealsCsv = [
+        ['ID', 'Title', 'Value', 'Stage', 'Probability', 'Created'].join(','),
+        ...(deals.data || []).map((d: any) => [
+          d.id,
+          `"${(d.title || '').replace(/"/g, '""')}"`,
+          d.value || 0,
+          `"${stageMap[d.stage_id] || ''}"`,
+          d.probability || 0,
+          d.created_at
+        ].join(','))
+      ].join('\n');
+
+      downloadCsv('deals.csv', dealsCsv);
+
+      btn!.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> Done!';
+      setTimeout(() => {
+        btn!.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Export CSV';
+        btn?.removeAttribute('disabled');
+      }, 2000);
+    } catch (err) {
+      console.error('Export failed:', err);
+      btn!.innerHTML = 'Export Failed';
+      setTimeout(() => {
+        btn!.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Export CSV';
+        btn?.removeAttribute('disabled');
+      }, 2000);
+    }
+  });
+
+  function downloadCsv(filename: string, content: string) {
+    const blob = new Blob([content], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Task menu
+  (window as any).openTaskMenu = function(event: MouseEvent) {
+    event.stopPropagation();
+    const menu = document.getElementById('task-menu')!;
+    const btn = event.target as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + 8}px`;
+    menu.style.right = `${window.innerWidth - rect.right}px`;
+    menu.style.left = 'auto';
+    menu.classList.remove('hidden');
+    
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu() {
+        menu.classList.add('hidden');
+        document.removeEventListener('click', closeMenu);
+      });
+    }, 0);
+  };
+
+  (window as any).selectActivityType = function(type: string, btn: HTMLElement) {
+    document.querySelectorAll('.activity-type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    (document.getElementById('activity-type') as HTMLInputElement).value = type;
+  };
+
+  (window as any).openNewTaskModal = function() {
+    const menu = document.getElementById('task-menu');
+    if (menu) menu.classList.add('hidden');
+    const form = document.getElementById('task-form') as HTMLFormElement;
+    form.reset();
+    document.querySelectorAll('.activity-type-btn').forEach(b => b.classList.remove('selected'));
+    const callBtn = document.querySelector('[data-type="call"]') as HTMLElement;
+    if (callBtn) {
+      callBtn.classList.add('selected');
+      (document.getElementById('activity-type') as HTMLInputElement).value = 'call';
+    }
+    document.getElementById('task-modal')!.classList.remove('hidden');
+  };
+
+  (window as any).closeTaskModal = function() {
+    document.getElementById('task-modal')!.classList.add('hidden');
+  };
+
+  (window as any).markAllTasksComplete = async function() {
+    const menu = document.getElementById('task-menu');
+    if (menu) menu.classList.add('hidden');
+    
+    const token = getToken();
+    if (!token) return;
+
+    if (!confirm('Mark all tasks as completed?')) return;
+
+    try {
+      const res = await fetch('/api/v1/activities', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        alert('Failed to fetch activities');
+        return;
+      }
+
+      const data = await res.json();
+      const allActivities = Object.values(data.data || data) as any[];
+
+      const pendingTasks = allActivities.filter((a: any) => 
+        a.status && a.status.toLowerCase() === 'planned'
+      );
+
+      if (pendingTasks.length === 0) {
+        alert('No pending tasks found');
+        return;
+      }
+
+      let completed = 0;
+      for (const task of pendingTasks) {
+        await fetch(`/api/v1/activities/${task.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: 'completed' })
+        });
+        completed++;
+      }
+
+      alert(`Marked ${completed} task(s) as completed`);
+    } catch (err) {
+      console.error('Failed to complete tasks:', err);
+      alert('Failed to complete tasks');
+    }
+  };
+
+  // Task form submission
+  document.getElementById('task-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    const token = getToken();
+    if (!token) return;
+
+    const type = formData.get('type') as string;
+    const title = formData.get('title') as string;
+
+    if (!title || !title.trim()) {
+      alert('Please enter a subject');
+      return;
     }
 
-    document.addEventListener('DOMContentLoaded', loadDashboard);
-  </script>
-</AppLayout>
+    const payload: Record<string, any> = {
+      type,
+      title: title.trim(),
+    };
+
+    const body = formData.get('body') as string;
+    if (body && body.trim()) {
+      payload.body = body.trim();
+    }
+
+    const direction = formData.get('direction') as string;
+    if (direction) {
+      payload.direction = direction;
+    }
+
+    const dueAt = formData.get('due_at') as string;
+    if (dueAt) {
+      payload.due_at = new Date(dueAt).toISOString();
+    }
+
+    try {
+      const res = await fetch('/api/v1/activities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeTaskModal();
+        loadDashboardStats();
+      } else {
+        const error = await res.json();
+        alert('Failed to save activity: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to save activity:', err);
+    }
+  });
+</script>
