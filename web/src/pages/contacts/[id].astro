@@ -1,0 +1,436 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+const { id } = Astro.params;
+
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Contact Details">
+  <div id="contact-data" data-id={id}></div>
+  <div class="p-6">
+    <div class="mb-6">
+      <a href="/contacts" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-white transition-colors">
+        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        Back to Contacts
+      </a>
+    </div>
+
+    <div id="contact-header" class="flex items-start gap-6 mb-8">
+      <div id="contact-avatar" class="w-20 h-20 rounded-2xl bg-surface-container-highest flex items-center justify-center text-2xl font-bold text-gray-400">
+        <span class="material-symbols-outlined text-4xl">person</span>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-2">
+          <h1 id="contact-name" class="text-3xl font-bold text-white">Loading...</h1>
+          <span id="contact-type" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">--</span>
+        </div>
+        <p id="contact-company" class="text-gray-500 font-mono text-sm">--</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openEditContactModal()" class="flex items-center gap-2 px-4 py-2 bg-surface-container text-xs font-mono text-white rounded border border-outline-variant/10 hover:bg-surface-container-high transition-colors">
+          <span class="material-symbols-outlined text-[16px]">edit</span>
+          Edit Contact
+        </button>
+        <button class="flex items-center gap-2 px-4 py-2 bg-surface-container text-xs font-mono text-white rounded border border-outline-variant/10 hover:bg-surface-container-high transition-colors">
+          <span class="material-symbols-outlined text-[16px]">more_vert</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Contact Information</h2>
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">mail</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Email</p>
+                <p id="contact-email" class="text-white">--</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">phone</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Phone</p>
+                <p id="contact-phone" class="text-white">--</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">business</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Company</p>
+                <p id="contact-company-detail" class="text-white">--</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">source</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Source</p>
+                <p id="contact-source" class="text-white">--</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Tags</h2>
+          <div id="contact-tags" class="flex flex-wrap gap-2">
+            <span class="text-gray-500 text-sm">No tags</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Activity</h2>
+          </div>
+          <div id="activity-list" class="space-y-4">
+            <p class="text-gray-500 text-sm">No activity yet</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Lead Score</h2>
+          <div class="flex items-center justify-center">
+            <div class="relative w-32 h-32">
+              <svg class="w-full h-full transform -rotate-90">
+                <circle cx="64" cy="64" r="56" stroke="currentColor" stroke-width="8" fill="none" class="text-surface-container-highest" />
+                <circle id="score-circle" cx="64" cy="64" r="56" stroke="currentColor" stroke-width="8" fill="none" class="text-primary" stroke-dasharray="351" stroke-dashoffset="351" />
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span id="contact-score" class="text-3xl font-bold text-white">--</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-center text-gray-500 text-sm mt-4">Lead Score</p>
+        </div>
+
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Details</h2>
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs text-gray-500 font-mono uppercase">Created</p>
+              <p id="contact-created" class="text-white text-sm">--</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-mono uppercase">Last Updated</p>
+              <p id="contact-updated" class="text-white text-sm">--</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-contact-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeEditContactModal()"></div>
+    <div class="relative w-full max-w-lg bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between sticky top-0 bg-surface-container z-10">
+        <h2 class="text-lg font-headline font-bold text-white">Edit Contact</h2>
+        <button onclick="closeEditContactModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+          <span class="material-symbols-outlined text-gray-400">close</span>
+        </button>
+      </div>
+      <form id="edit-contact-form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Type <span class="text-red-400">*</span></label>
+          <select id="edit-contact-type" name="type" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="lead">Lead</option>
+            <option value="contact">Contact</option>
+            <option value="customer">Customer</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">First Name <span class="text-red-400">*</span></label>
+            <input type="text" id="edit-contact-first-name" name="first_name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Last Name <span class="text-red-400">*</span></label>
+            <input type="text" id="edit-contact-last-name" name="last_name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Email</label>
+          <input type="email" id="edit-contact-email" name="email" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Phone</label>
+          <input type="tel" id="edit-contact-phone" name="phone" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Company</label>
+          <select id="edit-contact-company" name="company_id" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="">Select a company</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Source</label>
+          <select id="edit-contact-source" name="source" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="">Select a source</option>
+            <option value="website">Website</option>
+            <option value="referral">Referral</option>
+            <option value="social_media">Social Media</option>
+            <option value="email_campaign">Email Campaign</option>
+            <option value="cold_outreach">Cold Outreach</option>
+            <option value="event">Event</option>
+            <option value="partner">Partner</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Tags</label>
+          <input type="text" id="edit-contact-tags" name="tags" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="vip, enterprise, hot-lead" />
+          <p class="text-[10px] text-gray-500 mt-1">Separate multiple tags with commas</p>
+        </div>
+        <div id="edit-form-error" class="hidden text-red-400 text-sm bg-red-400/10 p-3 rounded-lg"></div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeEditContactModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" id="edit-form-submit-btn" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  const id = document.getElementById('contact-data')?.dataset.id;
+  let contact: any = null;
+  let companies: any[] = [];
+
+  async function loadContact() {
+    const token = getToken();
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
+    if (!id) {
+      document.getElementById('contact-name').textContent = 'Invalid contact ID';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/persons/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          document.getElementById('contact-name').textContent = 'Contact not found';
+        }
+        return;
+      }
+
+      const { data } = await res.json();
+      contact = data;
+      
+      if (contact.company_id) {
+        try {
+          const companyRes = await fetch(`/api/v1/companies/${contact.company_id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (companyRes.ok) {
+            const { data: companyData } = await companyRes.json();
+            contact.company = companyData;
+          }
+        } catch (err) {
+          console.error('Failed to load company:', err);
+        }
+      }
+      
+      renderContact();
+    } catch (err) {
+      console.error('Failed to load contact:', err);
+    }
+  }
+
+  async function loadCompanies() {
+    const token = getToken();
+    if (!token || companies.length > 0) return;
+    
+    try {
+      const res = await fetch('/api/v1/companies?limit=100', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const { data } = await res.json();
+      companies = data || [];
+      populateCompanyDropdown();
+    } catch (err) {
+      console.error('Failed to load companies:', err);
+    }
+  }
+
+  function populateCompanyDropdown() {
+    const select = document.getElementById('edit-contact-company');
+    select.innerHTML = '<option value="">Select a company</option>';
+    companies.forEach(company => {
+      const option = document.createElement('option');
+      option.value = company.id;
+      option.textContent = company.name;
+      select.appendChild(option);
+    });
+  }
+
+  function getInitials(firstName?: string, lastName?: string): string {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || '??';
+  }
+
+  function formatDate(dateStr?: string): string {
+    if (!dateStr) return '--';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+
+  function renderContact() {
+    if (!contact) return;
+
+    document.getElementById('contact-name').textContent = `${contact.first_name} ${contact.last_name}`;
+    document.getElementById('contact-type').textContent = contact.type || 'contact';
+    document.getElementById('contact-company').textContent = contact.company?.name || 'No company';
+    document.getElementById('contact-company-detail').textContent = contact.company?.name || 'No company';
+    document.getElementById('contact-email').textContent = contact.email?.[0] || 'No email';
+    document.getElementById('contact-phone').textContent = contact.phone?.[0] || 'No phone';
+    document.getElementById('contact-source').textContent = contact.source || 'Not set';
+    document.getElementById('contact-created').textContent = formatDate(contact.created_at);
+    document.getElementById('contact-updated').textContent = formatDate(contact.updated_at);
+
+    const avatar = document.getElementById('contact-avatar');
+    avatar.innerHTML = getInitials(contact.first_name, contact.last_name);
+    avatar.className = 'w-20 h-20 rounded-2xl bg-surface-container-highest flex items-center justify-center text-2xl font-bold text-gray-400';
+
+    const score = contact.score || 0;
+    document.getElementById('contact-score').textContent = score.toString();
+    const scoreCircle = document.getElementById('score-circle');
+    const circumference = 351;
+    const offset = circumference - (score / 100) * circumference;
+    scoreCircle.style.strokeDashoffset = offset.toString();
+
+    const tagsEl = document.getElementById('contact-tags');
+    if (contact.tags && contact.tags.length > 0) {
+      tagsEl.innerHTML = contact.tags.map((tag: string) => 
+        `<span class="px-2 py-1 rounded text-xs font-mono bg-surface-container-high text-gray-300">${tag}</span>`
+      ).join('');
+    } else {
+      tagsEl.innerHTML = '<span class="text-gray-500 text-sm">No tags</span>';
+    }
+  }
+
+  function openEditContactModal() {
+    if (!contact) return;
+    loadCompanies();
+
+    (document.getElementById('edit-contact-type') as HTMLSelectElement).value = contact.type || 'lead';
+    (document.getElementById('edit-contact-first-name') as HTMLInputElement).value = contact.first_name || '';
+    (document.getElementById('edit-contact-last-name') as HTMLInputElement).value = contact.last_name || '';
+    (document.getElementById('edit-contact-email') as HTMLInputElement).value = contact.email?.[0] || '';
+    (document.getElementById('edit-contact-phone') as HTMLInputElement).value = contact.phone?.[0] || '';
+    (document.getElementById('edit-contact-company') as HTMLSelectElement).value = contact.company_id || '';
+    (document.getElementById('edit-contact-source') as HTMLSelectElement).value = contact.source || '';
+    (document.getElementById('edit-contact-tags') as HTMLInputElement).value = (contact.tags || []).join(', ');
+
+    document.getElementById('edit-contact-modal').classList.remove('hidden');
+  }
+
+  function closeEditContactModal() {
+    document.getElementById('edit-contact-modal').classList.add('hidden');
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  document.getElementById('edit-contact-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('edit-form-submit-btn');
+    const errorEl = document.getElementById('edit-form-error');
+    
+    const token = getToken();
+    if (!token) return;
+
+    errorEl.classList.add('hidden');
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.textContent = 'Saving...';
+
+    const tagsInput = formData.get('tags') as string;
+    const tags = tagsInput 
+      ? tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0)
+      : [];
+
+    const payload: any = {
+      type: formData.get('type'),
+      first_name: formData.get('first_name'),
+      last_name: formData.get('last_name'),
+    };
+
+    const email = formData.get('email') as string;
+    const phone = formData.get('phone') as string;
+    if (email) payload.email = [email];
+    if (phone) payload.phone = [phone];
+    if (tags.length > 0) payload.tags = tags;
+    
+    const source = formData.get('source') as string;
+    if (source) payload.source = source;
+
+    const companyId = formData.get('company_id') as string;
+    if (companyId) payload.company_id = companyId;
+
+    try {
+      const res = await fetch(`/api/v1/persons/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const { data } = await res.json();
+        contact = data;
+        renderContact();
+        closeEditContactModal();
+      } else {
+        const error = await res.json();
+        let errorMsg = 'Failed to save contact';
+        if (error.error?.details) {
+          errorMsg = error.error.details.map((d: any) => d.message || d.field).join(', ');
+        } else if (error.error?.message) {
+          errorMsg = error.error.message;
+        }
+        errorEl.textContent = errorMsg;
+        errorEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      console.error('Failed to save contact:', err);
+      errorEl.textContent = 'An unexpected error occurred';
+      errorEl.classList.remove('hidden');
+    } finally {
+      submitBtn.removeAttribute('disabled');
+      submitBtn.textContent = 'Save Changes';
+    }
+  });
+
+  (window as any).openEditContactModal = openEditContactModal;
+  (window as any).closeEditContactModal = closeEditContactModal;
+
+  loadContact();
+</script>
