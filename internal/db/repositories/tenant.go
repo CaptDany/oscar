@@ -207,7 +207,7 @@ func (r *BrandingRepository) Create(ctx context.Context, tenantID uuid.UUID) (*t
 	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
 		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
+		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -228,7 +228,7 @@ func (r *BrandingRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID u
 	err := tx.QueryRow(ctx, query, tenantID).Scan(
 		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
+		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -245,7 +245,7 @@ func (r *BrandingRepository) Get(ctx context.Context, tenantID uuid.UUID) (*tena
 	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
 		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
+		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -268,9 +268,10 @@ func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req
 			secondary_color = COALESCE($6, secondary_color),
 			accent_color = COALESCE($7, accent_color),
 			font_family = COALESCE($8, font_family),
-			app_name = COALESCE($9, app_name),
-			custom_css = COALESCE($10, custom_css),
-			email_header_html = COALESCE($11, email_header_html)
+			mono_font = COALESCE($9, mono_font),
+			app_name = COALESCE($10, app_name),
+			custom_css = COALESCE($11, custom_css),
+			email_header_html = COALESCE($12, email_header_html)
 		WHERE tenant_id = $1
 		RETURNING *
 	`
@@ -279,11 +280,11 @@ func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req
 	err := r.pool.QueryRow(ctx, query,
 		tenantID, req.LogoLightURL, req.LogoDarkURL, req.FaviconURL,
 		req.PrimaryColor, req.SecondaryColor, req.AccentColor,
-		req.FontFamily, req.AppName, req.CustomCSS, req.EmailHeaderHTML,
+		req.FontFamily, req.MonoFont, req.AppName, req.CustomCSS, req.EmailHeaderHTML,
 	).Scan(
 		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
+		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
@@ -313,6 +314,7 @@ func mapBrandingRowToDomain(row *generated.TenantBranding) *tenant.TenantBrandin
 		SecondaryColor:  pgTextToStrStr(row.SecondaryColor),
 		AccentColor:     pgTextToStrStr(row.AccentColor),
 		FontFamily:      pgTextToStrStr(row.FontFamily),
+		MonoFont:        pgTextToStrStr(row.MonoFont),
 		AppName:         pgTextToStrStr(row.AppName),
 		CustomCSS:       pgTextToStr(row.CustomCss),
 		EmailHeaderHTML: pgTextToStr(row.EmailHeaderHtml),
@@ -340,4 +342,24 @@ func (p *TenantPool) SetTenantContext(ctx context.Context, tenantID uuid.UUID) (
 
 func NewTenantPool(pool *pgxpool.Pool) *TenantPool {
 	return &TenantPool{Pool: pool}
+}
+
+func (r *BrandingRepository) UpdateBrandAssets(ctx context.Context, tenantID uuid.UUID, logoLightURL, logoDarkURL, faviconURL *string) error {
+	query := `
+		UPDATE tenant_branding SET
+			logo_light_url = COALESCE($2, logo_light_url),
+			logo_dark_url = COALESCE($3, logo_dark_url),
+			favicon_url = COALESCE($4, favicon_url)
+		WHERE tenant_id = $1
+	`
+
+	_, err := r.pool.Exec(ctx, query, tenantID, logoLightURL, logoDarkURL, faviconURL)
+	if err != nil {
+		return fmt.Errorf("branding.UpdateBrandAssets: %w", err)
+	}
+	return nil
+}
+
+type BrandAssetsUpdater interface {
+	UpdateBrandAssets(ctx context.Context, tenantID uuid.UUID, logoLightURL, logoDarkURL, faviconURL *string) error
 }

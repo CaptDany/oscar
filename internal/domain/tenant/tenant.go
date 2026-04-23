@@ -45,11 +45,26 @@ type TenantBranding struct {
 	SecondaryColor  string    `json:"secondary_color"`
 	AccentColor     string    `json:"accent_color"`
 	FontFamily      string    `json:"font_family"`
+	MonoFont        string    `json:"mono_font"`
 	AppName         string    `json:"app_name"`
 	CustomCSS       *string   `json:"custom_css"`
 	EmailHeaderHTML *string   `json:"email_header_html"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+type UpdateBrandingRequest struct {
+	LogoLightURL    *string `json:"logo_light_url"`
+	LogoDarkURL     *string `json:"logo_dark_url"`
+	FaviconURL      *string `json:"favicon_url"`
+	PrimaryColor    *string `json:"primary_color"`
+	SecondaryColor  *string `json:"secondary_color"`
+	AccentColor     *string `json:"accent_color"`
+	FontFamily      *string `json:"font_family"`
+	MonoFont        *string `json:"mono_font"`
+	AppName         *string `json:"app_name"`
+	CustomCSS       *string `json:"custom_css"`
+	EmailHeaderHTML *string `json:"email_header_html"`
 }
 
 type CreateTenantRequest struct {
@@ -63,19 +78,6 @@ type UpdateTenantRequest struct {
 	Status           *Status           `json:"status"`
 	SubscriptionTier *SubscriptionTier `json:"subscription_tier"`
 	Settings         json.RawMessage   `json:"settings"`
-}
-
-type UpdateBrandingRequest struct {
-	LogoLightURL    *string `json:"logo_light_url"`
-	LogoDarkURL     *string `json:"logo_dark_url"`
-	FaviconURL      *string `json:"favicon_url"`
-	PrimaryColor    *string `json:"primary_color"`
-	SecondaryColor  *string `json:"secondary_color"`
-	AccentColor     *string `json:"accent_color"`
-	FontFamily      *string `json:"font_family"`
-	AppName         *string `json:"app_name"`
-	CustomCSS       *string `json:"custom_css"`
-	EmailHeaderHTML *string `json:"email_header_html"`
 }
 
 type Repository interface {
