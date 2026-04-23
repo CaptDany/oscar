@@ -16,7 +16,7 @@ if (!user) return Astro.redirect('/login');
       </div>
       <div class="flex items-center gap-2">
         <div class="flex bg-surface-container-low p-1 rounded-lg">
-          <button id="filter-all" class="px-3 py-1.5 text-xs font-mono font-bold bg-surface-container-highest text-primary rounded shadow-sm">All</button>
+          <button id="filter-all" class="px-3 py-1.5 text-xs font-mono font-bold text-gray-500 hover:text-white transition-colors">All</button>
           <button id="filter-leads" class="px-3 py-1.5 text-xs font-mono text-gray-500 hover:text-white transition-colors">Leads</button>
           <button id="filter-customers" class="px-3 py-1.5 text-xs font-mono text-gray-500 hover:text-white transition-colors">Customers</button>
         </div>
@@ -282,7 +282,8 @@ if (!user) return Astro.redirect('/login');
       btn.classList.add('text-gray-500');
     });
     
-    const activeBtn = document.getElementById(`filter-${filter}`);
+    const filterId = filter === 'lead' ? 'filter-leads' : filter === 'customer' ? 'filter-customers' : 'filter-all';
+    const activeBtn = document.getElementById(filterId);
     if (activeBtn) {
       activeBtn.classList.add('bg-surface-container-highest', 'text-primary', 'shadow-sm');
       activeBtn.classList.remove('text-gray-500');
@@ -707,4 +708,5 @@ if (!user) return Astro.redirect('/login');
   (window as any).clearSelection = clearSelection;
 
   loadContacts();
+  setFilter('all');
 </script>

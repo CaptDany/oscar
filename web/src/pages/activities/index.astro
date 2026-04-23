@@ -83,11 +83,11 @@ if (!user) return Astro.redirect('/login');
     </div>
   </div>
 
-  <main class="flex-1 ml-[220px] transition-all duration-300 p-8 grid grid-cols-12 gap-8 custom-scrollbar overflow-y-auto">
+  <section class="px-6 py-6 space-y-6">
     <!-- Page Header -->
-    <div class="col-span-12 flex justify-between items-end mb-4">
+    <div class="flex justify-between items-end">
       <div>
-        <h1 class="text-4xl font-headline font-bold text-on-background tracking-tight">Activity Timeline</h1>
+        <h1 class="text-3xl font-headline font-bold text-on-background tracking-tight">Activity Timeline</h1>
         <p class="text-on-surface-variant font-mono text-sm mt-1 uppercase tracking-wider">SYSTEM_LOG_REF: V0.1.0-STABLE</p>
       </div>
       <button onclick="openLogActivityModal()" class="bg-primary-container text-on-primary-container px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary-container/20">
@@ -97,7 +97,9 @@ if (!user) return Astro.redirect('/login');
     </div>
 
     <!-- Content Grid -->
-    <div class="col-span-12 lg:col-span-9 space-y-10">
+    <div class="grid grid-cols-12 gap-6">
+      <!-- Main Content -->
+      <div class="col-span-12 lg:col-span-9 space-y-10">
       <!-- Group: Today -->
       <section id="today-section">
         <div class="flex items-center gap-4 mb-6">
@@ -219,7 +221,7 @@ if (!user) return Astro.redirect('/login');
         </div>
       </div>
     </aside>
-  </main>
+  </section>
 
   <!-- Floating Quick Action -->
   <button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all hover:rotate-90 z-50">

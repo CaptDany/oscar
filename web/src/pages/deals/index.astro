@@ -134,9 +134,8 @@ if (!user) return Astro.redirect('/login');
           <div>
             <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Stage</label>
             <select id="deal-stage-select" name="stage" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
-              <option value="qualification">Prospecting</option>
-              <option value="discovery">Discovery</option>
-              <option value="proposal">Proposal</option>
+              <option value="prospecting">Prospecting</option>
+              <option value="qualified">Qualified</option>
               <option value="negotiation">Negotiation</option>
               <option value="closed_won">Closed Won</option>
               <option value="closed_lost">Closed Lost</option>
@@ -167,19 +166,62 @@ if (!user) return Astro.redirect('/login');
 </AppLayout>
 
 <script>
-  let currentStage = 'qualification';
+  let currentStage = 'prospecting';
   let draggedDealId: string | null = null;
   let editingDealId: string | null = null;
   let stageIdMap: Record<string, string> = {};
   let pipelineId: string | null = null;
   let allStages: any[] = [];
   
-  const uiToBackendStage: Record<string, string> = {
-    'prospecting': 'qualification',
-    'qualified': 'discovery',
-    'negotiation': 'negotiation',
-    'won': 'closed_won',
-    'lost': 'closed_lost'
+  function getStageId(stageName: string): string | null {
+    const normalized = stageName.toLowerCase().trim();
+    return stageIdMap[normalized] || null;
+  }
+  
+  function getUIStage(stageName: string): string {
+    const name = stageName.toLowerCase();
+    if (name.includes('won')) return 'won';
+    if (name.includes('lost')) return 'lost';
+    if (name.includes('negotiation')) return 'negotiation';
+    if (name.includes('qualified')) return 'qualified';
+    if (name.includes('prospecting')) return 'prospecting';
+    return 'prospecting';
+  }
+
+  (window as any).openDealModal = function(stage: string, deal?: any) {
+    editingDealId = deal?.id || null;
+    currentStage = stage;
+    
+    const modalTitle = document.getElementById('deal-modal-title');
+    const deleteBtn = document.getElementById('delete-deal-btn');
+    const titleInput = document.getElementById('deal-title') as HTMLInputElement;
+    const valueInput = document.getElementById('deal-value') as HTMLInputElement;
+    const stageSelect = document.getElementById('deal-stage-select') as HTMLSelectElement;
+    const dateInput = document.getElementById('deal-expected-close-date') as HTMLInputElement;
+    const probabilityInput = document.getElementById('deal-probability') as HTMLInputElement;
+    const tagsInput = document.getElementById('deal-tags') as HTMLInputElement;
+    
+    if (deal) {
+      modalTitle!.textContent = 'Edit Deal';
+      deleteBtn?.classList.remove('hidden');
+      titleInput.value = deal.title || '';
+      valueInput.value = deal.value || 0;
+      dateInput.value = deal.expected_close_date ? deal.expected_close_date.split('T')[0] : '';
+      probabilityInput.value = deal.probability || 20;
+      tagsInput.value = (deal.tags || []).join(', ');
+      
+      const uiStage = deal.stage_id ? getUIStage(allStages.find((s: any) => s.id === deal.stage_id)?.name || '') : 'prospecting';
+      stageSelect.value = uiStage;
+    } else {
+      modalTitle!.textContent = 'New Deal';
+      deleteBtn?.classList.add('hidden');
+      (document.getElementById('deal-form') as HTMLFormElement).reset();
+      stageSelect.value = stage;
+      probabilityInput.value = '20';
+      valueInput.value = '0';
+    }
+    
+    document.getElementById('deal-modal')!.classList.remove('hidden');
   };
 
   (window as any).openDealModal = function(stage: string, deal?: any) {
@@ -212,7 +254,8 @@ if (!user) return Astro.redirect('/login');
       modalTitle!.textContent = 'New Deal';
       deleteBtn?.classList.add('hidden');
       (document.getElementById('deal-form') as HTMLFormElement).reset();
-      stageSelect.value = stage || 'qualification';
+      const backendStage = uiToBackendStage[stage] || stage;
+      stageSelect.value = backendStage;
       probabilityInput.value = '20';
       valueInput.value = '0';
     }
@@ -265,17 +308,7 @@ if (!user) return Astro.redirect('/login');
     .then(res => res.json())
     .then(({ data: deal }) => {
       if (deal) {
-        const stageIdToUI: Record<string, string> = {};
-        allStages.forEach((s: any) => {
-          const name = s.name.toLowerCase();
-          let uiStage = 'prospecting';
-          if (name.includes('won')) uiStage = 'won';
-          else if (name.includes('lost')) uiStage = 'lost';
-          else if (name.includes('qualif') || name.includes('discovery')) uiStage = 'qualified';
-          else if (name.includes('negotiat') || name.includes('proposal')) uiStage = 'negotiation';
-          stageIdToUI[s.id] = uiStage;
-        });
-        const uiStage = deal.stage_id ? (stageIdToUI[deal.stage_id] || 'prospecting') : 'prospecting';
+        const uiStage = deal.stage_id ? getUIStage(allStages.find((s: any) => s.id === deal.stage_id)?.name || '') : 'prospecting';
         openDealModal(uiStage, deal);
       }
     })
@@ -308,12 +341,11 @@ if (!user) return Astro.redirect('/login');
         stageIdMap = {};
         
         allStages.forEach((stage: any) => {
-          const normalizedName = stage.name.toLowerCase().replace(/\s+/g, '_');
+          const normalizedName = stage.name.toLowerCase().trim();
           stageIdMap[normalizedName] = stage.id;
           
-          if (normalizedName.includes('qualification')) stageIdMap['qualification'] = stage.id;
-          if (normalizedName.includes('discovery')) stageIdMap['discovery'] = stage.id;
-          if (normalizedName.includes('proposal')) stageIdMap['proposal'] = stage.id;
+          if (normalizedName.includes('prospecting')) stageIdMap['prospecting'] = stage.id;
+          if (normalizedName.includes('qualified')) stageIdMap['qualified'] = stage.id;
           if (normalizedName.includes('negotiation')) stageIdMap['negotiation'] = stage.id;
           if (normalizedName.includes('won')) stageIdMap['closed_won'] = stage.id;
           if (normalizedName.includes('lost')) stageIdMap['closed_lost'] = stage.id;
@@ -333,15 +365,9 @@ if (!user) return Astro.redirect('/login');
     const textClass = won ? 'group-hover:text-green-400' : 'group-hover:text-primary';
     
     const stageIdToUI: Record<string, string> = {};
-    allStages.forEach((s: any) => {
-      const name = s.name.toLowerCase();
-      let uiStage = 'prospecting';
-      if (name.includes('won')) uiStage = 'won';
-      else if (name.includes('lost')) uiStage = 'lost';
-      else if (name.includes('qualif') || name.includes('discovery')) uiStage = 'qualified';
-      else if (name.includes('negotiat') || name.includes('proposal')) uiStage = 'negotiation';
-      stageIdToUI[s.id] = uiStage;
-    });
+    for (const s of allStages) {
+      stageIdToUI[s.id] = getUIStage(s.name);
+    }
     const currentUIStage = deal.stage_id ? (stageIdToUI[deal.stage_id] || 'prospecting') : 'prospecting';
     
     return `
@@ -405,30 +431,25 @@ if (!user) return Astro.redirect('/login');
 
       const stageIdToStage: Record<string, string> = {};
       allStages.forEach((stage: any) => {
-        const name = stage.name.toLowerCase();
-        let uiStage = 'prospecting';
-        if (name.includes('won')) {
-          uiStage = 'won';
-        } else if (name.includes('lost')) {
-          uiStage = 'lost';
-        } else if (name.includes('qualif') || name.includes('discovery')) {
-          uiStage = 'qualified';
-        } else if (name.includes('negotiat') || name.includes('proposal')) {
-          uiStage = 'negotiation';
-        }
-        stageIdToStage[stage.id] = uiStage;
+        stageIdToStage[stage.id] = getUIStage(stage.name);
       });
 
       (deals || []).forEach((deal: any) => {
         let stage = 'prospecting';
         
-        if (deal.stage_id && stageIdToStage[deal.stage_id]) {
-          stage = stageIdToStage[deal.stage_id];
+        if (deal.stage_id) {
+          const uiStage = stageIdToStage[deal.stage_id];
+          stage = uiStage || 'prospecting';
         }
         
         stageData[stage].push(deal);
         stageValues[stage] += deal.value || 0;
       });
+
+      console.log('allStages:', allStages);
+      console.log('Stage mapping (stageIdToStage):', stageIdToStage);
+      console.log('Deal stage_ids:', (deals || []).map(d => ({ id: d.id, stage_id: d.stage_id, title: d.title })));
+      console.log('StageData counts:', Object.entries(stageData).map(([k, v]) => `${k}: ${v.length}`));
 
       document.getElementById('deals-count')!.textContent = deals?.length?.toString() || '0';
       const totalPipelineValue = stageValues.prospecting + stageValues.qualified + stageValues.negotiation;
@@ -451,7 +472,6 @@ if (!user) return Astro.redirect('/login');
         if (dealsEl) dealsEl.innerHTML = stageData[stage].map(createDealCard).join('') || '<p class="text-center text-gray-600 text-sm py-8">No deals</p>';
       });
 
-      // Re-attach drag handlers
       initDragAndDrop();
     } catch (err) {
       console.error('Failed to load deals:', err);
@@ -459,8 +479,14 @@ if (!user) return Astro.redirect('/login');
   }
 
   function initDragAndDrop() {
-    const cards = document.querySelectorAll('.draggable-card');
-    const targets = document.querySelectorAll('.drag-target');
+    const board = document.getElementById('kanban-board');
+    if (!board) return;
+
+    const newBoard = board.cloneNode(true) as HTMLElement;
+    board.parentNode?.replaceChild(newBoard, board);
+
+    const cards = newBoard.querySelectorAll('.draggable-card');
+    const targets = newBoard.querySelectorAll('.drag-target');
 
     cards.forEach(card => {
       card.addEventListener('dragstart', (e) => {
@@ -472,6 +498,11 @@ if (!user) return Astro.redirect('/login');
       card.addEventListener('dragend', () => {
         (card as HTMLElement).classList.remove('opacity-50');
         draggedDealId = null;
+      });
+
+      card.addEventListener('click', (e) => {
+        const dealId = (card as HTMLElement).dataset.dealId;
+        if (dealId) (window as any).openEditModal(dealId);
       });
     });
 
@@ -501,11 +532,10 @@ if (!user) return Astro.redirect('/login');
     const token = getToken();
     if (!token) return;
 
-    const backendStage = uiToBackendStage[uiStage] || uiStage;
-    const stageId = stageIdMap[backendStage];
+    const stageId = stageIdMap[uiStage];
     
     if (!stageId) {
-      console.error('Stage ID not found for:', uiStage, backendStage, stageIdMap);
+      console.error('Stage ID not found for:', uiStage, stageIdMap);
       return;
     }
 
@@ -545,8 +575,7 @@ if (!user) return Astro.redirect('/login');
     if (!token) return;
 
     const selectedStage = formData.get('stage') as string;
-    const backendStage = uiToBackendStage[selectedStage] || selectedStage;
-    const stageId = stageIdMap[backendStage];
+    const stageId = stageIdMap[selectedStage];
     
     const title = formData.get('title') as string;
     if (!title || !title.trim()) {
