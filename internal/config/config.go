@@ -25,7 +25,7 @@ type Config struct {
 	App       AppConfig
 	Database  DatabaseConfig
 	Redis     RedisConfig
-	Storage   StorageConfig
+	R2        R2Config
 	Email     EmailConfig
 	SMS       SMSConfig
 	OAuth     OAuthConfig
@@ -58,13 +58,12 @@ type RedisConfig struct {
 	PoolTimeout time.Duration
 }
 
-type StorageConfig struct {
-	Endpoint  string
+type R2Config struct {
+	AccountID string
 	AccessKey string
 	SecretKey string
 	Bucket    string
-	UseSSL    bool
-	Region    string
+	PublicURL string
 }
 
 type EmailConfig struct {
@@ -130,13 +129,12 @@ func Load() (*Config, error) {
 			PoolTimeout: getEnvDuration("REDIS_POOL_TIMEOUT", 5*time.Second),
 			DB:          getEnvInt("REDIS_DB", 0),
 		},
-		Storage: StorageConfig{
-			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-			AccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
-			SecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
-			Bucket:    getEnv("MINIO_BUCKET", "oscar"),
-			UseSSL:    getEnvBool("MINIO_USE_SSL", false),
-			Region:    getEnv("MINIO_REGION", "us-east-1"),
+		R2: R2Config{
+			AccountID: getEnv("R2_ACCOUNT_ID", ""),
+			AccessKey: getEnv("R2_ACCESS_KEY", ""),
+			SecretKey: getEnv("R2_SECRET_KEY", ""),
+			Bucket:    getEnv("R2_BUCKET", "oscar"),
+			PublicURL: getEnv("R2_PUBLIC_URL", ""),
 		},
 		Email: EmailConfig{
 			Host: getEnv("SMTP_HOST", "localhost"),

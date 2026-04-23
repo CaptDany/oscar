@@ -18,11 +18,11 @@ import (
 )
 
 type UploadHandler struct {
-	storage  *storage.MinIOClient
+	storage  *storage.R2Client
 	userRepo user.Repository
 }
 
-func NewUploadHandler(storage *storage.MinIOClient, userRepo user.Repository) *UploadHandler {
+func NewUploadHandler(storage *storage.R2Client, userRepo user.Repository) *UploadHandler {
 	return &UploadHandler{
 		storage:  storage,
 		userRepo: userRepo,
