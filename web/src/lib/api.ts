@@ -409,6 +409,15 @@ export const api = {
     update: (token: string, data: { name?: string; currency?: string; timezone?: string }) =>
       apiFetch<{ message: string }>('/settings', { method: 'PATCH', body: JSON.stringify(data), token }),
   },
+
+  invitations: {
+    list: (token: string) =>
+      apiFetch<{ data: any[]; total: number }>('/invitations', { token }),
+    create: (token: string, data: { email: string; first_name: string; last_name: string; role_name: string }) =>
+      apiFetch<{ data: any }>('/invitations', { method: 'POST', body: JSON.stringify(data), token }),
+    delete: (token: string, id: string) =>
+      apiFetch<{ message: string }>(`/invitations/${id}`, { method: 'DELETE', token }),
+  },
 };
 
 export type { ApiError };
