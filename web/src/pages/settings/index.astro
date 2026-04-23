@@ -8,6 +8,12 @@ if (!user) return Astro.redirect('/login');
 const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
 ---
 
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;500;600;700&family=Cousine:wght@400;700&family=Courier+Prime:wght@400;700&family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inconsolata:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Overpass+Mono:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600;700&family=Source+Sans+Pro:wght@400;600;700&family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&family=Ubuntu:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
 <AppLayout title="Settings">
   <main class="ml-[220px] pt-10 px-8 pb-20">
     <div class="max-w-7xl mx-auto">
@@ -22,6 +28,7 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
         <a href="/settings/users" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Users</a>
         <a href="/settings/security" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Security</a>
         <a href="/settings/pipelines" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Pipelines</a>
+        <a href="/settings/profile" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">My Profile</a>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -34,27 +41,29 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
                 <span class="material-symbols-outlined text-primary">palette</span>
                 Accent Architecture
               </h3>
-              <span class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Global Accent</span>
             </div>
-            <div class="space-y-6">
-              <div class="grid grid-cols-5 gap-3">
-                <button class="aspect-square bg-[#d2bbff] rounded border-2 border-white ring-2 ring-primary ring-offset-4 ring-offset-surface-container-low" data-color="#d2bbff"></button>
-                <button class="aspect-square bg-[#7c3aed] rounded hover:scale-105 transition-transform" data-color="#7c3aed"></button>
-                <button class="aspect-square bg-[#0044fe] rounded hover:scale-105 transition-transform" data-color="#0044fe"></button>
-                <button class="aspect-square bg-[#cebdff] rounded hover:scale-105 transition-transform" data-color="#cebdff"></button>
-                <div class="aspect-square bg-surface-container-highest rounded border-2 border-outline-variant flex items-center justify-center cursor-pointer hover:bg-surface-container-high transition-colors">
-                  <span class="material-symbols-outlined text-sm">add</span>
-                </div>
+            <div class="space-y-4">
+              <div class="grid grid-cols-3 gap-2">
+                <button class="color-type-btn aspect-square rounded border-2 border-transparent hover:border-outline-variant transition-colors relative" data-type="primary">
+                  <span class="absolute inset-1 rounded"></span>
+                </button>
+                <button class="color-type-btn aspect-square rounded border-2 border-transparent hover:border-outline-variant transition-colors relative" data-type="secondary">
+                  <span class="absolute inset-1 rounded"></span>
+                </button>
+                <button class="color-type-btn aspect-square rounded border-2 border-transparent hover:border-outline-variant transition-colors relative" data-type="accent">
+                  <span class="absolute inset-1 rounded"></span>
+                </button>
               </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-2 block">Primary</label>
-                  <input id="primary-color" class="w-full bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm font-mono" type="text" value="#D2BBFF"/>
-                </div>
-                <div>
-                  <label class="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-2 block">Secondary</label>
-                  <input id="secondary-color" class="w-full bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm font-mono" type="text" value="#7c3aed"/>
-                </div>
+              <div id="color-swatches" class="grid grid-cols-5 gap-3">
+                <button class="color-swatch aspect-square bg-[#d2bbff] rounded border-2 border-transparent hover:border-white/50 transition-transform" data-color="#d2bbff"></button>
+                <button class="color-swatch aspect-square bg-[#7c3aed] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#7c3aed"></button>
+                <button class="color-swatch aspect-square bg-[#0044fe] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#0044fe"></button>
+                <button class="color-swatch aspect-square bg-[#cebdff] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#cebdff"></button>
+                <button class="color-swatch aspect-square bg-[#b9c3ff] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#b9c3ff"></button>
+                <button class="color-swatch aspect-square bg-[#6366f1] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#6366f1"></button>
+                <button class="color-swatch aspect-square bg-[#8b5cf6] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#8b5cf6"></button>
+                <button class="color-swatch aspect-square bg-[#06b6d4] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#06b6d4"></button>
+                <button class="color-swatch aspect-square bg-[#10b981] rounded border-2 border-transparent hover:scale-105 transition-transform" data-color="#10b981"></button>
               </div>
             </div>
           </section>
@@ -66,29 +75,93 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
                 <span class="material-symbols-outlined text-primary">token</span>
                 Brand Assets
               </h3>
-              <span class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">SVG / PNG / WEBP</span>
+              <span class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">SVG Only</span>
             </div>
-            <div id="logo-upload-area" class="border-2 border-dashed border-outline-variant rounded-xl p-8 flex flex-col items-center justify-center gap-4 bg-surface-container-lowest hover:bg-surface-container transition-all group cursor-pointer">
-              <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors">
-                <span class="material-symbols-outlined text-3xl">upload_file</span>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2 block">Light Logo</label>
+                <div id="logo-light-upload-area" class="border-2 border-dashed border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-2 bg-surface-container-lowest hover:bg-surface-container transition-all group cursor-pointer aspect-square">
+                  <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-xl">upload_file</span>
+                  </div>
+                  <p class="text-xs text-slate-500">Drop SVG</p>
+                  <input type="file" id="logo-light-input" class="hidden" accept=".svg" />
+                </div>
+                <div id="logo-light-preview" class="hidden mt-2 p-2 bg-surface-container rounded-lg flex items-center gap-2">
+                  <div id="logo-light-preview-img" class="w-8 h-8 bg-primary-container rounded flex items-center justify-center">
+                    <span class="text-white font-bold text-xs">O</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p id="logo-light-name" class="text-xs truncate">logo.svg</p>
+                  </div>
+                  <button onclick="removeLogoLight()" class="p-1 hover:bg-surface-container-high rounded text-gray-400">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                </div>
               </div>
-              <div class="text-center">
-                <p class="text-sm font-medium text-on-surface">Drag and drop logo file</p>
-                <p class="text-xs font-mono text-slate-500 mt-1 uppercase tracking-wider">or <span class="text-primary hover:underline cursor-pointer">browse filesystem</span></p>
+              <div>
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2 block">Dark Logo</label>
+                <div id="logo-dark-upload-area" class="border-2 border-dashed border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-2 bg-surface-container-lowest hover:bg-surface-container transition-all group cursor-pointer aspect-square">
+                  <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-xl">upload_file</span>
+                  </div>
+                  <p class="text-xs text-slate-500">Drop SVG</p>
+                  <input type="file" id="logo-dark-input" class="hidden" accept=".svg" />
+                </div>
+                <div id="logo-dark-preview" class="hidden mt-2 p-2 bg-surface-container rounded-lg flex items-center gap-2">
+                  <div id="logo-dark-preview-img" class="w-8 h-8 bg-surface-container-highest rounded flex items-center justify-center">
+                    <span class="text-on-surface font-bold text-xs">O</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p id="logo-dark-name" class="text-xs truncate">logo.svg</p>
+                  </div>
+                  <button onclick="removeLogoDark()" class="p-1 hover:bg-surface-container-high rounded text-gray-400">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                </div>
               </div>
-              <input type="file" id="logo-input" class="hidden" accept="image/*" />
-            </div>
-            <div id="logo-preview" class="hidden mt-4 p-4 bg-surface-container rounded-lg flex items-center gap-4">
-              <div id="logo-preview-img" class="w-12 h-12 bg-primary-container rounded-lg flex items-center justify-center overflow-hidden">
-                <span class="text-white font-bold">O</span>
+              <div>
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2 block">Light Favicon</label>
+                <div id="favicon-light-upload-area" class="border-2 border-dashed border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-2 bg-surface-container-lowest hover:bg-surface-container transition-all group cursor-pointer aspect-square">
+                  <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-xl">upload_file</span>
+                  </div>
+                  <p class="text-xs text-slate-500">Drop SVG</p>
+                  <input type="file" id="favicon-light-input" class="hidden" accept=".svg" />
+                </div>
+                <div id="favicon-light-preview" class="hidden mt-2 p-2 bg-surface-container rounded-lg flex items-center gap-2">
+                  <div id="favicon-light-preview-img" class="w-8 h-8 bg-primary-container rounded flex items-center justify-center">
+                    <span class="text-white font-bold text-xs">O</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p id="favicon-light-name" class="text-xs truncate">favicon.svg</p>
+                  </div>
+                  <button onclick="removeFaviconLight()" class="p-1 hover:bg-surface-container-high rounded text-gray-400">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                </div>
               </div>
-              <div class="flex-1">
-                <p id="logo-name" class="text-sm font-medium text-on-surface">logo.png</p>
-                <p class="text-xs text-slate-500">Upload successful</p>
+              <div>
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-2 block">Dark Favicon</label>
+                <div id="favicon-dark-upload-area" class="border-2 border-dashed border-outline-variant rounded-xl p-4 flex flex-col items-center justify-center gap-2 bg-surface-container-lowest hover:bg-surface-container transition-all group cursor-pointer aspect-square">
+                  <div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-slate-500 group-hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-xl">upload_file</span>
+                  </div>
+                  <p class="text-xs text-slate-500">Drop SVG</p>
+                  <input type="file" id="favicon-dark-input" class="hidden" accept=".svg" />
+                </div>
+                <div id="favicon-dark-preview" class="hidden mt-2 p-2 bg-surface-container rounded-lg flex items-center gap-2">
+                  <div id="favicon-dark-preview-img" class="w-8 h-8 bg-surface-container-highest rounded flex items-center justify-center">
+                    <span class="text-on-surface font-bold text-xs">O</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p id="favicon-dark-name" class="text-xs truncate">favicon.svg</p>
+                  </div>
+                  <button onclick="removeFaviconDark()" class="p-1 hover:bg-surface-container-high rounded text-gray-400">
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                  </button>
+                </div>
               </div>
-              <button onclick="removeLogo()" class="p-1 hover:bg-surface-container-high rounded transition-colors text-gray-400">
-                <span class="material-symbols-outlined text-lg">delete</span>
-              </button>
             </div>
           </section>
 
@@ -106,7 +179,22 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
                 <select id="headline-font" class="bg-surface-container-highest border-none focus:ring-1 focus:ring-primary text-sm p-3 rounded-lg">
                   <option value="Space Grotesk">Space Grotesk</option>
                   <option value="Inter">Inter</option>
-                  <option value="Geist Mono">Geist Mono</option>
+                  <option value="Poppins">Poppins</option>
+                  <option value="Playfair Display">Playfair Display</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Roboto Slab">Roboto Slab</option>
+                  <option value="Oswald">Oswald</option>
+                  <option value="Raleway">Raleway</option>
+                  <option value="Merriweather">Merriweather</option>
+                  <option value="Nunito">Nunito</option>
+                  <option value="Open Sans">Open Sans</option>
+                  <option value="Lato">Lato</option>
+                  <option value="Source Sans Pro">Source Sans Pro</option>
+                  <option value="Ubuntu">Ubuntu</option>
+                  <option value="Fira Sans">Fira Sans</option>
+                  <option value="Work Sans">Work Sans</option>
+                  <option value="Rubik">Rubik</option>
+                  <option value="Bitter">Bitter</option>
                 </select>
               </div>
               <div class="flex flex-col gap-1">
@@ -115,7 +203,30 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
                   <option value="Geist Mono">Geist Mono</option>
                   <option value="Fira Code">Fira Code</option>
                   <option value="JetBrains Mono">JetBrains Mono</option>
+                  <option value="Source Code Pro">Source Code Pro</option>
+                  <option value="Roboto Mono">Roboto Mono</option>
+                  <option value="Ubuntu Mono">Ubuntu Mono</option>
+                  <option value="IBM Plex Mono">IBM Plex Mono</option>
+                  <option value="Inconsolata">Inconsolata</option>
+                  <option value="Cousine">Cousine</option>
+                  <option value="Courier Prime">Courier Prime</option>
+                  <option value="Overpass Mono">Overpass Mono</option>
+                  <option value="Space Mono">Space Mono</option>
                 </select>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Secondary Color</label>
+                <div class="flex items-center gap-2">
+                  <input id="secondary-color" class="flex-1 bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm font-mono" type="text" placeholder="#7c3aed"/>
+                  <div id="secondary-color-preview" class="w-8 h-8 rounded bg-[#7c3aed] border border-outline"></div>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Accent Color</label>
+                <div class="flex items-center gap-2">
+                  <input id="accent-color" class="flex-1 bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm font-mono" type="text" placeholder="#0044fe"/>
+                  <div id="accent-color-preview" class="w-8 h-8 rounded bg-[#0044fe] border border-outline"></div>
+                </div>
               </div>
             </div>
           </section>
@@ -175,11 +286,11 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
             </div>
             <div class="bg-surface-container rounded-xl overflow-hidden shadow-2xl border border-outline-variant/10">
               <div class="flex h-[600px] bg-background">
-                <div class="w-16 h-full bg-surface-container-low flex flex-col items-center py-6 gap-6">
-                  <div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center">
+                <div id="preview-sidebar" class="w-16 h-full bg-surface-container-low flex flex-col items-center py-6 gap-6">
+                  <div id="preview-logo" class="w-8 h-8 rounded bg-primary-container flex items-center justify-center">
                     <span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'FILL' 1;">architecture</span>
                   </div>
-                  <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border-r-2 border-primary">
+                  <div class="w-8 h-8 rounded-lg flex items-center justify-center text-primary border-r-2 border-primary">
                     <span class="material-symbols-outlined text-sm">grid_view</span>
                   </div>
                   <div class="w-8 h-8 flex items-center justify-center text-slate-600"><span class="material-symbols-outlined text-sm">dataset</span></div>
@@ -187,24 +298,24 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
                 </div>
                 <div class="flex-1 p-8 space-y-8 overflow-hidden">
                   <div class="flex items-center justify-between border-b border-outline-variant/10 pb-4">
-                    <div class="h-4 w-32 bg-surface-container-highest rounded-full"></div>
+                    <div id="preview-nav-text" class="h-4 w-32 bg-surface-container-highest rounded-full font-mono text-[8px] text-slate-500"></div>
                     <div class="flex gap-3">
                       <div class="h-8 w-8 bg-surface-container-highest rounded"></div>
-                      <div class="h-8 w-24 bg-primary text-on-primary rounded flex items-center justify-center text-[10px] font-bold">COMMIT CHANGES</div>
+                      <div id="preview-button" class="h-8 w-24 text-on-primary rounded flex items-center justify-center text-[10px] font-bold">COMMIT CHANGES</div>
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-4">
                     <div class="bg-surface-container-low p-4 rounded-lg h-40 flex flex-col justify-between">
                       <div class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Active Node</div>
-                      <div id="preview-primary-text" class="text-2xl font-headline font-bold text-primary">02.X-STABLE</div>
+                      <div id="preview-primary-text" class="text-2xl font-headline font-bold">02.X-STABLE</div>
                       <div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                        <div class="h-full w-2/3 bg-primary"></div>
+                        <div id="preview-progress-bar" class="h-full w-2/3"></div>
                       </div>
                     </div>
                     <div class="bg-surface-container-low p-4 rounded-lg h-40">
                       <div class="flex justify-between items-start mb-4">
                         <div class="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Traffic flow</div>
-                        <span class="material-symbols-outlined text-xs text-primary">show_chart</span>
+                        <span id="preview-icon" class="material-symbols-outlined text-xs">show_chart</span>
                       </div>
                       <div class="space-y-2">
                         <div class="h-2 w-full bg-surface-container-highest rounded-full"></div>
@@ -212,11 +323,11 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
                         <div class="h-2 w-1/2 bg-surface-container-highest rounded-full opacity-30"></div>
                       </div>
                     </div>
-                    <div class="col-span-2 bg-gradient-to-br from-primary-container/20 to-surface-container-low p-6 rounded-lg h-48 border border-primary/20 relative overflow-hidden">
+                    <div id="preview-card" class="col-span-2 p-6 rounded-lg h-48 border relative overflow-hidden">
                       <div class="relative z-10">
                         <h4 id="preview-headline-font" class="text-xl font-headline font-bold mb-2">Oscar UI Ready</h4>
-                        <p class="text-xs text-on-surface-variant max-w-sm mb-6">Component libraries successfully synchronized with primary brand tokens.</p>
-                        <button class="px-4 py-2 bg-primary text-on-primary rounded text-[10px] font-bold shadow-lg shadow-primary/25 hover:scale-95 transition-transform">INITIALIZE DEPLOY</button>
+                        <p id="preview-body-font" class="text-xs max-w-sm mb-6">Component libraries successfully synchronized with primary brand tokens.</p>
+                        <button id="preview-cta-button" class="px-4 py-2 rounded text-[10px] font-bold shadow-lg hover:scale-95 transition-transform">INITIALIZE DEPLOY</button>
                       </div>
                       <div class="absolute -right-8 -bottom-8 opacity-10">
                         <span class="material-symbols-outlined text-[160px]">terminal</span>
@@ -228,12 +339,12 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
             </div>
             <div class="absolute -right-4 top-1/2 -translate-y-1/2 flex flex-col gap-32">
               <div class="bg-surface-container-highest border border-outline-variant p-2 rounded flex items-center gap-2 shadow-xl whitespace-nowrap">
-                <span id="preview-color-dot" class="w-3 h-3 rounded-full bg-primary animate-pulse"></span>
-                <span id="preview-color-label" class="text-[9px] font-mono uppercase tracking-widest">Global Primary: #D2BBFF</span>
+                <span id="preview-color-dot" class="w-3 h-3 rounded-full animate-pulse"></span>
+                <span id="preview-color-label" class="text-[9px] font-mono uppercase tracking-widest">Primary: #D2BBFF</span>
               </div>
               <div class="bg-surface-container-highest border border-outline-variant p-2 rounded flex items-center gap-2 shadow-xl whitespace-nowrap">
                 <span class="w-3 h-3 rounded-full bg-surface-container-low"></span>
-                <span class="text-[9px] font-mono uppercase tracking-widest">Base Layer: #131315</span>
+                <span class="text-[9px] font-mono uppercase tracking-widest">Base: #131315</span>
               </div>
             </div>
           </div>
@@ -244,169 +355,439 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
 </AppLayout>
 
 <script>
-  let logoFile: File | null = null;
-  let logoPreviewUrl: string | null = null;
+  let selectedColorType = 'primary';
+  let faviconLightFile: File | null = null;
+  let faviconLightPreviewUrl: string | null = null;
+  let faviconDarkFile: File | null = null;
+  let faviconDarkPreviewUrl: string | null = null;
 
-  document.getElementById('logo-upload-area')?.addEventListener('click', () => {
-    document.getElementById('logo-input')?.click();
-  });
+  const previewConfig = {
+    primaryColor: '#D2BBFF',
+    secondaryColor: '#7c3aed',
+    accentColor: '#0044fe',
+    headlineFont: 'Space Grotesk',
+    monoFont: 'Geist Mono'
+  };
 
-  document.getElementById('logo-upload-area')?.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    (e.target as HTMLElement).closest('.border-dashed')?.classList.add('border-primary');
-  });
-
-  document.getElementById('logo-input')?.addEventListener('change', (e) => {
-    const input = e.target as HTMLInputElement;
-    if (input.files?.[0]) {
-      handleLogoUpload(input.files[0]);
-    }
-  });
-
-  function handleLogoUpload(file: File) {
-    logoFile = file;
-    document.getElementById('logo-name')!.textContent = file.name;
-    document.getElementById('logo-upload-area')!.classList.add('hidden');
-    document.getElementById('logo-preview')!.classList.remove('hidden');
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      logoPreviewUrl = e.target?.result as string;
-      const previewImg = document.getElementById('logo-preview-img');
-      if (previewImg) {
-        previewImg.innerHTML = `<img src="${logoPreviewUrl}" class="w-full h-full object-cover" alt="Logo" />`;
+  function initPreviewListeners() {
+    document.getElementById('primary-color')?.addEventListener('input', (e) => {
+      const color = (e.target as HTMLInputElement).value;
+      if (color.match(/^#[0-9A-Fa-f]{6}$/)) {
+        previewConfig.primaryColor = color;
+        updatePreview();
+        updateColorSwatches();
       }
-    };
-    reader.readAsDataURL(file);
+    });
+
+    document.getElementById('secondary-color')?.addEventListener('input', (e) => {
+      const color = (e.target as HTMLInputElement).value;
+      if (color.match(/^#[0-9A-Fa-f]{6}$/)) {
+        previewConfig.secondaryColor = color;
+        updatePreview();
+      }
+    });
+
+    document.getElementById('accent-color')?.addEventListener('input', (e) => {
+      const color = (e.target as HTMLInputElement).value;
+      if (color.match(/^#[0-9A-Fa-f]{6}$/)) {
+        previewConfig.accentColor = color;
+        updatePreview();
+      }
+    });
+
+    document.getElementById('headline-font')?.addEventListener('change', (e) => {
+      const font = (e.target as HTMLSelectElement).value;
+      previewConfig.headlineFont = font;
+      updatePreview();
+    });
+
+    document.getElementById('mono-font')?.addEventListener('change', (e) => {
+      const font = (e.target as HTMLSelectElement).value;
+      previewConfig.monoFont = font;
+      updatePreview();
+    });
   }
 
-  function removeLogo() {
-    logoFile = null;
-    logoPreviewUrl = null;
-    document.getElementById('logo-input')!.value = '';
-    document.getElementById('logo-upload-area')!.classList.remove('hidden');
-    document.getElementById('logo-preview')!.classList.add('hidden');
+  function updatePreview() {
+    const { primaryColor, secondaryColor, accentColor, headlineFont, monoFont } = previewConfig;
+
+    const colorDot = document.getElementById('preview-color-dot');
+    const colorLabel = document.getElementById('preview-color-label');
+    const primaryText = document.getElementById('preview-primary-text');
+    const headlineText = document.getElementById('preview-headline-font');
+    const bodyText = document.getElementById('preview-body-font');
+    const navText = document.getElementById('preview-nav-text');
+    const sidebar = document.getElementById('preview-sidebar');
+    const logo = document.getElementById('preview-logo');
+    const button = document.getElementById('preview-button');
+    const ctaButton = document.getElementById('preview-cta-button');
+    const progressBar = document.getElementById('preview-progress-bar');
+    const icon = document.getElementById('preview-icon');
+    const card = document.getElementById('preview-card');
+
+    if (colorDot) colorDot.style.backgroundColor = primaryColor;
+    if (colorLabel) colorLabel.textContent = `Primary: ${primaryColor}`;
+    if (primaryText) primaryText.style.color = primaryColor;
+    if (headlineText) {
+      headlineText.style.fontFamily = `'${headlineFont}', sans-serif`;
+      headlineText.style.color = primaryColor;
+    }
+    if (bodyText) bodyText.style.fontFamily = `'${monoFont}', monospace`;
+    if (navText) navText.style.fontFamily = `'${monoFont}', monospace`;
+    if (sidebar) sidebar.style.borderRight = `2px solid ${primaryColor}`;
+    if (logo) {
+      logo.style.backgroundColor = primaryColor;
+      logo.style.border = `2px solid ${primaryColor}`;
+    }
+    if (button) {
+      button.style.backgroundColor = primaryColor;
+      button.style.border = `2px solid ${primaryColor}`;
+    }
+    if (ctaButton) {
+      ctaButton.style.backgroundColor = secondaryColor;
+      ctaButton.style.color = '#ffffff';
+      ctaButton.style.boxShadow = `0 10px 15px -3px ${secondaryColor}40`;
+    }
+    if (progressBar) progressBar.style.backgroundColor = primaryColor;
+    if (icon) icon.style.color = accentColor;
+    if (card) {
+      card.style.background = `linear-gradient(135deg, ${primaryColor}20, #131315)`;
+      card.style.borderColor = `${primaryColor}33`;
+    }
+
+    const secondaryPreview = document.getElementById('secondary-color-preview');
+    if (secondaryPreview) secondaryPreview.style.backgroundColor = secondaryColor;
+    const accentPreview = document.getElementById('accent-color-preview');
+    if (accentPreview) accentPreview.style.backgroundColor = accentColor;
+  }
+
+  function updateColorSwatches() {
+    const primaryColor = previewConfig.primaryColor;
+    const primarySwatchBtns = document.querySelectorAll('.color-swatch[data-color]');
+    primarySwatchBtns.forEach(btn => {
+      const swatchColor = btn.getAttribute('data-color');
+      if (swatchColor === primaryColor) {
+        btn.classList.add('border-white');
+        btn.classList.remove('border-transparent');
+      } else {
+        btn.classList.remove('border-white');
+        btn.classList.add('border-transparent');
+      }
+    });
+  }
+
+  document.getElementById('logo-light-upload-area')?.addEventListener('click', () => {
+    document.getElementById('logo-light-input')?.click();
+  });
+  document.getElementById('logo-dark-upload-area')?.addEventListener('click', () => {
+    document.getElementById('logo-dark-input')?.click();
+  });
+  document.getElementById('favicon-light-upload-area')?.addEventListener('click', () => {
+    document.getElementById('favicon-light-input')?.click();
+  });
+  document.getElementById('favicon-dark-upload-area')?.addEventListener('click', () => {
+    document.getElementById('favicon-dark-input')?.click();
+  });
+
+  ['logo-light', 'logo-dark', 'favicon-light', 'favicon-dark'].forEach(id => {
+    document.getElementById(`${id}-upload-area`)?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      (e.target as HTMLElement).closest('.border-dashed')?.classList.add('border-primary');
+    });
+  });
+
+  document.getElementById('logo-light-input')?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0]) handleLogoLightUpload(input.files[0]);
+  });
+  document.getElementById('logo-dark-input')?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0]) handleLogoDarkUpload(input.files[0]);
+  });
+  document.getElementById('favicon-light-input')?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0]) handleFaviconLightUpload(input.files[0]);
+  });
+  document.getElementById('favicon-dark-input')?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.files?.[0]) handleFaviconDarkUpload(input.files[0]);
+  });
+
+  document.querySelectorAll('.color-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.getAttribute('data-type');
+      if (type) selectColorType(type);
+    });
+  });
+
+  document.querySelectorAll('.color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const color = btn.getAttribute('data-color');
+      if (color) selectColor(color);
+    });
+  });
+
+  function selectColorType(type: string) {
+    selectedColorType = type;
+    document.querySelectorAll('.color-type-btn').forEach(btn => {
+      const btnType = btn.getAttribute('data-type');
+      if (btnType === type) {
+        btn.classList.add('border-primary');
+        btn.classList.remove('border-transparent');
+      } else {
+        btn.classList.remove('border-primary');
+        btn.classList.add('border-transparent');
+      }
+    });
+    document.querySelectorAll('.color-type-btn').forEach(btn => {
+      const btnType = btn.getAttribute('data-type');
+      const span = btn.querySelector('span');
+      if (span && btnType) {
+        const colors: Record<string, string> = {
+          primary: previewConfig.primaryColor,
+          secondary: previewConfig.secondaryColor,
+          accent: previewConfig.accentColor
+        };
+        span.style.backgroundColor = colors[btnType] || '#d2bbff';
+      }
+    });
+  }
+
+  function selectColor(color: string) {
+    if (selectedColorType === 'primary') {
+      previewConfig.primaryColor = color;
+      document.getElementById('primary-color')!.value = color;
+    } else if (selectedColorType === 'secondary') {
+      previewConfig.secondaryColor = color;
+      document.getElementById('secondary-color')!.value = color;
+    } else if (selectedColorType === 'accent') {
+      previewConfig.accentColor = color;
+      document.getElementById('accent-color')!.value = color;
+    }
+    updatePreview();
+    updateColorSwatches();
+    document.querySelectorAll('.color-type-btn').forEach(btn => {
+      const btnType = btn.getAttribute('data-type');
+      const span = btn.querySelector('span');
+      if (span && btnType) {
+        const colors: Record<string, string> = {
+          primary: previewConfig.primaryColor,
+          secondary: previewConfig.secondaryColor,
+          accent: previewConfig.accentColor
+        };
+        span.style.backgroundColor = colors[btnType] || '#d2bbff';
+      }
+    });
+  }
+
+  async function handleLogoLightUpload(file: File) {
+    if (!file.name.endsWith('.svg')) { alert('Please upload SVG only'); return; }
+    try {
+      const { upload_url, object_key } = await getPresignedURL('logo_light', file.name);
+      await fetch(upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': 'image/svg+xml' } });
+      await confirmUpload(object_key, 'logo_light');
+      document.getElementById('logo-light-name')!.textContent = file.name;
+      document.getElementById('logo-light-upload-area')!.classList.add('hidden');
+      document.getElementById('logo-light-preview')!.classList.remove('hidden');
+      const previewImg = document.getElementById('logo-light-preview-img');
+      if (previewImg) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          previewImg.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-contain" />`;
+          const logo = document.getElementById('preview-logo');
+          if (logo) logo.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-contain" />`;
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) { console.error(err); alert('Upload failed'); }
+  }
+
+  async function handleLogoDarkUpload(file: File) {
+    if (!file.name.endsWith('.svg')) { alert('Please upload SVG only'); return; }
+    try {
+      const { upload_url, object_key } = await getPresignedURL('logo_dark', file.name);
+      await fetch(upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': 'image/svg+xml' } });
+      await confirmUpload(object_key, 'logo_dark');
+      document.getElementById('logo-dark-name')!.textContent = file.name;
+      document.getElementById('logo-dark-upload-area')!.classList.add('hidden');
+      document.getElementById('logo-dark-preview')!.classList.remove('hidden');
+      const previewImg = document.getElementById('logo-dark-preview-img');
+      if (previewImg) {
+        const reader = new FileReader();
+        reader.onload = (e) => { previewImg.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-contain" />`; };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) { console.error(err); alert('Upload failed'); }
+  }
+
+  async function handleFaviconLightUpload(file: File) {
+    if (!file.name.endsWith('.svg')) { alert('Please upload SVG only'); return; }
+    try {
+      const { upload_url, object_key } = await getPresignedURL('favicon_light', file.name);
+      await fetch(upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': 'image/svg+xml' } });
+      await confirmUpload(object_key, 'favicon_light');
+      document.getElementById('favicon-light-name')!.textContent = file.name;
+      document.getElementById('favicon-light-upload-area')!.classList.add('hidden');
+      document.getElementById('favicon-light-preview')!.classList.remove('hidden');
+      const previewImg = document.getElementById('favicon-light-preview-img');
+      if (previewImg) {
+        const reader = new FileReader();
+        reader.onload = (e) => { previewImg.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-contain" />`; };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) { console.error(err); alert('Upload failed'); }
+  }
+
+  async function handleFaviconDarkUpload(file: File) {
+    if (!file.name.endsWith('.svg')) { alert('Please upload SVG only'); return; }
+    try {
+      const { upload_url, object_key } = await getPresignedURL('favicon_dark', file.name);
+      await fetch(upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': 'image/svg+xml' } });
+      await confirmUpload(object_key, 'favicon_dark');
+      document.getElementById('favicon-dark-name')!.textContent = file.name;
+      document.getElementById('favicon-dark-upload-area')!.classList.add('hidden');
+      document.getElementById('favicon-dark-preview')!.classList.remove('hidden');
+      const previewImg = document.getElementById('favicon-dark-preview-img');
+      if (previewImg) {
+        const reader = new FileReader();
+        reader.onload = (e) => { previewImg.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-contain" />`; };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) { console.error(err); alert('Upload failed'); }
+  }
+
+  function removeLogoLight() {
+    document.getElementById('logo-light-input')!.value = '';
+    document.getElementById('logo-light-upload-area')!.classList.remove('hidden');
+    document.getElementById('logo-light-preview')!.classList.add('hidden');
+    const logo = document.getElementById('preview-logo');
+    if (logo) logo.innerHTML = `<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'FILL' 1;">architecture</span>`;
+  }
+  function removeLogoDark() {
+    document.getElementById('logo-dark-input')!.value = '';
+    document.getElementById('logo-dark-upload-area')!.classList.remove('hidden');
+    document.getElementById('logo-dark-preview')!.classList.add('hidden');
+  }
+  function removeFaviconLight() {
+    document.getElementById('favicon-light-input')!.value = '';
+    document.getElementById('favicon-light-upload-area')!.classList.remove('hidden');
+    document.getElementById('favicon-light-preview')!.classList.add('hidden');
+  }
+  function removeFaviconDark() {
+    document.getElementById('favicon-dark-input')!.value = '';
+    document.getElementById('favicon-dark-upload-area')!.classList.remove('hidden');
+    document.getElementById('favicon-dark-preview')!.classList.add('hidden');
+  }
+
+  async function getPresignedURL(assetType: string, filename: string) {
+    const token = getToken();
+    const res = await fetch('/api/v1/upload/branding/presigned', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ asset_type: assetType, filename })
+    });
+    if (!res.ok) throw new Error('Failed to get presigned URL');
+    return res.json();
+  }
+
+  async function confirmUpload(objectKey: string, assetType: string) {
+    const token = getToken();
+    const res = await fetch('/api/v1/upload/branding/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ object_key: objectKey, asset_type: assetType })
+    });
+    if (!res.ok) throw new Error('Failed to confirm upload');
+    return res.json();
   }
 
   function getToken(): string | null {
     const stored = localStorage.getItem('oscar_auth');
-    if (stored) {
-      const { token } = JSON.parse(stored);
-      if (token) return token;
-    }
-    const cookies = Object.fromEntries(
-      document.cookie.split('; ').map(c => c.split('='))
-    );
+    if (stored) { const { token } = JSON.parse(stored); if (token) return token; }
+    const cookies = Object.fromEntries(document.cookie.split('; ').map(c => c.split('=')));
     return cookies['oscar_token'] || null;
   }
 
-  async function saveSettings() {
-    const token = getToken();
-    if (!token) return;
-
-    const primaryColor = (document.getElementById('primary-color') as HTMLInputElement).value;
-    const secondaryColor = (document.getElementById('secondary-color') as HTMLInputElement).value;
-    const tenantName = (document.getElementById('tenant-name') as HTMLInputElement).value;
-    const currency = (document.getElementById('currency') as HTMLSelectElement).value;
-    const timezone = (document.getElementById('timezone') as HTMLSelectElement).value;
-    const headlineFont = (document.getElementById('headline-font') as HTMLSelectElement).value;
-    const monoFont = (document.getElementById('mono-font') as HTMLSelectElement).value;
-
-    try {
-      const res = await fetch('/api/v1/settings', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: tenantName || undefined,
-          currency: currency || undefined,
-          timezone: timezone || undefined,
-          primary_color: primaryColor || undefined,
-          secondary_color: secondaryColor || undefined,
-          font_family: headlineFont || undefined,
-          logo_light_url: logoPreviewUrl || undefined,
-        })
-      });
-
-      if (res.ok) {
-        updatePreview();
-        alert('Settings saved successfully!');
-      } else {
-        const error = await res.json();
-        alert('Failed to save settings: ' + (error.error?.message || 'Unknown error'));
-      }
-    } catch (err) {
-      console.error('Failed to save settings:', err);
-    }
+  function getCachedBrandingURL(objectKey: string): string | null {
+    return sessionStorage.getItem('branding_url_' + objectKey);
   }
 
-  function updatePreview() {
-    const primaryColor = (document.getElementById('primary-color') as HTMLInputElement).value;
-    const secondaryColor = (document.getElementById('secondary-color') as HTMLInputElement).value;
-    const headlineFont = (document.getElementById('headline-font') as HTMLSelectElement).value;
-    
-    const previewDot = document.getElementById('preview-color-dot');
-    const previewLabel = document.getElementById('preview-color-label');
-    const previewPrimaryText = document.getElementById('preview-primary-text');
-    const previewHeadlineFont = document.getElementById('preview-headline-font');
-    
-    if (previewDot) previewDot.style.backgroundColor = primaryColor;
-    if (previewLabel) previewLabel.textContent = `Global Primary: ${primaryColor}`;
-    if (previewPrimaryText) previewPrimaryText.style.color = primaryColor;
-    if (previewHeadlineFont) previewHeadlineFont.style.fontFamily = headlineFont;
+  function cacheBrandingURL(objectKey: string, url: string): void {
+    sessionStorage.setItem('branding_url_' + objectKey, url);
   }
 
   async function loadSettings() {
     const token = getToken();
     if (!token) return;
-
     try {
-      const res = await fetch('/api/v1/settings', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch('/api/v1/settings', { headers: { Authorization: `Bearer ${token}` } });
       const { data } = await res.json();
-      
       if (data) {
-        if (data.primary_color) (document.getElementById('primary-color') as HTMLInputElement).value = data.primary_color;
-        if (data.secondary_color) (document.getElementById('secondary-color') as HTMLInputElement).value = data.secondary_color;
-        if (data.tenant_name || data.name) (document.getElementById('tenant-name') as HTMLInputElement).value = data.tenant_name || data.name;
-        if (data.currency) (document.getElementById('currency') as HTMLSelectElement).value = data.currency;
-        if (data.timezone) (document.getElementById('timezone') as HTMLSelectElement).value = data.timezone;
-        if (data.font_family) (document.getElementById('headline-font') as HTMLSelectElement).value = data.font_family;
-        
-        if (data.logo_light_url) {
-          logoPreviewUrl = data.logo_light_url;
-          document.getElementById('logo-upload-area')!.classList.add('hidden');
-          document.getElementById('logo-preview')!.classList.remove('hidden');
-          const previewImg = document.getElementById('logo-preview-img');
-          if (previewImg) {
-            previewImg.innerHTML = `<img src="${data.logo_light_url}" class="w-full h-full object-cover" alt="Logo" />`;
-          }
+        if (data.primary_color) {
+          const input = document.getElementById('primary-color') as HTMLInputElement;
+          if (input) input.value = data.primary_color;
+          previewConfig.primaryColor = data.primary_color;
         }
-        
+        if (data.secondary_color) {
+          const input = document.getElementById('secondary-color') as HTMLInputElement;
+          if (input) input.value = data.secondary_color;
+          previewConfig.secondaryColor = data.secondary_color;
+        }
+        if (data.accent_color) {
+          const input = document.getElementById('accent-color') as HTMLInputElement;
+          if (input) input.value = data.accent_color;
+          previewConfig.accentColor = data.accent_color;
+        }
+        if (data.font_family) {
+          const select = document.getElementById('headline-font') as HTMLSelectElement;
+          if (select) select.value = data.font_family;
+          previewConfig.headlineFont = data.font_family;
+        }
+        if (data.mono_font) {
+          const select = document.getElementById('mono-font') as HTMLSelectElement;
+          if (select) select.value = data.mono_font;
+          previewConfig.monoFont = data.mono_font;
+        }
         updatePreview();
+        selectColorType('primary');
+        const secondaryPreview = document.getElementById('secondary-color-preview');
+        if (secondaryPreview) secondaryPreview.style.backgroundColor = previewConfig.secondaryColor;
+        const accentPreview = document.getElementById('accent-color-preview');
+        if (accentPreview) accentPreview.style.backgroundColor = previewConfig.accentColor;
       }
-    } catch (err) {
-      console.error('Failed to load settings:', err);
-    }
+    } catch (err) { console.error('Failed to load settings:', err); }
   }
 
-  document.querySelectorAll('[data-color]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const color = btn.getAttribute('data-color');
-      if (color) {
-        (document.getElementById('primary-color') as HTMLInputElement).value = color;
-        updatePreview();
-      }
-    });
+  async function saveSettings() {
+    const token = getToken();
+    if (!token) return;
+    const primaryColor = (document.getElementById('primary-color') as HTMLInputElement)?.value;
+    const secondaryColor = (document.getElementById('secondary-color') as HTMLInputElement)?.value;
+    const accentColor = (document.getElementById('accent-color') as HTMLInputElement)?.value;
+    const fontFamily = (document.getElementById('headline-font') as HTMLSelectElement)?.value;
+    const monoFont = (document.getElementById('mono-font') as HTMLSelectElement)?.value;
+    try {
+      const res = await fetch('/api/v1/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          primary_color: primaryColor,
+          secondary_color: secondaryColor,
+          accent_color: accentColor,
+          font_family: fontFamily,
+          mono_font: monoFont,
+        })
+      });
+      if (res.ok) { alert('Settings saved!'); }
+      else { const error = await res.json(); alert('Failed: ' + (error.error?.message || 'Unknown')); }
+    } catch (err) { console.error(err); }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initPreviewListeners();
+    selectColorType('primary');
+    loadSettings();
   });
-
-  const primaryColorInput = document.getElementById('primary-color') as HTMLInputElement;
-  primaryColorInput?.addEventListener('input', updatePreview);
-
-  loadSettings();
 </script>
 
 <style>
