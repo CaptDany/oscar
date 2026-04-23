@@ -5,13 +5,24 @@ interface Props {
   title?: string;
 }
 
-const { title = 'Oscar CRM' } = Astro.props;
+const { title = 'oscar' } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
+  <link rel="apple-touch-icon" sizes="180x180" href={asset('dark-icons/apple-touch-icon.png')} media="(prefers-color-scheme: dark)" />
+  <link rel="apple-touch-icon" sizes="180x180" href={asset('light-icons/apple-touch-icon.png')} media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" sizes="32x32" href={asset('dark-icons/favicon-32x32.png')} media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" sizes="32x32" href={asset('light-icons/favicon-32x32.png')} media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" sizes="16x16" href={asset('dark-icons/favicon-16x16.png')} media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" sizes="16x16" href={asset('light-icons/favicon-16x16.png')} media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/x-icon" href={asset('dark-icons/favicon.ico')} media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/x-icon" href={asset('light-icons/favicon.ico')} media="(prefers-color-scheme: light)" />
+  <link rel="manifest" href={asset('dark-icons/site.webmanifest')} media="(prefers-color-scheme: dark)" />
+  <link rel="manifest" href={asset('light-icons/site.webmanifest')} media="(prefers-color-scheme: light)" />
+  <link rel="sitemap" href={asset('sitemap-index.xml')} />
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title} | oscar</title>
