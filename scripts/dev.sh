@@ -14,8 +14,8 @@ pkill -f "postgres" 2>/dev/null
 pkill -f "redis" 2>/dev/null
 pkill -f "tmux" 2>/dev/null
 pkill -f "ngrok" 2>/dev/null
-docker stop oscar-minio oscar-mailhog 2>/dev/null
-docker rm oscar-minio oscar-mailhog 2>/dev/null
+docker stop oscar-mailhog 2>/dev/null
+docker rm oscar-mailhog 2>/dev/null
 sleep 2
 echo -e "${GREEN}✓ Killed existing processes${NC}"
 
@@ -74,7 +74,7 @@ tmux split-window -h -t $SESSION_NAME:1
 
 tmux send-keys -t $SESSION_NAME:1.0 "clear && echo -e '${PURPLE}=== POSTGRESQL ===${NC}' && brew services start postgresql@16" C-m
 
-tmux send-keys -t $SESSION_NAME:1.1 "clear && echo -e '${PURPLE}=== MINIO ===${NC}' && mkdir -p ~/docker/oscar/minio && (docker run -d --name oscar-minio -p 9000:9000 -p 9001:9001 -v ~/docker/oscar/minio:/data -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio server /data --console-address ':9001' 2>/dev/null || echo 'Docker not available') && sleep 1 && clear && echo -e '${PURPLE}=== MAILHOG ===${NC}' && (docker run -d --name oscar-mailhog -p 1025:1025 -p 8025:8020 mailhog/mailhog 2>/dev/null || echo 'Docker not available')" C-m
+tmux send-keys -t $SESSION_NAME:1.1 "clear && echo -e '${PURPLE}=== MAILHOG ===${NC}' && (docker run -d --name oscar-mailhog -p 1025:1025 -p 8025:8020 mailhog/mailhog 2>/dev/null || echo 'Docker not available')" C-m
 
 tmux new-window -t $SESSION_NAME:2 -n 'tools'
 
@@ -94,13 +94,12 @@ echo ""
 echo -e "${YELLOW}Services:${NC}"
 echo "  - oscar API: http://localhost:8080"
 echo "  - Astro Frontend: http://localhost:4321"
-echo "  - MinIO Console: http://localhost:9001"
 echo "  - Mailhog: http://localhost:8025"
 echo "  - Ngrok: http://localhost:4040"
 echo ""
 echo -e "${YELLOW}Navigation:${NC}"
 echo "  - Ctrl+B, 0 = oscar + Astro (main)"
-echo "  - Ctrl+B, 1 = Services (Postgres, MinIO, Mailhog)"
+echo "  - Ctrl+B, 1 = Services (Postgres, Mailhog)"
 echo "  - Ctrl+B, 2 = Tools (Redis, Ngrok)"
 echo "  - Ctrl+B, D = Detach"
 echo "  - Ctrl+B, [ = Scroll mode (q to exit)"

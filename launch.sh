@@ -15,9 +15,9 @@ stop() {
     echo -e "${YELLOW}Stopping oscar services...${NC}"
 
     tmux kill-session -t $SESSION 2>/dev/null && echo -e "${GREEN}oscar session stopped${NC}" || true
+    docker stop oscar-mailhog 2>/dev/null && echo -e "${GREEN}Docker containers stopped${NC}" || true
 
-    docker stop oscar-minio oscar-mailhog 2>/dev/null && echo -e "${GREEN}Docker containers stopped${NC}" || true
-    docker rm oscar-minio oscar-mailhog 2>/dev/null && echo -e "${GREEN}Docker containers removed${NC}" || true
+    docker rm oscar-mailhog 2>/dev/null && echo -e "${GREEN}Docker containers removed${NC}" || true
 
     brew services stop postgresql@16 2>/dev/null && echo -e "${GREEN}PostgreSQL stopped${NC}" || true
 
@@ -85,8 +85,8 @@ start() {
     pkill -f "postgres" 2>/dev/null || true
     pkill -f "redis" 2>/dev/null || true
     pkill -f "ngrok" 2>/dev/null || true
-    docker stop oscar-minio oscar-mailhog 2>/dev/null || true
-    docker rm oscar-minio oscar-mailhog 2>/dev/null || true
+    docker stop oscar-mailhog 2>/dev/null || true
+    docker rm oscar-mailhog 2>/dev/null || true
     sleep 2
     echo -e "${GREEN}Cleanup complete${NC}"
 
@@ -134,7 +134,7 @@ start() {
 
     tmux select-layout -t $SESSION even-vertical
 
-    tmux send-keys -t $SESSION:0.0 "clear && echo -e '${PURPLE}=== OSCAR API ===${NC}' && echo 'Waiting for MinIO...' && while ! curl -s --max-time 1 http://localhost:9000/minio/health/live > /dev/null 2>&1; do sleep 1; done && while ! /usr/local/bin/redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done && echo 'Ready! Starting API...' && cd /Users/dany/Documents/GitHub/oscar && lsof -ti :8080 | xargs kill -9 2>/dev/null; source .env && make dev" C-m
+    tmux send-keys -t $SESSION:0.0 "clear && echo -e '${PURPLE}=== OSCAR API ===${NC}' && echo 'Waiting for Postgres...' && while ! /usr/local/bin/redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done && echo 'Ready! Starting API...' && cd /Users/dany/Documents/GitHub/oscar && lsof -ti :8080 | xargs kill -9 2>/dev/null; source .env && make dev" C-m
 
     tmux send-keys -t $SESSION:0.1 "clear && echo -e '${CYAN}=== ASTRO FRONTEND ===${NC}' && cd /Users/dany/Documents/GitHub/oscar/web && npx astro dev" C-m
 
@@ -142,7 +142,7 @@ start() {
 
     tmux new-window -t $SESSION -n 'services'
 
-    tmux send-keys -t $SESSION:1 "clear && echo '' && echo 'Starting services...' && brew services start postgresql@16 && docker run -d --name oscar-minio -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio server /data --console-address ':9001' && docker run -d --name oscar-mailhog -p 1025:1025 -p 8025:8020 mailhog/mailhog && /usr/local/bin/redis-server --daemonize yes && echo 'All services started' && echo ''" C-m
+    tmux send-keys -t $SESSION:1 "clear && echo '' && echo 'Starting services...' && brew services start postgresql@16 && docker run -d --name oscar-mailhog -p 1025:1025 -p 8025:8020 mailhog/mailhog && /usr/local/bin/redis-server --daemonize yes && echo 'All services started' && echo ''" C-m
 
     tmux select-window -t $SESSION:0
 
@@ -153,17 +153,16 @@ start() {
     echo ""
     echo -e "${YELLOW}Sessions:${NC}"
     echo "  tmux attach -t oscar        -> Backend + Frontend + Ngrok"
-    echo "  tmux attach -t oscar-infra  -> Postgres, MinIO, Mailhog, Redis"
+    echo "  tmux attach -t oscar-infra  -> Postgres, Mailhog, Redis"
     echo ""
     echo -e "${YELLOW}URLs:${NC}"
     echo "  API:       http://localhost:8080"
     echo "  Frontend:  http://localhost:4321"
-    echo "  MinIO:     http://localhost:9001"
     echo "  Mailhog:   http://localhost:8025"
     echo ""
     echo -e "${YELLOW}Navigation:${NC}"
-    echo "  Ctrl+B, 0 = oscar + Astro (main)"
-    echo "  Ctrl+B, 1 = Services (Postgres, MinIO, Mailhog)"
+    echo "  Ctrl+B, 1 = oscar + Astro (main)"
+    echo "  Ctrl+B, 2 = Services (Postgres, Mailhog)"
     echo "  Ctrl+B, D = Detach"
     echo ""
     echo -e "${GREEN}Attaching to tmux session...${NC}"
@@ -188,7 +187,7 @@ case "$1" in
         echo "Usage: ./launch.sh [command]"
         echo ""
         echo "Commands:"
-        echo "  start     Start all services (API, Frontend, Ngrok, Postgres, MinIO, Mailhog, Redis)"
+        echo "  start     Start all services (API, Frontend, Ngrok, Postgres, Mailhog, Redis)"
         echo "  stop      Stop all services"
         echo "  reset-db  Truncate all tables in the database (requires confirmation)"
         echo ""
