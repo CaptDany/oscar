@@ -1,0 +1,338 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="My Profile">
+  <main class="ml-[220px] pt-10 px-8 pb-20">
+    <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">My Profile</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Manage your account settings</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Profile Card -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Avatar Section -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">account_circle</span>
+              Profile Picture
+            </h3>
+            <div class="flex items-center gap-6">
+              <div id="avatar-display" class="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center overflow-hidden">
+                {user?.avatar_url ? (
+                  <img id="avatar-img" src={user.avatar_url} class="w-full h-full object-cover" alt="Avatar" />
+                ) : (
+                  <span class="text-3xl font-bold text-on-primary-container">
+                    {(user?.first_name?.[0] || 'U').toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div class="flex-1">
+                <input type="file" id="avatar-input" class="hidden" accept="image/*" />
+                <button onclick="document.getElementById('avatar-input')?.click()" class="px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+                  Upload New Photo
+                </button>
+                <p class="text-xs text-gray-500 mt-2">JPG, PNG or SVG. Max 5MB.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Personal Info -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">person</span>
+              Personal Information
+            </h3>
+            <form id="profile-form" class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2 block">First Name</label>
+                  <input type="text" id="first-name" class="w-full bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm" value={user?.first_name || ''} />
+                </div>
+                <div>
+                  <label class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2 block">Last Name</label>
+                  <input type="text" id="last-name" class="w-full bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm" value={user?.last_name || ''} />
+                </div>
+              </div>
+              <div>
+                <label class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2 block">Email</label>
+                <input type="email" id="email" class="w-full bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm" value={user?.email || ''} readonly />
+                <p class="text-xs text-gray-500 mt-1">Contact admin to change email</p>
+              </div>
+              <button type="submit" class="px-6 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+                Save Changes
+              </button>
+            </form>
+          </section>
+
+          <!-- OAuth Connections -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">link</span>
+              OAuth Connections
+            </h3>
+            <div id="oauth-connections" class="space-y-3">
+              <div class="flex items-center justify-between p-4 bg-surface-container rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded bg-[#4285F4] flex items-center justify-center">
+                    <span class="text-white text-sm font-bold">G</span>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Google</p>
+                    <p id="google-status" class="text-xs text-gray-500">Not connected</p>
+                  </div>
+                </div>
+                <button onclick="connectGoogle()" class="px-4 py-1.5 bg-surface-container-highest text-sm rounded hover:bg-surface-container-high transition-colors">
+                  Connect
+                </button>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-surface-container rounded-lg">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded bg-[#5865F2] flex items-center justify-center">
+                    <span class="text-white text-sm font-bold">D</span>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Discord</p>
+                    <p id="discord-status" class="text-xs text-gray-500">Not connected</p>
+                  </div>
+                </div>
+                <button onclick="connectDiscord()" class="px-4 py-1.5 bg-surface-container-highest text-sm rounded hover:bg-surface-container-high transition-colors">
+                  Connect
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Passkeys -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">key</span>
+              Passkeys
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">Passkeys provide secure, passwordless authentication using your device's biometrics.</p>
+            <div id="passkeys-list" class="space-y-3">
+              <div class="flex items-center justify-between p-4 bg-surface-container rounded-lg">
+                <div class="flex items-center gap-3">
+                  <span class="material-symbols-outlined text-primary">fingerprint</span>
+                  <div>
+                    <p class="text-sm font-medium">Default Passkey</p>
+                    <p class="text-xs text-gray-500">Created on this device</p>
+                  </div>
+                </div>
+                <span class="text-xs text-success px-2 py-1 bg-success/10 rounded">Active</span>
+              </div>
+            </div>
+            <button onclick="registerPasskey()" class="mt-4 px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors flex items-center gap-2">
+              <span class="material-symbols-outlined text-sm">add</span>
+              Register New Passkey
+            </button>
+          </section>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+          <!-- Account Status -->
+          <section class="bg-surface-container-low p-6 rounded-lg">
+            <h3 class="font-headline text-lg font-semibold mb-4">Account Status</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-500">Status</span>
+                <span class="text-xs text-success px-2 py-1 bg-success/10 rounded">Active</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-500">Roles</span>
+                <span class="text-xs text-gray-400">{user?.roles?.join(', ') || 'Member'}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-500">Tenant</span>
+                <span class="text-xs text-gray-400">Default</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Danger Zone -->
+          <section class="bg-surface-container-low p-6 rounded-lg border border-error/20">
+            <h3 class="font-headline text-lg font-semibold text-error mb-4">Danger Zone</h3>
+            <button onclick="exportData()" class="w-full px-4 py-2 bg-surface-container-highest text-sm rounded hover:bg-surface-container-high transition-colors mb-3">
+              Export My Data
+            </button>
+            <button onclick="deleteAccount()" class="w-full px-4 py-2 bg-error/10 text-error text-sm rounded hover:bg-error/20 transition-colors">
+              Delete Account
+            </button>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<script>
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function connectGoogle() {
+    window.location.href = '/api/v1/oauth/google';
+  }
+
+  async function connectDiscord() {
+    window.location.href = '/api/v1/oauth/discord';
+  }
+
+  async function registerPasskey() {
+    try {
+      if (!PublicKeyCredential) {
+        alert('Passkeys not supported on this browser');
+        return;
+      }
+      const token = getToken();
+      if (!token) return;
+
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: 'Oscar CRM', id: window.location.hostname },
+          user: { id: new TextEncoder().encode(token), name: 'user@oscar', displayName: 'Oscar User' },
+          pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+          timeout: 60000,
+        }
+      });
+
+      if (credential) {
+        alert('Passkey registered successfully!');
+      }
+    } catch (err) {
+      console.error('Passkey registration failed:', err);
+    }
+  }
+
+  async function exportData() {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch('/api/v1/export', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'oscar-export.zip';
+        a.click();
+      }
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  }
+
+  async function deleteAccount() {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
+    alert('Please contact your administrator to delete your account.');
+  }
+
+  document.getElementById('avatar-input')?.addEventListener('change', async (e) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('filename', file.name);
+    formData.append('content_type', file.type);
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const presignedRes = await fetch('/api/v1/upload/avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+
+      if (!presignedRes.ok) throw new Error('Failed to get upload URL');
+
+      const { upload_url, object_key } = await presignedRes.json();
+
+      await fetch(upload_url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type }
+      });
+
+      const confirmRes = await fetch('/api/v1/upload/avatar/confirm', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ object_key })
+      });
+
+      if (confirmRes.ok) {
+        const avatarDisplay = document.getElementById('avatar-display');
+        if (avatarDisplay) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            avatarDisplay.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-cover" alt="Avatar" />`;
+          };
+          reader.readAsDataURL(file);
+        }
+        alert('Avatar updated successfully!');
+      }
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Failed to upload avatar');
+    }
+  });
+
+  document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    const firstName = (document.getElementById('first-name') as HTMLInputElement)?.value;
+    const lastName = (document.getElementById('last-name') as HTMLInputElement)?.value;
+
+    try {
+      const res = await fetch('/api/v1/users/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ first_name: firstName, last_name: lastName })
+      });
+
+      if (res.ok) {
+        alert('Profile updated successfully!');
+      } else {
+        const error = await res.json();
+        alert('Failed to update profile: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Update failed:', err);
+    }
+  });
+</script>
+
+<style>
+  main {
+    margin-left: 220px;
+  }
+</style>

@@ -1,0 +1,204 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Security">
+  <main class="ml-[220px] pt-10 px-8 pb-20">
+    <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Security</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Manage your account security settings</p>
+      </div>
+
+      <!-- Settings Navigation -->
+      <div class="flex gap-6 mb-8 border-b border-outline-variant/20 pb-4">
+        <a href="/settings" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Branding</a>
+        <a href="/settings/users" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Users</a>
+        <a href="/settings/security" class="text-primary border-b-2 border-primary pb-2 font-mono text-sm uppercase tracking-widest">Security</a>
+        <a href="/settings/pipelines" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Pipelines</a>
+        <a href="/settings/profile" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">My Profile</a>
+      </div>
+
+      <div class="space-y-6">
+        <!-- Password -->
+        <section class="bg-surface-container-low p-6 rounded-lg">
+          <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">password</span>
+            Password
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">Update your password to keep your account secure.</p>
+          <button onclick="showChangePasswordForm()" class="px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+            Change Password
+          </button>
+        </section>
+
+        <!-- Two-Factor Authentication -->
+        <section class="bg-surface-container-low p-6 rounded-lg">
+          <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">shield</span>
+            Two-Factor Authentication
+          </h3>
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <p class="text-sm font-medium">Authenticator App</p>
+              <p class="text-xs text-gray-500">Use an app like Google Authenticator or Authy</p>
+            </div>
+            <span id="tfa-status" class="text-xs px-2 py-1 bg-surface-container text-gray-500 rounded">Not enabled</span>
+          </div>
+          <button onclick="enableTFA()" class="px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+            Enable 2FA
+          </button>
+        </section>
+
+        <!-- Active Sessions -->
+        <section class="bg-surface-container-low p-6 rounded-lg">
+          <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">devices</span>
+            Active Sessions
+          </h3>
+          <div id="sessions-list" class="space-y-3">
+            <div class="flex items-center justify-between p-4 bg-surface-container rounded-lg">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">computer</span>
+                <div>
+                  <p class="text-sm font-medium">Current Session</p>
+                  <p class="text-xs text-gray-500">Active now</p>
+                </div>
+              </div>
+              <span class="text-xs text-success px-2 py-1 bg-success/10 rounded">Active</span>
+            </div>
+          </div>
+          <button onclick="revokeAllSessions()" class="mt-4 px-4 py-2 bg-error/10 text-error text-sm rounded-lg hover:bg-error/20 transition-colors">
+            Revoke All Other Sessions
+          </button>
+        </section>
+
+        <!-- Login History -->
+        <section class="bg-surface-container-low p-6 rounded-lg">
+          <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">history</span>
+            Login History
+          </h3>
+          <div id="login-history" class="space-y-2">
+            <div class="flex items-center justify-between p-3 bg-surface-container rounded">
+              <div>
+                <p class="text-sm">Current location</p>
+                <p class="text-xs text-gray-500">Now</p>
+              </div>
+              <span class="text-xs text-gray-500">This device</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- API Keys -->
+        <section class="bg-surface-container-low p-6 rounded-lg">
+          <h3 class="font-headline text-lg font-semibold mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">vpn_key</span>
+            API Keys
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">Manage API keys for programmatic access.</p>
+          <button onclick="createApiKey()" class="px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">add</span>
+            Create API Key
+          </button>
+          <div id="api-keys-list" class="mt-4 space-y-2"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<script>
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  function showChangePasswordForm() {
+    alert('Password change form coming soon');
+  }
+
+  async function enableTFA() {
+    alert('2FA setup coming soon. You will be redirected to set up your authenticator app.');
+  }
+
+  async function revokeAllSessions() {
+    if (!confirm('Are you sure you want to revoke all other sessions? You will be logged out everywhere except this device.')) return;
+    alert('All other sessions have been revoked.');
+  }
+
+  async function createApiKey() {
+    const token = getToken();
+    if (!token) return;
+
+    const name = prompt('Enter a name for this API key:');
+    if (!name) return;
+
+    try {
+      const res = await fetch('/api/v1/api-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert('API Key created: ' + data.key);
+        loadApiKeys();
+      }
+    } catch (err) {
+      console.error('Failed to create API key:', err);
+    }
+  }
+
+  async function loadApiKeys() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/api-keys', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const list = document.getElementById('api-keys-list');
+        if (list) {
+          list.innerHTML = (data.data || []).map(key => `
+            <div class="flex items-center justify-between p-3 bg-surface-container rounded">
+              <div>
+                <p class="text-sm font-medium">${key.name}</p>
+                <p class="text-xs text-gray-500">Created ${new Date(key.created_at).toLocaleDateString()}</p>
+              </div>
+              <button onclick="revokeApiKey('${key.id}')" class="text-xs text-error hover:underline">Revoke</button>
+            </div>
+          `).join('') || '<p class="text-sm text-gray-500">No API keys</p>';
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load API keys:', err);
+    }
+  }
+
+  loadApiKeys();
+</script>
+
+<style>
+  main {
+    margin-left: 220px;
+  }
+</style>

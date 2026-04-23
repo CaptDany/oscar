@@ -1,0 +1,230 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+
+const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
+---
+
+<AppLayout title="Users">
+  <main class="ml-[220px] pt-10 px-8 pb-20">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Users</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Manage team members and their access</p>
+      </div>
+
+      <!-- Settings Navigation -->
+      <div class="flex gap-6 mb-8 border-b border-outline-variant/20 pb-4">
+        <a href="/settings" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Branding</a>
+        <a href="/settings/users" class="text-primary border-b-2 border-primary pb-2 font-mono text-sm uppercase tracking-widest">Users</a>
+        <a href="/settings/security" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Security</a>
+        <a href="/settings/pipelines" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Pipelines</a>
+        <a href="/settings/profile" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">My Profile</a>
+      </div>
+
+      {isAdmin && (
+        <div class="flex justify-end mb-6">
+          <button onclick="openInviteModal()" class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+            <span class="material-symbols-outlined text-sm">person_add</span>
+            Invite User
+          </button>
+        </div>
+      )}
+
+      <!-- Users Table -->
+      <div class="bg-surface-container-low rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-surface-container">
+              <tr class="text-left text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                <th class="px-4 py-3">User</th>
+                <th class="px-4 py-3">Email</th>
+                <th class="px-4 py-3">Role</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Joined</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-outline-variant/10">
+              <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                  Loading users...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<!-- Invite Modal -->
+<div id="invite-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeInviteModal()"></div>
+  <div class="relative w-full max-w-md bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+      <h2 class="text-lg font-headline font-bold">Invite User</h2>
+      <button onclick="closeInviteModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+        <span class="material-symbols-outlined text-gray-400">close</span>
+      </button>
+    </div>
+    <form id="invite-form" class="p-6 space-y-4">
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">First Name</label>
+        <input type="text" id="invite-first-name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="John" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Last Name</label>
+        <input type="text" id="invite-last-name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Doe" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Email</label>
+        <input type="email" id="invite-email" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="john@company.com" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Role</label>
+        <select id="invite-role" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
+          <option value="Member">Member</option>
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Sales Rep">Sales Rep</option>
+        </select>
+      </div>
+      <div class="flex justify-end gap-3 pt-4">
+        <button type="button" onclick="closeInviteModal()" class="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-opacity">Send Invite</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let users = [];
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function loadUsers() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/users', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        users = data.data || [];
+        renderUsers();
+      }
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    }
+  }
+
+  function renderUsers() {
+    const tbody = document.getElementById('users-table-body');
+    if (!tbody) return;
+
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No users found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = users.map(user => `
+      <tr class="hover:bg-surface-container-high transition-colors">
+        <td class="px-4 py-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-sm font-bold">
+              ${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}
+            </div>
+            <div>
+              <p class="text-sm font-medium">${user.first_name || ''} ${user.last_name || ''}</p>
+              <p class="text-xs text-gray-500">${user.id?.slice(0, 8) || ''}</p>
+            </div>
+          </div>
+        </td>
+        <td class="px-4 py-4 text-sm text-gray-400">${user.email || ''}</td>
+        <td class="px-4 py-4">
+          <span class="text-xs px-2 py-1 bg-primary/10 text-primary rounded">${user.roles?.join(', ') || 'Member'}</span>
+        </td>
+        <td class="px-4 py-4">
+          <span class="text-xs px-2 py-1 ${user.status === 'active' ? 'bg-success/10 text-success' : 'bg-surface-container text-gray-500'} rounded">${user.status || 'active'}</span>
+        </td>
+        <td class="px-4 py-4 text-sm text-gray-500">${user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
+        <td class="px-4 py-4 text-right">
+          <button onclick="editUser('${user.id}')" class="p-2 hover:bg-surface-container-high rounded transition-colors">
+            <span class="material-symbols-outlined text-sm">edit</span>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openInviteModal() {
+    document.getElementById('invite-modal')?.classList.remove('hidden');
+  }
+
+  function closeInviteModal() {
+    document.getElementById('invite-modal')?.classList.add('hidden');
+    document.getElementById('invite-form')?.reset();
+  }
+
+  function editUser(userId) {
+    alert('Edit user: ' + userId);
+  }
+
+  document.getElementById('invite-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    const firstName = (document.getElementById('invite-first-name') as HTMLInputElement)?.value;
+    const lastName = (document.getElementById('invite-last-name') as HTMLInputElement)?.value;
+    const email = (document.getElementById('invite-email') as HTMLInputElement)?.value;
+    const role = (document.getElementById('invite-role') as HTMLSelectElement)?.value;
+
+    try {
+      const res = await fetch('/api/v1/invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ email, first_name: firstName, last_name: lastName, role_name: role })
+      });
+
+      if (res.ok) {
+        closeInviteModal();
+        alert('Invitation sent successfully!');
+      } else {
+        const error = await res.json();
+        alert('Failed to send invitation: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Invitation failed:', err);
+    }
+  });
+
+  loadUsers();
+</script>
+
+<style>
+  main {
+    margin-left: 220px;
+  }
+</style>

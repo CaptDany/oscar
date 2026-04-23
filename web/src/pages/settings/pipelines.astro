@@ -1,0 +1,301 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+
+const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
+---
+
+<AppLayout title="Pipelines">
+  <main class="ml-[220px] pt-10 px-8 pb-20">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Pipelines</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Configure your sales pipelines and stages</p>
+      </div>
+
+      <!-- Settings Navigation -->
+      <div class="flex gap-6 mb-8 border-b border-outline-variant/20 pb-4">
+        <a href="/settings" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Branding</a>
+        <a href="/settings/users" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Users</a>
+        <a href="/settings/security" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Security</a>
+        <a href="/settings/pipelines" class="text-primary border-b-2 border-primary pb-2 font-mono text-sm uppercase tracking-widest">Pipelines</a>
+        <a href="/settings/profile" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">My Profile</a>
+      </div>
+
+      {isAdmin && (
+        <div class="flex justify-end mb-6">
+          <button onclick="openCreatePipelineModal()" class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+            <span class="material-symbols-outlined text-sm">add</span>
+            Create Pipeline
+          </button>
+        </div>
+      )}
+
+      <!-- Pipelines Grid -->
+      <div id="pipelines-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="col-span-full text-center py-8 text-gray-500">
+          Loading pipelines...
+        </div>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<!-- Create Pipeline Modal -->
+<div id="create-pipeline-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeCreatePipelineModal()"></div>
+  <div class="relative w-full max-w-md bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+      <h2 class="text-lg font-headline font-bold">Create Pipeline</h2>
+      <button onclick="closeCreatePipelineModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+        <span class="material-symbols-outlined text-gray-400">close</span>
+      </button>
+    </div>
+    <form id="create-pipeline-form" class="p-6 space-y-4">
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Pipeline Name</label>
+        <input type="text" id="pipeline-name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Sales Pipeline" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Stages (comma separated)</label>
+        <input type="text" id="pipeline-stages" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="Prospecting, Qualified, Proposal, Negotiation, Won, Lost" />
+      </div>
+      <div class="flex justify-end gap-3 pt-4">
+        <button type="button" onclick="closeCreatePipelineModal()" class="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-opacity">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Pipeline Modal -->
+<div id="edit-pipeline-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeEditPipelineModal()"></div>
+  <div class="relative w-full max-w-lg bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between sticky top-0 bg-surface-container z-10">
+      <h2 class="text-lg font-headline font-bold">Edit Pipeline</h2>
+      <button onclick="closeEditPipelineModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+        <span class="material-symbols-outlined text-gray-400">close</span>
+      </button>
+    </div>
+    <div class="p-6">
+      <div class="mb-6">
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Pipeline Name</label>
+        <input type="text" id="edit-pipeline-name" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+      </div>
+      <h3 class="font-headline text-base font-semibold mb-4">Stages</h3>
+      <div id="stages-list" class="space-y-2 mb-4"></div>
+      <div class="flex justify-between pt-4 border-t border-outline-variant/10">
+        <button type="button" onclick="addStage()" class="px-4 py-2 bg-surface-container-highest text-sm rounded hover:bg-surface-container transition-colors flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">add</span>
+          Add Stage
+        </button>
+        <button onclick="savePipeline()" class="px-6 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-opacity">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let pipelines = [];
+  let currentPipeline = null;
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function loadPipelines() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/pipelines', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        pipelines = data.data || [];
+        renderPipelines();
+      }
+    } catch (err) {
+      console.error('Failed to load pipelines:', err);
+    }
+  }
+
+  function renderPipelines() {
+    const grid = document.getElementById('pipelines-grid');
+    if (!grid) return;
+
+    if (pipelines.length === 0) {
+      grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">No pipelines found</div>';
+      return;
+    }
+
+    grid.innerHTML = pipelines.map(pipeline => `
+      <div class="bg-surface-container-low rounded-lg overflow-hidden">
+        <div class="p-4 border-b border-outline-variant/10 flex items-center justify-between">
+          <h3 class="font-headline text-lg font-semibold">${pipeline.name}</h3>
+          <button onclick="editPipeline('${pipeline.id}')" class="p-2 hover:bg-surface-container-high rounded transition-colors">
+            <span class="material-symbols-outlined text-sm">edit</span>
+          </button>
+        </div>
+        <div class="p-4">
+          <div class="space-y-2">
+            ${(pipeline.stages || []).map((stage, i) => `
+              <div class="flex items-center gap-3 p-3 bg-surface-container rounded-lg">
+                <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-xs font-bold">${i + 1}</div>
+                <div class="flex-1">
+                  <p class="text-sm font-medium">${stage.name}</p>
+                  ${stage.probability != null ? `<p class="text-xs text-gray-500">${stage.probability}% probability</p>` : ''}
+                </div>
+                <div class="flex items-center gap-1">
+                  <button onclick="moveStageUp('${pipeline.id}', '${stage.id}')" class="p-1 hover:bg-surface-container-high rounded ${i === 0 ? 'opacity-30' : ''}">
+                    <span class="material-symbols-outlined text-sm">keyboard_arrow_up</span>
+                  </button>
+                  <button onclick="moveStageDown('${pipeline.id}', '${stage.id}')" class="p-1 hover:bg-surface-container-high rounded ${i === pipeline.stages.length - 1 ? 'opacity-30' : ''}">
+                    <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <p class="text-xs text-gray-500 mt-4">${pipeline.stages?.length || 0} stages</p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openCreatePipelineModal() {
+    document.getElementById('create-pipeline-modal')?.classList.remove('hidden');
+  }
+
+  function closeCreatePipelineModal() {
+    document.getElementById('create-pipeline-modal')?.classList.add('hidden');
+    document.getElementById('create-pipeline-form')?.reset();
+  }
+
+  async function editPipeline(pipelineId) {
+    currentPipeline = pipelines.find(p => p.id === pipelineId);
+    if (!currentPipeline) return;
+
+    document.getElementById('edit-pipeline-name').value = currentPipeline.name;
+    renderStagesList(currentPipeline.stages || []);
+    document.getElementById('edit-pipeline-modal')?.classList.remove('hidden');
+  }
+
+  function closeEditPipelineModal() {
+    document.getElementById('edit-pipeline-modal')?.classList.add('hidden');
+    currentPipeline = null;
+  }
+
+  function renderStagesList(stages) {
+    const list = document.getElementById('stages-list');
+    if (!list) return;
+
+    list.innerHTML = stages.map((stage, i) => `
+      <div class="flex items-center gap-2 stage-item" data-stage-id="${stage.id}">
+        <input type="text" value="${stage.name}" class="flex-1 bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm stage-name" />
+        <input type="number" value="${stage.probability || 0}" class="w-20 bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm stage-probability" placeholder="%" />
+        <button type="button" onclick="removeStage('${stage.id}')" class="p-2 hover:bg-error/10 text-error rounded transition-colors">
+          <span class="material-symbols-outlined text-sm">delete</span>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  function addStage() {
+    if (!currentPipeline) return;
+    currentPipeline.stages = currentPipeline.stages || [];
+    currentPipeline.stages.push({ name: '', probability: 0 });
+    renderStagesList(currentPipeline.stages);
+  }
+
+  function removeStage(stageId) {
+    if (!currentPipeline) return;
+    currentPipeline.stages = currentPipeline.stages.filter(s => s.id !== stageId && s.temp_id !== stageId);
+    renderStagesList(currentPipeline.stages);
+  }
+
+  async function savePipeline() {
+    const token = getToken();
+    if (!token || !currentPipeline) return;
+
+    const name = (document.getElementById('edit-pipeline-name') as HTMLInputElement).value;
+    const stageItems = document.querySelectorAll('.stage-item');
+    const stages = Array.from(stageItems).map((item, i) => ({
+      name: (item.querySelector('.stage-name') as HTMLInputElement)?.value || '',
+      probability: parseInt((item.querySelector('.stage-probability') as HTMLInputElement)?.value) || 0,
+      order: i
+    }));
+
+    try {
+      const res = await fetch(`/api/v1/pipelines/${currentPipeline.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, stages })
+      });
+
+      if (res.ok) {
+        closeEditPipelineModal();
+        loadPipelines();
+      }
+    } catch (err) {
+      console.error('Failed to save pipeline:', err);
+    }
+  }
+
+  document.getElementById('create-pipeline-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    const name = (document.getElementById('pipeline-name') as HTMLInputElement).value;
+    const stagesStr = (document.getElementById('pipeline-stages') as HTMLInputElement).value;
+    const stages = stagesStr.split(',').map(s => s.trim()).filter(s => s).map((s, i) => ({
+      name: s,
+      probability: 0,
+      order: i
+    }));
+
+    try {
+      const res = await fetch('/api/v1/pipelines', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, stages })
+      });
+
+      if (res.ok) {
+        closeCreatePipelineModal();
+        loadPipelines();
+      }
+    } catch (err) {
+      console.error('Failed to create pipeline:', err);
+    }
+  });
+
+  loadPipelines();
+</script>
+
+<style>
+  main {
+    margin-left: 220px;
+  }
+</style>
