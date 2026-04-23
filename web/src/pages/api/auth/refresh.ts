@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 
+export const prerender = false;
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const refreshToken = cookies.get('oscar_refresh_token')?.value;

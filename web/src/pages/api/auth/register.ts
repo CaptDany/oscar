@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 
+export const prerender = false;
+
 const ACCESS_TOKEN_MAX_AGE = 60 * 15;
 const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
 
