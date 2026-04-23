@@ -88,10 +88,11 @@ env:
   APP_PORT: "8080"
   DATABASE_URL: ""
   REDIS_URL: ""
-  MINIO_ENDPOINT: ""
-  MINIO_ACCESS_KEY: ""
-  MINIO_SECRET_KEY: ""
-  MINIO_BUCKET: oscar
+  R2_ACCOUNT_ID: ""
+  R2_ACCESS_KEY: ""
+  R2_SECRET_KEY: ""
+  R2_BUCKET: oscar
+  R2_PUBLIC_URL: ""
 
 secret:
   enabled: true

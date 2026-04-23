@@ -68,22 +68,24 @@ spec:
                   name: {{ include "oscar.fullname" . }}-secret
                   key: redis-url
                   optional: true
-            - name: MINIO_ENDPOINT
-              value: {{ .Values.env.MINIO_ENDPOINT | quote }}
-            - name: MINIO_ACCESS_KEY
+            - name: R2_ACCOUNT_ID
+              value: {{ .Values.env.R2_ACCOUNT_ID | quote }}
+            - name: R2_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "oscar.fullname" . }}-secret
-                  key: minio-access-key
+                  key: r2-access-key
                   optional: true
-            - name: MINIO_SECRET_KEY
+            - name: R2_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ include "oscar.fullname" . }}-secret
-                  key: minio-secret-key
+                  key: r2-secret-key
                   optional: true
-            - name: MINIO_BUCKET
-              value: {{ .Values.env.MINIO_BUCKET | quote }}
+            - name: R2_BUCKET
+              value: {{ .Values.env.R2_BUCKET | quote }}
+            - name: R2_PUBLIC_URL
+              value: {{ .Values.env.R2_PUBLIC_URL | quote }}
           volumeMounts:
             - name: tmp
               mountPath: /tmp
