@@ -13,12 +13,11 @@ BEGIN
 
     -- Create default stages
     INSERT INTO pipeline_stages (pipeline_id, name, position, probability, stage_type)
-    VALUES 
-        (pipeline_id, 'Qualification', 1, 20, 'open'),
-        (pipeline_id, 'Discovery', 2, 40, 'open'),
-        (pipeline_id, 'Proposal', 3, 60, 'open'),
-        (pipeline_id, 'Negotiation', 4, 80, 'open'),
-        (pipeline_id, 'Closed Won', 5, 100, 'won'),
-        (pipeline_id, 'Closed Lost', 6, 0, 'lost');
+    VALUES
+        (pipeline_id, 'Prospecting', 1, 20, 'open'),
+        (pipeline_id, 'Qualified', 2, 40, 'open'),
+        (pipeline_id, 'Negotiation', 3, 60, 'open'),
+        (pipeline_id, 'Closed Won', 4, 100, 'won'),
+        (pipeline_id, 'Closed Lost', 5, 0, 'lost');
 END;
 $$ LANGUAGE plpgsql;

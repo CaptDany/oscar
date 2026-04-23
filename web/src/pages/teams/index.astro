@@ -409,6 +409,8 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
     }
   }
 
+  (window as any).revokeInvitation = revokeInvitation;
+
   document.getElementById('invite-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
