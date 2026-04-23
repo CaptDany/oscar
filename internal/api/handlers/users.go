@@ -15,10 +15,10 @@ import (
 type UserHandler struct {
 	userRepo user.Repository
 	roleRepo user.RoleRepository
-	storage  *storage.MinIOClient
+	storage  *storage.R2Client
 }
 
-func NewUserHandler(userRepo user.Repository, roleRepo user.RoleRepository, storage *storage.MinIOClient) *UserHandler {
+func NewUserHandler(userRepo user.Repository, roleRepo user.RoleRepository, storage *storage.R2Client) *UserHandler {
 	return &UserHandler{
 		userRepo: userRepo,
 		roleRepo: roleRepo,

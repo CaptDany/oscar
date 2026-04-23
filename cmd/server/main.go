@@ -93,16 +93,16 @@ func main() {
 	authHandler := handlers.NewAuthHandlerWithInvitations(userRepo, tenantRepo, roleRepo, invitationRepo, cryptoSvc, tokenManager, emailClient, cfg.App.BaseURL, cfg.App.FrontendURL)
 	oauthHandler := handlers.NewOAuthHandler(userRepo, tenantRepo, roleRepo, cryptoSvc, tokenManager, nil, cfg.App.BaseURL, &cfg.OAuth)
 
-	minioClient, err := storage.NewMinIOClient(&cfg.Storage)
+	r2Client, err := storage.NewR2Client(&cfg.R2)
 	if err != nil {
-		log.Fatalf("Failed to create MinIO client: %v", err)
+		log.Fatalf("Failed to create R2 client: %v", err)
 	}
-	if err := minioClient.EnsureBucket(context.Background()); err != nil {
-		log.Fatalf("Failed to ensure MinIO bucket: %v", err)
+	if err := r2Client.EnsureBucket(context.Background()); err != nil {
+		log.Fatalf("Failed to ensure R2 bucket: %v", err)
 	}
 
-	userHandler := handlers.NewUserHandler(userRepo, roleRepo, minioClient)
-	uploadHandler := handlers.NewUploadHandler(minioClient, userRepo)
+	userHandler := handlers.NewUserHandler(userRepo, roleRepo, r2Client)
+	uploadHandler := handlers.NewUploadHandler(r2Client, userRepo)
 
 	authMw := middleware.Auth(tokenManager)
 	tenantPool := repositories.NewTenantPool(pool)
