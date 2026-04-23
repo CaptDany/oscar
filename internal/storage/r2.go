@@ -29,6 +29,7 @@ func NewR2Client(cfg *appconfig.R2Config) (*R2Client, error) {
 
 	awsCfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")),
+		config.WithRegion("auto"),
 		config.WithEndpointResolverWithOptions(customResolver),
 	)
 	if err != nil {

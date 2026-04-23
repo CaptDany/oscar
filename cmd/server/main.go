@@ -95,14 +95,20 @@ func main() {
 
 	r2Client, err := storage.NewR2Client(&cfg.R2)
 	if err != nil {
-		log.Fatalf("Failed to create R2 client: %v", err)
-	}
-	if err := r2Client.EnsureBucket(context.Background()); err != nil {
-		log.Fatalf("Failed to ensure R2 bucket: %v", err)
+		log.Printf("Warning: Failed to create R2 client: %v (upload features disabled)", err)
+		r2Client = nil
+	} else {
+		if err := r2Client.EnsureBucket(context.Background()); err != nil {
+			log.Printf("Warning: Failed to ensure R2 bucket: %v (upload features disabled)", err)
+		}
 	}
 
-	userHandler := handlers.NewUserHandler(userRepo, roleRepo, r2Client)
-	uploadHandler := handlers.NewUploadHandler(r2Client, userRepo)
+	var userHandler *handlers.UserHandler
+	var uploadHandler *handlers.UploadHandler
+	if r2Client != nil {
+		userHandler = handlers.NewUserHandler(userRepo, roleRepo, r2Client)
+		uploadHandler = handlers.NewUploadHandler(r2Client, userRepo, brandingRepo)
+	}
 
 	authMw := middleware.Auth(tokenManager)
 	tenantPool := repositories.NewTenantPool(pool)

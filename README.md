@@ -10,38 +10,45 @@ A production-grade, open-source CRM backend built in Go with multi-tenant SaaS a
 - **Company Management**: Track companies with industry, size, revenue, and associations
 - **Deal Pipeline**: Kanban boards, multiple pipelines, stages, and probability tracking
 - **Activity Tracking**: Notes, calls, emails, meetings, tasks with timeline view
-- **WebSocket Support**: Real-time updates for live collaboration
+- **Product Catalog**: Manage products and services with pricing
+- **Teams & Roles**: Organize users into teams with role-based permissions
 
 ### Security & Auth
 - **Paseto v2 Authentication**: Stateless, secure token-based authentication
 - **Role-Based Access Control**: Flexible permission system (Owner, Admin, Manager, Sales Rep, Read Only)
 - **Row Level Security**: Database-level tenant isolation for maximum security
-- **Multi-factor Ready**: Architecture supports future MFA implementation
+- **OAuth Support**: Google and Apple OAuth integrations
+- **Email Verification**: Account verification with secure tokens
+- **Invitation System**: Team invitations with secure token-based flow
+- **API Keys**: Programmatic access via API keys
 
 ### Customization
-- **Custom Fields**: Define custom fields for any entity (persons, companies, deals, activities)
+- **Custom Fields** (API ready): Domain and repository exist; handlers and UI pending
 - **White-label Branding**: Custom logos, colors, fonts per tenant
-- **Automation Engine**: Trigger-based workflows with parallel action execution
-- **Webhook Support**: Integrate with external systems
+- **Automation Engine** (API ready): Domain and repository exist; handlers and UI pending
+- **Webhook Support**: Defined in automation actions (execution pending)
 
 ### Developer Experience
 - **sqlc Integration**: Type-safe SQL queries with code generation
 - **Repository Pattern**: Clean separation between data access and business logic
 - **Comprehensive Error Handling**: Structured error responses with HTTPError interface
 - **Cursor-based Pagination**: Efficient pagination for large datasets
-- **OpenTelemetry**: Distributed tracing support
+- **Soft Deletes**: All major entities support soft deletion with recovery
 
 ## Tech Stack
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| Language | Go 1.23+ | Backend API |
+| Language | Go 1.24+ | Backend API |
 | Framework | Echo v4 | HTTP routing |
 | Database | PostgreSQL 16 | Primary data store |
 | ORM/Driver | pgx/v5 | Database access |
-| Code Gen | sqlc v1.30.0 | Type-safe SQL |
+| Code Gen | sqlc | Type-safe SQL |
 | Auth | Paseto v2 | Token authentication |
 | Validation | go-playground/validator | Request validation |
+| File Storage | AWS S3 SDK | Avatar/branding uploads |
+| Image Processing | disintegration/imaging | Image manipulation |
+| Cache | Redis (planned) | Caching (in go.mod, not wired) |
 | Testing | testify | Unit testing |
 
 ## Project Structure
@@ -60,13 +67,21 @@ oscar/
 │   │   │   ├── companies.go # Company CRUD operations
 │   │   │   ├── deals.go     # Deal and pipeline operations
 │   │   │   ├── pipelines.go # Pipeline management
-│   │   │   └── activities.go# Activity tracking
+│   │   │   ├── activities.go# Activity tracking
+│   │   │   ├── products.go  # Product catalog
+│   │   │   ├── users.go     # User management
+│   │   │   ├── teams.go     # Team management
+│   │   │   ├── notifications.go
+│   │   │   ├── invitations.go
+│   │   │   ├── settings.go  # Tenant settings
+│   │   │   ├── upload.go    # File uploads
+│   │   │   └── custom_fields.go # Custom fields (pending)
 │   │   ├── middleware/      # HTTP middleware
 │   │   │   └── middleware.go# Auth, tenant resolution, rate limiting
 │   │   ├── routes.go        # Route definitions
 │   │   ├── server.go        # Echo server setup
-│   │   └── ws/              # WebSocket support
-│   │       └── handler.go   # Real-time communication
+│   │   └── ws/              # WebSocket support (planned)
+│   │       └── handler.go   # Real-time communication (planned)
 │   │
 │   ├── config/              # Configuration management
 │   │   └── config.go        # Env var loading
@@ -79,14 +94,17 @@ oscar/
 │   │   │   ├── person.go    # Person repository
 │   │   │   ├── company.go   # Company repository
 │   │   │   ├── deal.go      # Deal & pipeline repository
+│   │   │   ├── deal_line_item.go
 │   │   │   ├── activity.go  # Activity & association repository
 │   │   │   ├── team.go      # Team management
 │   │   │   ├── tenant.go    # Tenant & branding
 │   │   │   ├── user.go      # User & role management
 │   │   │   ├── custom_field.go
-│   │   │   ├── automation.go # Automation rules
+│   │   │   ├── automation.go # Automation rules (API pending)
 │   │   │   ├── notification.go
-│   │   │   ├── audit_log.go
+│   │   │   ├── audit_log.go  # Audit log (API pending)
+│   │   │   ├── invitation.go
+│   │   │   ├── product.go   # Product catalog
 │   │   │   └── helpers.go   # Type conversion utilities
 │   │   └── schema.sql       # Database schema
 │   │
@@ -108,22 +126,22 @@ oscar/
 │   │   ├── custom_field/
 │   │   │   └── custom_field.go
 │   │   ├── automation/
-│   │   │   └── automation.go # Automation types
+│   │   │   └── automation.go # Automation types (API pending)
 │   │   ├── notification/
 │   │   │   └── notification.go
 │   │   ├── audit_log/
-│   │   │   └── audit_log.go
+│   │   │   └── audit_log.go # Audit log (API pending)
 │   │   └── product/
 │   │       └── product.go   # Product types
 │   │
-│   ├── events/              # Event bus
+│   ├── events/              # Event bus (planned)
 │   │   └── events.go        # Event definitions
 │   │
-│   ├── email/               # Email service
+│   ├── email/               # Email service (stub)
 │   │   └── email.go
 │   │
 │   └── storage/             # File storage
-│       └── storage.go
+│       └── storage.go      # S3-compatible storage
 │
 ├── pkg/                     # Shared packages
 │   ├── crypto/
@@ -156,7 +174,7 @@ oscar/
 │  │ Middleware  │→ │  Handlers   │→ │   Request/Response   ││
 │  └─────────────┘  └─────────────┘  └─────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                   Business Logic Layer                        │
 │  ┌─────────────────────────────────────────────────────────┐│
@@ -164,7 +182,7 @@ oscar/
 │  │  (Person, Company, Deal, Activity, Tenant, User, etc.) ││
 │  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                     Data Access Layer                        │
 │  ┌─────────────────────────────────────────────────────────┐│
@@ -172,7 +190,7 @@ oscar/
 │  │  (PersonRepo, CompanyRepo, DealRepo, etc.)             ││
 │  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+                               ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                      Database Layer                          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐│
@@ -218,23 +236,30 @@ Examples:
 
 ### Key Tables
 
-- `tenants` - Multi-tenant support
-- `users` - User accounts with password hashing
+- `tenants` - Multi-tenant support with subscription tiers
+- `tenant_branding` - White-label customization
+- `users` - User accounts with auth
 - `roles` - Role definitions with permissions
+- `user_roles` - Role assignments
+- `teams` - Team groupings
+- `team_members` - Team memberships
+- `api_keys` - API key authentication
 - `persons` - Leads, contacts, customers
 - `companies` - Company records
-- `deals` - Sales opportunities
 - `pipelines` - Deal pipelines
 - `pipeline_stages` - Pipeline stages
+- `deals` - Sales opportunities
+- `deal_line_items` - Products on deals (API pending)
+- `products` - Product catalog
 - `activities` - Activity log
 - `activity_associations` - Activity-entity links
-- `custom_field_definitions` - Custom field schemas
-- `automations` - Automation rules
-- `automation_actions` - Automation action steps
-- `automation_runs` - Automation execution logs
+- `custom_field_definitions` - Custom field schemas (API pending)
+- `automations` - Automation rules (API pending)
+- `automation_actions` - Automation action steps (API pending)
+- `automation_runs` - Automation execution logs (API pending)
 - `notifications` - User notifications
-- `audit_logs` - Audit trail
-- `team_members` - Team memberships
+- `audit_logs` - Audit trail (API pending)
+- `invitations` - Team invitations
 
 ### Row Level Security
 
@@ -256,6 +281,12 @@ CREATE POLICY tenant_isolation ON persons
 | POST | `/api/v1/auth/refresh` | Refresh access token |
 | POST | `/api/v1/auth/logout` | Invalidate session |
 | GET | `/api/v1/auth/me` | Get current user info |
+| GET | `/api/v1/auth/verify-email/:token` | Verify email address |
+| POST | `/api/v1/auth/resend-verification` | Resend verification email |
+| GET | `/api/v1/auth/oauth/google` | Initiate Google OAuth |
+| GET | `/api/v1/auth/oauth/google/callback` | Google OAuth callback |
+| GET | `/api/v1/auth/oauth/apple` | Initiate Apple OAuth |
+| GET | `/api/v1/auth/oauth/apple/callback` | Apple OAuth callback |
 
 ### Persons (CRM)
 
@@ -319,16 +350,87 @@ CREATE POLICY tenant_isolation ON persons
 | GET | `/api/v1/activities/:id` | Get activity |
 | PATCH | `/api/v1/activities/:id` | Update activity |
 | POST | `/api/v1/activities/:id/complete` | Mark complete |
+| POST | `/api/v1/activities/:id/uncomplete` | Unmark complete |
 | DELETE | `/api/v1/activities/:id` | Delete activity |
 | GET | `/api/v1/timeline` | Entity timeline |
+
+### Products
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/products` | List products |
+| POST | `/api/v1/products` | Create product |
+| GET | `/api/v1/products/:id` | Get product |
+| PATCH | `/api/v1/products/:id` | Update product |
+| DELETE | `/api/v1/products/:id` | Delete product |
+
+### Users & Teams
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/users` | List users |
+| GET | `/api/v1/users/:id` | Get user |
+| PATCH | `/api/v1/users/:id` | Update user |
+| PUT | `/api/v1/users/:id/roles` | Assign roles |
+| GET | `/api/v1/teams` | List teams |
+| POST | `/api/v1/teams` | Create team |
+| GET | `/api/v1/teams/:id` | Get team |
+| PATCH | `/api/v1/teams/:id` | Update team |
+| DELETE | `/api/v1/teams/:id` | Delete team |
+| GET | `/api/v1/teams/:id/members` | List members |
+| POST | `/api/v1/teams/:id/members` | Add member |
+| DELETE | `/api/v1/teams/:id/members/:user_id` | Remove member |
+| POST | `/api/v1/teams/:id/lead/:user_id` | Set team lead |
+
+### Notifications
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/notifications` | List notifications |
+| GET | `/api/v1/notifications/count` | Unread count |
+| GET | `/api/v1/notifications/:id` | Get notification |
+| POST | `/api/v1/notifications/:id/read` | Mark as read |
+| POST | `/api/v1/notifications/read-all` | Mark all as read |
+| DELETE | `/api/v1/notifications/:id` | Delete notification |
+
+### Invitations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/invitations` | List invitations |
+| POST | `/api/v1/invitations` | Send invitation |
+| DELETE | `/api/v1/invitations/:id` | Cancel invitation |
+| GET | `/api/v1/invitations/:token/validate` | Validate token |
+
+### Settings & Uploads
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/settings` | Get settings |
+| PATCH | `/api/v1/settings` | Update settings |
+| POST | `/api/v1/upload/avatar` | Upload avatar |
+| POST | `/api/v1/upload/avatar/confirm` | Confirm avatar |
+| GET | `/api/v1/avatar/:user_id` | Get user avatar |
+| POST | `/api/v1/upload/branding/presigned` | Get presigned URL |
+| POST | `/api/v1/upload/branding/confirm` | Confirm branding |
+
+### Planned Endpoints (Not Yet Implemented)
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Custom Fields API | Pending | CRUD for custom field definitions |
+| Automation API | Pending | CRUD for automation rules |
+| Audit Log API | Pending | Audit trail access |
+| Deal Line Items API | Pending | Products on deals |
 
 ## Quick Start
 
 ### Prerequisites
 
-- Go 1.23 or later
+- Go 1.24 or later
 - PostgreSQL 16+
 - Make
+- Node.js 20+ (for frontend)
 
 ### Installation
 
@@ -337,7 +439,7 @@ CREATE POLICY tenant_isolation ON persons
 git clone https://github.com/oscar/oscar.git
 cd oscar
 
-# Install dependencies
+# Install Go dependencies
 go mod download
 
 # Copy environment file
@@ -359,14 +461,18 @@ make seed
 ### Run Development Server
 
 ```bash
-# Start the server
+# Start backend
 go run ./cmd/server
 
 # Or use make
 make dev
+
+# In another terminal, start frontend
+cd web && npm install && npm run dev
 ```
 
-The server starts on `http://localhost:8080`
+The backend starts on `http://localhost:8080`
+The frontend starts on `http://localhost:4321`
 
 ### Run Tests
 
@@ -383,10 +489,20 @@ Environment variables (see `.env.example`):
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP_SECRET` | JWT signing secret | - |
+| `APP_SECRET` | Paseto signing secret | - |
 | `APP_HOST` | Server host | `0.0.0.0` |
 | `APP_PORT` | Server port | `8080` |
 | `DATABASE_URL` | PostgreSQL connection string | - |
+| `AWS_ACCESS_KEY_ID` | S3 access key | - |
+| `AWS_SECRET_ACCESS_KEY` | S3 secret key | - |
+| `AWS_REGION` | S3 region | `us-east-1` |
+| `AWS_S3_BUCKET` | S3 bucket name | - |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | - |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth secret | - |
+| `APPLE_CLIENT_ID` | Apple OAuth client ID | - |
+| `APPLE_TEAM_ID` | Apple team ID | - |
+| `APPLE_KEY_ID` | Apple key ID | - |
+| `APPLE_PRIVATE_KEY` | Apple private key path | - |
 
 ## Authentication Flow
 
@@ -394,6 +510,7 @@ Environment variables (see `.env.example`):
 2. **Login**: `POST /auth/login` returns access + refresh tokens
 3. **Authenticate**: Include `Authorization: Bearer <token>` header
 4. **Refresh**: `POST /auth/refresh` with refresh token
+5. **OAuth**: Use `/auth/oauth/{provider}` to initiate OAuth flow
 
 ## Development
 
@@ -455,10 +572,72 @@ GNU GPLv3 - see LICENSE file for details.
 
 ## Roadmap
 
-- [ ] Redis integration for caching and sessions
-- [ ] Email/SMS notification delivery
-- [ ] Import/Export CSV functionality
-- [ ] Advanced automation conditions
-- [ ] Audit log API
-- [ ] Dashboard analytics
-- [ ] Mobile push notifications
+### Phase 1: Foundation Gaps (1-2 months)
+*Completes the core CRM feature set*
+
+- [ ] **Custom Fields API** — Add CRUD for custom field definitions
+- [ ] **Custom Fields UI** — Render dynamic fields in forms
+- [ ] **Deal Line Items API** — Connect existing table to deals
+- [ ] **Contact/Company/Deal Detail Views** — Replace stubs with real data
+- [ ] **Audit Log API** — Expose audit logs
+- [ ] **Redis Integration** — Wire up caching for sessions and hot data
+- [ ] **File Attachments** — Attach documents to any record
+
+### Phase 2: Analytics & Insights (2-3 months)
+*Competes with basic reporting in HubSpot Free / Zoho Standard*
+
+- [ ] **Reports Dashboard** — Revenue by period, pipeline velocity, conversion rates
+- [ ] **Sales Forecasting** — Run rate, weighted pipeline, forecast by rep/team
+- [ ] **Activity Reports** — Calls, emails, meetings logged per rep
+- [ ] **Goal Tracking** — Set quotas per rep/team, show progress vs target
+- [ ] **Global Search** — Full-text search across contacts, companies, deals
+
+### Phase 3: Communication Layer (2-3 months)
+*Competes with Zoho email sequences + HubSpot Sales Hub*
+
+- [ ] **Email Templates** — Template editor with merge tags, categories
+- [ ] **Email Sequences** — Drip campaigns linked to contacts/deals
+- [ ] **Email Tracking** — Open/click tracking via pixel
+- [ ] **Twilio SMS Integration** — Send SMS from activity timeline
+- [ ] **Bulk Email** — Mass email from contact/company lists
+- [ ] **CSV Import** — Full import wizard
+
+### Phase 4: Automation Engine (3-4 months)
+*Competes with HubSpot workflows + Zoho Blueprint*
+
+- [ ] **Automation API** — CRUD for automation rules
+- [ ] **Workflow Builder UI** — Visual drag-and-drop editor
+- [ ] **Automation Execution** — Fire automations on events
+- [ ] **Outbound Webhooks** — Execute HTTP webhooks as actions
+- [ ] **Workflow Analytics** — Track automation runs
+
+### Phase 5: AI Features (3-4 months)
+*Competes with Zia AI, Einstein AI, Breeze AI*
+
+- [ ] **AI Lead Scoring** — Score contacts/deals based on signals
+- [ ] **AI Next Best Action** — Recommend next step for each deal
+- [ ] **Deal Health Score** — Alert on deals going stale
+- [ ] **AI Write Assist** — Generate email drafts
+- [ ] **Sentiment Analysis** — Analyze activity sentiment
+
+### Phase 6: Productivity & Integrations (2-3 months)
+*Competes with HubSpot's ease-of-use*
+
+- [ ] **Calendar View** — Monthly/weekly view of activities
+- [ ] **Google Calendar Sync** — Bidirectional sync
+- [ ] **Meeting Scheduler** — Booking links
+- [ ] **2FA (TOTP)** — Google Authenticator support
+- [ ] **OpenAPI Docs** — Auto-generated API documentation
+- [ ] **Slack Integration** — Notifications to Slack
+- [ ] **Zapier/Make Integration** — Third-party automation
+
+### Phase 7: Advanced (ongoing)
+*Competes with Salesforce Enterprise + Zoho Enterprise*
+
+- [ ] **Quotes & Invoices** — Generate PDFs from deals
+- [ ] **CPQ** — Configure-Price-Quote
+- [ ] **SSO (SAML/OIDC)** — Enterprise identity provider integration
+- [ ] **Mobile App** — iOS/Android app
+- [ ] **WhatsApp Integration** — Send/receive via Twilio
+- [ ] **Knowledge Base** — Self-serve help center
+- [ ] **Partner Portal** — External access for partners
