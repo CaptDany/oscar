@@ -457,7 +457,6 @@ GNU GPLv3 - see LICENSE file for details.
 
 - [ ] Redis integration for caching and sessions
 - [ ] Email/SMS notification delivery
-- [ ] File upload to S3/MinIO
 - [ ] Import/Export CSV functionality
 - [ ] Advanced automation conditions
 - [ ] Audit log API
