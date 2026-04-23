@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,15 +18,21 @@ import (
 	"github.com/oscar/oscar/pkg/errs"
 )
 
+type BrandAssetsUpdater interface {
+	UpdateBrandAssets(ctx context.Context, tenantID uuid.UUID, logoLightURL, logoDarkURL, faviconURL *string) error
+}
+
 type UploadHandler struct {
 	storage  *storage.R2Client
 	userRepo user.Repository
+	brandRepo BrandAssetsUpdater
 }
 
-func NewUploadHandler(storage *storage.R2Client, userRepo user.Repository) *UploadHandler {
+func NewUploadHandler(storage *storage.R2Client, userRepo user.Repository, brandRepo BrandAssetsUpdater) *UploadHandler {
 	return &UploadHandler{
 		storage:  storage,
 		userRepo: userRepo,
+		brandRepo: brandRepo,
 	}
 }
 
@@ -167,5 +174,108 @@ func (h *UploadHandler) ConfirmAvatarUpload(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"avatar_key": finalKey,
+	})
+}
+
+type GetBrandingAssetPresignedRequest struct {
+	AssetType string `json:"asset_type" validate:"required,oneof=logo_light logo_dark favicon"`
+	Filename string `json:"filename" validate:"required"`
+}
+
+func (h *UploadHandler) GetBrandingAssetPresignedURL(c echo.Context) error {
+	tenantID := c.Get("tenant_id").(uuid.UUID)
+	if tenantID == uuid.Nil {
+		return errs.Unauthorized("Tenant not authenticated").HTTPError(c)
+	}
+
+	var req GetBrandingAssetPresignedRequest
+	if err := c.Bind(&req); err != nil {
+		return errs.BadRequest("Invalid request body").HTTPError(c)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return errs.ValidationFailed().HTTPError(c)
+	}
+
+	ext := strings.ToLower(filepath.Ext(req.Filename))
+	if ext != ".svg" {
+		return errs.BadRequest("Branding assets must be SVG files").HTTPError(c)
+	}
+
+	timestamp := time.Now().UnixMilli()
+	var objectKey string
+	switch req.AssetType {
+	case "logo_light":
+		objectKey = fmt.Sprintf("branding/%s/logo_light_%d.svg", tenantID.String(), timestamp)
+	case "logo_dark":
+		objectKey = fmt.Sprintf("branding/%s/logo_dark_%d.svg", tenantID.String(), timestamp)
+	case "favicon":
+		objectKey = fmt.Sprintf("branding/%s/favicon_%d.svg", tenantID.String(), timestamp)
+	}
+
+	uploadURL, err := h.storage.GetPresignedPutURL(c.Request().Context(), objectKey, 5*time.Minute)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	finalURL, err := h.storage.GetPresignedURL(c.Request().Context(), objectKey, 24*time.Hour)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"upload_url": uploadURL,
+		"object_key": objectKey,
+		"final_url":  finalURL,
+	})
+}
+
+type ConfirmBrandingAssetRequest struct {
+	ObjectKey string `json:"object_key" validate:"required"`
+	AssetType string `json:"asset_type" validate:"required,oneof=logo_light logo_dark favicon"`
+}
+
+func (h *UploadHandler) ConfirmBrandingAssetUpload(c echo.Context) error {
+	tenantID := c.Get("tenant_id").(uuid.UUID)
+	if tenantID == uuid.Nil {
+		return errs.Unauthorized("Tenant not authenticated").HTTPError(c)
+	}
+
+	var req ConfirmBrandingAssetRequest
+	if err := c.Bind(&req); err != nil {
+		return errs.BadRequest("Invalid request body").HTTPError(c)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return errs.ValidationFailed().HTTPError(c)
+	}
+
+	if h.brandRepo == nil {
+		return errs.Internal(fmt.Errorf("branding repository not configured")).HTTPError(c)
+	}
+
+	_, err := h.storage.GetPresignedURL(c.Request().Context(), req.ObjectKey, 24*time.Hour)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	var logoLightURL, logoDarkURL, faviconURL *string
+	switch req.AssetType {
+	case "logo_light":
+		logoLightURL = &req.ObjectKey
+	case "logo_dark":
+		logoDarkURL = &req.ObjectKey
+	case "favicon":
+		faviconURL = &req.ObjectKey
+	}
+
+	err = h.brandRepo.UpdateBrandAssets(c.Request().Context(), tenantID, logoLightURL, logoDarkURL, faviconURL)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"asset_type": req.AssetType,
+		"object_key": req.ObjectKey,
 	})
 }

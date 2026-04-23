@@ -51,6 +51,10 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	tenantScoped := auth.Group("", authMiddlewareWithTenant)
 	tenantScoped.GET("/avatar/:user_id", h.Upload.GetAvatarURL)
 
+	branding := tenantScoped.Group("/upload/branding")
+	branding.POST("/presigned", h.Upload.GetBrandingAssetPresignedURL)
+	branding.POST("/confirm", h.Upload.ConfirmBrandingAssetUpload)
+
 	settings := tenantScoped.Group("/settings")
 	settings.GET("", h.Settings.GetSettings)
 	settings.PATCH("", h.Settings.UpdateSettings)

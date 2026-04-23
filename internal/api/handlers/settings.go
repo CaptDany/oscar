@@ -41,6 +41,9 @@ func (h *SettingsHandler) GetSettings(c echo.Context) error {
 	}
 
 	branding, _ := h.brandingRepo.Get(c.Request().Context(), tenantID)
+	if branding == nil {
+		branding = &tenant.TenantBranding{}
+	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"data": map[string]interface{}{
@@ -51,6 +54,7 @@ func (h *SettingsHandler) GetSettings(c echo.Context) error {
 			"secondary_color": branding.SecondaryColor,
 			"accent_color":    branding.AccentColor,
 			"font_family":     branding.FontFamily,
+			"mono_font":      branding.MonoFont,
 			"logo_light_url":  branding.LogoLightURL,
 			"logo_dark_url":   branding.LogoDarkURL,
 			"favicon_url":     branding.FaviconURL,
@@ -81,6 +85,7 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 		SecondaryColor *string `json:"secondary_color"`
 		AccentColor    *string `json:"accent_color"`
 		FontFamily     *string `json:"font_family"`
+		MonoFont       *string `json:"mono_font"`
 		LogoLightURL   *string `json:"logo_light_url"`
 		LogoDarkURL    *string `json:"logo_dark_url"`
 		FaviconURL     *string `json:"favicon_url"`
@@ -118,12 +123,13 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 	}
 
 	if req.PrimaryColor != nil || req.SecondaryColor != nil || req.AccentColor != nil ||
-		req.FontFamily != nil || req.LogoLightURL != nil || req.LogoDarkURL != nil || req.FaviconURL != nil {
+		req.FontFamily != nil || req.MonoFont != nil || req.LogoLightURL != nil || req.LogoDarkURL != nil || req.FaviconURL != nil {
 		_, err = h.brandingRepo.Update(c.Request().Context(), tenantID, &tenant.UpdateBrandingRequest{
 			PrimaryColor:   req.PrimaryColor,
 			SecondaryColor: req.SecondaryColor,
 			AccentColor:    req.AccentColor,
 			FontFamily:     req.FontFamily,
+			MonoFont:       req.MonoFont,
 			LogoLightURL:   req.LogoLightURL,
 			LogoDarkURL:    req.LogoDarkURL,
 			FaviconURL:     req.FaviconURL,
