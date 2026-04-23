@@ -208,6 +208,10 @@ func (h *PersonHandler) Update(c echo.Context) error {
 	if req.Tags != nil {
 		updateReq.Tags = req.Tags
 	}
+	if req.Source != nil {
+		s := person.PersonSource(*req.Source)
+		updateReq.Source = &s
+	}
 	if req.CompanyID != nil {
 		companyID, err := uuid.Parse(*req.CompanyID)
 		if err != nil {

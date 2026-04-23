@@ -29,13 +29,17 @@ const (
 type PersonSource string
 
 const (
-	PersonSourceWebsite  PersonSource = "website"
-	PersonSourceReferral PersonSource = "referral"
-	PersonSourceSocial   PersonSource = "social"
-	PersonSourceEmail    PersonSource = "email"
-	PersonSourcePhone    PersonSource = "phone"
-	PersonSourceEvent    PersonSource = "event"
-	PersonSourceOther    PersonSource = "other"
+	PersonSourceWebsite      PersonSource = "website"
+	PersonSourceReferral     PersonSource = "referral"
+	PersonSourceSocial       PersonSource = "social"
+	PersonSourceSocialMedia  PersonSource = "social_media"
+	PersonSourceEmail        PersonSource = "email"
+	PersonSourceEmailCampaign PersonSource = "email_campaign"
+	PersonSourcePhone        PersonSource = "phone"
+	PersonSourceColdOutreach PersonSource = "cold_outreach"
+	PersonSourceEvent        PersonSource = "event"
+	PersonSourcePartner      PersonSource = "partner"
+	PersonSourceOther        PersonSource = "other"
 )
 
 type Person struct {
