@@ -11,7 +11,7 @@ CREATE TYPE tenant_status AS ENUM ('active', 'suspended', 'deleted');
 CREATE TYPE subscription_tier AS ENUM ('free', 'starter', 'professional', 'enterprise');
 CREATE TYPE person_type AS ENUM ('lead', 'contact', 'customer');
 CREATE TYPE person_status AS ENUM ('new', 'contacted', 'qualified', 'unqualified', 'active', 'inactive');
-CREATE TYPE person_source AS ENUM ('website', 'referral', 'social', 'email', 'phone', 'event', 'other');
+CREATE TYPE person_source AS ENUM ('website', 'referral', 'social', 'social_media', 'email', 'email_campaign', 'phone', 'cold_outreach', 'event', 'partner', 'other');
 CREATE TYPE company_size AS ENUM ('startup', 'small', 'medium', 'large', 'enterprise');
 CREATE TYPE activity_type AS ENUM ('note', 'call', 'email', 'meeting', 'task', 'whatsapp', 'sms');
 CREATE TYPE activity_status AS ENUM ('planned', 'completed', 'cancelled');

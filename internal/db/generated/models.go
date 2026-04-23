@@ -477,13 +477,17 @@ func (ns NullPermissionScope) Value() (driver.Value, error) {
 type PersonSource string
 
 const (
-	PersonSourceWebsite  PersonSource = "website"
-	PersonSourceReferral PersonSource = "referral"
-	PersonSourceSocial   PersonSource = "social"
-	PersonSourceEmail    PersonSource = "email"
-	PersonSourcePhone    PersonSource = "phone"
-	PersonSourceEvent    PersonSource = "event"
-	PersonSourceOther    PersonSource = "other"
+	PersonSourceWebsite       PersonSource = "website"
+	PersonSourceReferral      PersonSource = "referral"
+	PersonSourceSocial        PersonSource = "social"
+	PersonSourceSocialMedia   PersonSource = "social_media"
+	PersonSourceEmail         PersonSource = "email"
+	PersonSourceEmailCampaign PersonSource = "email_campaign"
+	PersonSourcePhone         PersonSource = "phone"
+	PersonSourceColdOutreach  PersonSource = "cold_outreach"
+	PersonSourceEvent         PersonSource = "event"
+	PersonSourcePartner       PersonSource = "partner"
+	PersonSourceOther         PersonSource = "other"
 )
 
 func (e *PersonSource) Scan(src interface{}) error {
@@ -1030,6 +1034,7 @@ type TenantBranding struct {
 	SecondaryColor  pgtype.Text        `json:"secondary_color"`
 	AccentColor     pgtype.Text        `json:"accent_color"`
 	FontFamily      pgtype.Text        `json:"font_family"`
+	MonoFont        pgtype.Text        `json:"mono_font"`
 	AppName         pgtype.Text        `json:"app_name"`
 	CustomCss       pgtype.Text        `json:"custom_css"`
 	EmailHeaderHtml pgtype.Text        `json:"email_header_html"`

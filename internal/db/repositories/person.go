@@ -105,10 +105,14 @@ func (r *PersonRepository) Update(ctx context.Context, id uuid.UUID, req *person
 	`
 
 	row := &generated.Person{}
+	var source generated.NullPersonSource
+	if req.Source != nil {
+		source = generated.NullPersonSource{Valid: true, PersonSource: generated.PersonSource(*req.Source)}
+	}
 	err := r.getQuerier(ctx).QueryRow(ctx, query,
 		id, req.Type, req.Status, req.FirstName, req.LastName,
 		req.Email, req.Phone, req.AvatarURL, req.CompanyID, req.OwnerID,
-		req.Source, req.Score, req.Tags, req.CustomFields,
+		source, req.Score, req.Tags, req.CustomFields,
 	).Scan(
 		&row.ID, &row.TenantID, &row.Type, &row.Status, &row.FirstName, &row.LastName,
 		&row.Email, &row.Phone, &row.AvatarUrl, &row.CompanyID, &row.OwnerID,
