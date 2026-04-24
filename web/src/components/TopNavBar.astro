@@ -154,12 +154,36 @@ const { title = 'Oscar CRM' } = Astro.props;
       if (dropdownUserEmail) dropdownUserEmail.textContent = user.email || '';
       if (avatarInitials) avatarInitials.textContent = initials || '--';
 
-      if (user.avatar_key && userAvatar) {
+      const cachedAvatarKey = localStorage.getItem('oscar_avatar_key');
+      if (cachedAvatarKey && userAvatar) {
         const img = document.createElement('img');
         img.className = 'w-full h-full object-cover rounded-full';
-        img.src = `/api/v1/avatar/${user.id}`;
+        img.src = `/api/v1/avatar/${user.id}?t=${Date.now()}`;
+        img.onerror = () => {
+          localStorage.removeItem('oscar_avatar_key');
+          img.remove();
+          if (avatarInitials) {
+            avatarInitials.classList.remove('hidden');
+          }
+        };
         userAvatar.innerHTML = '';
         userAvatar.appendChild(img);
+      } else if (!cachedAvatarKey && userAvatar) {
+        const token = getToken();
+        if (token) {
+          fetch(`/api/v1/avatar/${user.id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(res => {
+            if (res.redirected) {
+              localStorage.setItem('oscar_avatar_key', res.url.split('key=')[1] || 'avatar');
+              const img = document.createElement('img');
+              img.className = 'w-full h-full object-cover rounded-full';
+              img.src = res.url;
+              userAvatar.innerHTML = '';
+              userAvatar.appendChild(img);
+            }
+          }).catch(() => {});
+        }
       }
     }
   }
