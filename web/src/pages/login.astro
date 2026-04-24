@@ -1,5 +1,6 @@
 ---
-export const prerender = true;
+export const prerender = false;
+import Logo from '../components/Logo.astro';
 import '../styles/global.css';
 
 const { user } = Astro.locals;
@@ -38,13 +39,10 @@ if (user) {
     <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl"></div>
   </div>
 
-  <div class="w-full max-w-md relative z-10">
+<div class="w-full max-w-md relative z-10">
     <div class="text-center mb-8">
-      <a href="/" class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary-container mb-4 shadow-glow hover:scale-105 transition-transform">
-        <span class="text-bg font-display font-bold text-2xl">O</span>
-      </a>
+      <Logo class="hover:scale-105 transition-transform" link={true}/>
       <h1 class="text-display-sm font-display text-on-surface">Welcome back</h1>
-      <p class="text-body-lg text-on-surface-variant mt-2">Sign in to your oscar account</p>
     </div>
 
     <div class="card-elevated p-8">
