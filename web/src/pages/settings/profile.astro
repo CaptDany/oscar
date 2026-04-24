@@ -7,7 +7,7 @@ if (!user) return Astro.redirect('/login');
 ---
 
 <AppLayout title="My Profile">
-  <main class="ml-[220px] pt-10 px-8 pb-20">
+  <main class="pt-10 px-8 pb-20">
     <div class="max-w-4xl mx-auto">
       <div class="mb-8">
         <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">My Profile</h2>
@@ -24,21 +24,17 @@ if (!user) return Astro.redirect('/login');
               Profile Picture
             </h3>
             <div class="flex items-center gap-6">
-              <div id="avatar-display" class="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center overflow-hidden">
-                {user?.avatar_url ? (
-                  <img id="avatar-img" src={user.avatar_url} class="w-full h-full object-cover" alt="Avatar" />
-                ) : (
-                  <span class="text-3xl font-bold text-on-primary-container">
-                    {(user?.first_name?.[0] || 'U').toUpperCase()}
-                  </span>
-                )}
+              <div id="avatar-display" data-user-id={user?.id} class="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center overflow-hidden">
+                <span id="avatar-initials" class="text-3xl font-bold text-on-primary-container">
+                  {(user?.first_name?.[0] || 'U').toUpperCase()}
+                </span>
               </div>
               <div class="flex-1">
                 <input type="file" id="avatar-input" class="hidden" accept="image/*" />
-                <button onclick="document.getElementById('avatar-input')?.click()" class="px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+                <button id="upload-avatar-btn" class="px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
                   Upload New Photo
                 </button>
-                <p class="text-xs text-gray-500 mt-2">JPG, PNG or SVG. Max 5MB.</p>
+                <p class="text-xs text-gray-500 mt-2">JPG or PNG. Max 5MB.</p>
               </div>
             </div>
           </section>
@@ -172,167 +168,240 @@ if (!user) return Astro.redirect('/login');
   </main>
 </AppLayout>
 
-<script>
-  function getToken(): string | null {
-    const stored = localStorage.getItem('oscar_auth');
-    if (stored) {
-      const { token } = JSON.parse(stored);
-      if (token) return token;
-    }
-    const cookies = Object.fromEntries(
-      document.cookie.split('; ').map(c => c.split('='))
-    );
-    return cookies['oscar_token'] || null;
-  }
-
-  async function connectGoogle() {
-    window.location.href = '/api/v1/oauth/google';
-  }
-
-  async function connectDiscord() {
-    window.location.href = '/api/v1/oauth/discord';
-  }
-
-  async function registerPasskey() {
-    try {
-      if (!PublicKeyCredential) {
-        alert('Passkeys not supported on this browser');
-        return;
-      }
-      const token = getToken();
-      if (!token) return;
-
-      const challenge = new Uint8Array(32);
-      crypto.getRandomValues(challenge);
-
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: 'Oscar CRM', id: window.location.hostname },
-          user: { id: new TextEncoder().encode(token), name: 'user@oscar', displayName: 'Oscar User' },
-          pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
-          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
-          timeout: 60000,
-        }
-      });
-
-      if (credential) {
-        alert('Passkey registered successfully!');
-      }
-    } catch (err) {
-      console.error('Passkey registration failed:', err);
-    }
-  }
-
-  async function exportData() {
-    const token = getToken();
-    if (!token) return;
-    try {
-      const res = await fetch('/api/v1/export', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'oscar-export.zip';
-        a.click();
-      }
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  }
-
-  async function deleteAccount() {
-    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
-    alert('Please contact your administrator to delete your account.');
-  }
-
-  document.getElementById('avatar-input')?.addEventListener('change', async (e) => {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('filename', file.name);
-    formData.append('content_type', file.type);
-
-    const token = getToken();
-    if (!token) return;
-
-    try {
-      const presignedRes = await fetch('/api/v1/upload/avatar', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData
-      });
-
-      if (!presignedRes.ok) throw new Error('Failed to get upload URL');
-
-      const { upload_url, object_key } = await presignedRes.json();
-
-      await fetch(upload_url, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type }
-      });
-
-      const confirmRes = await fetch('/api/v1/upload/avatar/confirm', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ object_key })
-      });
-
-      if (confirmRes.ok) {
-        const avatarDisplay = document.getElementById('avatar-display');
-        if (avatarDisplay) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            avatarDisplay.innerHTML = `<img src="${e.target?.result}" class="w-full h-full object-cover" alt="Avatar" />`;
-          };
-          reader.readAsDataURL(file);
-        }
-        alert('Avatar updated successfully!');
-      }
-    } catch (err) {
-      console.error('Upload failed:', err);
-      alert('Failed to upload avatar');
-    }
-  });
-
-  document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const token = getToken();
-    if (!token) return;
-
-    const firstName = (document.getElementById('first-name') as HTMLInputElement)?.value;
-    const lastName = (document.getElementById('last-name') as HTMLInputElement)?.value;
-
-    try {
-      const res = await fetch('/api/v1/users/me', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ first_name: firstName, last_name: lastName })
-      });
-
-      if (res.ok) {
-        alert('Profile updated successfully!');
-      } else {
-        const error = await res.json();
-        alert('Failed to update profile: ' + (error.error?.message || 'Unknown error'));
-      }
-    } catch (err) {
-      console.error('Update failed:', err);
-    }
-  });
 </script>
-
-<style>
-  main {
-    margin-left: 220px;
+<script is:inline>
+var getToken = function() {
+  const stored = localStorage.getItem('oscar_auth');
+  if (stored) {
+    const data = JSON.parse(stored);
+    if (data.token) return data.token;
   }
-</style>
+  var cookies = document.cookie.split('; ');
+  for (var i = 0; i < cookies.length; i++) {
+    var parts = cookies[i].split('=');
+    if (parts[0] === 'oscar_token') return parts[1];
+  }
+  return null;
+}
+
+async function connectGoogle() {
+  window.location.href = '/api/v1/oauth/google';
+}
+
+async function connectDiscord() {
+  window.location.href = '/api/v1/oauth/discord';
+}
+
+async function registerPasskey() {
+  try {
+    if (!PublicKeyCredential) {
+      alert('Passkeys not supported on this browser');
+      return;
+    }
+    var token = getToken();
+    if (!token) return;
+
+    var challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+
+    var credential = await navigator.credentials.create({
+      publicKey: {
+        challenge: challenge,
+        rp: { name: 'Oscar CRM', id: window.location.hostname },
+        user: { id: new TextEncoder().encode(token), name: 'user@oscar', displayName: 'Oscar User' },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000,
+      }
+    });
+
+    if (credential) {
+      alert('Passkey registered successfully!');
+    }
+  } catch (err) {
+    console.error('Passkey registration failed:', err);
+  }
+}
+
+async function exportData() {
+  var token = getToken();
+  if (!token) return;
+  try {
+    var res = await fetch('/api/v1/export', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (res.ok) {
+      var blob = await res.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'oscar-export.zip';
+      a.click();
+    }
+  } catch (err) {
+    console.error('Export failed:', err);
+  }
+}
+
+async function deleteAccount() {
+  if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
+  alert('Please contact your administrator to delete your account.');
+}
+
+async function loadAvatar() {
+  var avatarDisplay = document.getElementById('avatar-display');
+  var initials = document.getElementById('avatar-initials');
+  if (!avatarDisplay || !initials) return;
+
+  var cachedKey = localStorage.getItem('oscar_avatar_key') || sessionStorage.getItem('branding_avatar_key');
+  var token = getToken();
+  var userId = avatarDisplay.dataset.userId;
+
+  if (cachedKey) {
+    initials.classList.add('hidden');
+    var img = document.createElement('img');
+    img.src = '/api/v1/avatar/' + userId;
+    img.className = 'w-full h-full object-cover';
+    img.alt = 'Avatar';
+    img.onerror = function() {
+      initials.classList.remove('hidden');
+      img.remove();
+    };
+    avatarDisplay.innerHTML = '';
+    avatarDisplay.appendChild(img);
+  } else if (token) {
+    try {
+      var res = await fetch('/api/v1/auth/me', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (res.ok) {
+        var data = await res.json();
+        if (data.avatar_key) {
+          localStorage.setItem('oscar_avatar_key', data.avatar_key);
+          sessionStorage.setItem('branding_avatar_key', data.avatar_key);
+          initials.classList.add('hidden');
+          var img = document.createElement('img');
+          img.src = '/api/v1/avatar/' + userId;
+          img.className = 'w-full h-full object-cover';
+          img.alt = 'Avatar';
+          avatarDisplay.innerHTML = '';
+          avatarDisplay.appendChild(img);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load avatar:', err);
+    }
+  }
+}
+
+document.getElementById('profile-form')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var token = getToken();
+  if (!token) return;
+
+  var firstName = document.getElementById('first-name')?.value;
+  var lastName = document.getElementById('last-name')?.value;
+
+  try {
+    var res = await fetch('/api/v1/users/me', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      },
+      body: JSON.stringify({ first_name: firstName, last_name: lastName })
+    });
+
+    if (res.ok) {
+      alert('Profile updated successfully!');
+    } else {
+      var error = await res.json();
+      alert('Failed to update profile: ' + (error.error?.message || 'Unknown error'));
+    }
+  } catch (err) {
+    console.error('Update failed:', err);
+  }
+});
+
+var userId = document.getElementById('avatar-display')?.dataset?.userId || '';
+
+document.getElementById('avatar-input')?.addEventListener('change', function(e) {
+  var input = e.target;
+  var file = input.files?.[0];
+  if (!file) return;
+
+  console.log('File selected:', file.name, file.type, file.size);
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('File size must be less than 5MB');
+    return;
+  }
+
+  var token = getToken();
+  if (!token) return;
+
+  fetch('/api/v1/upload/avatar', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer ' + token
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      content_type: file.type
+    })
+  }).then(function(presignedRes) {
+    if (!presignedRes.ok) throw new Error('Failed to get presigned URL');
+    return presignedRes.json();
+  }).then(function(data) {
+    var uploadUrl = data.upload_url;
+    var objectKey = data.object_key;
+    var finalUrl = data.final_url;
+    return fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type }
+    }).then(function() {
+      return { objectKey: objectKey, finalUrl: finalUrl };
+    });
+  }).then(function(data) {
+    return fetch('/api/v1/upload/avatar/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token
+      },
+      body: JSON.stringify({ object_key: data.objectKey })
+    });
+  }).then(function(confirmRes) {
+    if (!confirmRes.ok) throw new Error('Failed to confirm upload');
+    return confirmRes.json();
+  }).then(function(data) {
+    var avatarKey = data.avatar_key;
+    localStorage.setItem('oscar_avatar_key', avatarKey);
+    sessionStorage.setItem('branding_avatar_key', avatarKey);
+    var avatarDisplay = document.getElementById('avatar-display');
+    var initials = document.getElementById('avatar-initials');
+    if (avatarDisplay && initials) {
+      initials.classList.add('hidden');
+      var img = document.createElement('img');
+      img.src = '/api/v1/avatar/' + userId + '?t=' + Date.now();
+      img.className = 'w-full h-full object-cover';
+      img.alt = 'Avatar';
+      avatarDisplay.innerHTML = '';
+      avatarDisplay.appendChild(img);
+    }
+    alert('Avatar updated!');
+    window.location.reload();
+  }).catch(function(err) {
+    console.error('Upload failed:', err);
+    alert('Failed to upload avatar');
+  });
+});
+
+document.getElementById('upload-avatar-btn')?.addEventListener('click', function() {
+  document.getElementById('avatar-input')?.click();
+});
+
+loadAvatar();
+</script>

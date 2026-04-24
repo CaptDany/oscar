@@ -7,7 +7,7 @@ if (!user) return Astro.redirect('/login');
 ---
 
 <AppLayout title="Security">
-  <main class="ml-[220px] pt-10 px-8 pb-20">
+  <main class="pt-10 px-8 pb-20">
     <div class="max-w-4xl mx-auto">
       <div class="mb-8">
         <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Security</h2>
@@ -196,9 +196,3 @@ if (!user) return Astro.redirect('/login');
 
   loadApiKeys();
 </script>
-
-<style>
-  main {
-    margin-left: 220px;
-  }
-</style>

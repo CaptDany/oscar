@@ -9,7 +9,7 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
 ---
 
 <AppLayout title="Pipelines">
-  <main class="ml-[220px] pt-10 px-8 pb-20">
+  <main class="pt-10 px-8 pb-20">
     <div class="max-w-6xl mx-auto">
       <div class="mb-8">
         <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Pipelines</h2>
@@ -293,9 +293,3 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
 
   loadPipelines();
 </script>
-
-<style>
-  main {
-    margin-left: 220px;
-  }
-</style>

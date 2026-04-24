@@ -9,7 +9,7 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
 ---
 
 <AppLayout title="Users">
-  <main class="ml-[220px] pt-10 px-8 pb-20">
+  <main class="pt-10 px-8 pb-20">
     <div class="max-w-6xl mx-auto">
       <div class="mb-8">
         <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Users</h2>
@@ -102,6 +102,47 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
   </div>
 </div>
 
+<!-- Edit User Modal -->
+<div id="edit-user-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeEditUserModal()"></div>
+  <div class="relative w-full max-w-md bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden">
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between">
+      <h2 class="text-lg font-headline font-bold">Edit User</h2>
+      <button onclick="closeEditUserModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+        <span class="material-symbols-outlined text-gray-400">close</span>
+      </button>
+    </div>
+    <form id="edit-user-form" class="p-6 space-y-4">
+      <input type="hidden" id="edit-user-id" />
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">First Name</label>
+        <input type="text" id="edit-first-name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Last Name</label>
+        <input type="text" id="edit-last-name" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Email</label>
+        <input type="email" id="edit-email" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Role</label>
+        <select id="edit-role" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary">
+          <option value="Member">Member</option>
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Sales Rep">Sales Rep</option>
+        </select>
+      </div>
+      <div class="flex justify-end gap-3 pt-4">
+        <button type="button" onclick="closeEditUserModal()" class="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-opacity">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
   let users = [];
 
@@ -167,7 +208,7 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
         </td>
         <td class="px-4 py-4 text-sm text-gray-500">${user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
         <td class="px-4 py-4 text-right">
-          <button onclick="editUser('${user.id}')" class="p-2 hover:bg-surface-container-high rounded transition-colors">
+          <button onclick="openEditUserModal('${user.id}')" class="p-2 hover:bg-surface-container-high rounded transition-colors">
             <span class="material-symbols-outlined text-sm">edit</span>
           </button>
         </td>
@@ -184,8 +225,26 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
     document.getElementById('invite-form')?.reset();
   }
 
+  function openEditUserModal(userId: string) {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    (document.getElementById('edit-user-id') as HTMLInputElement).value = user.id;
+    (document.getElementById('edit-first-name') as HTMLInputElement).value = user.first_name || '';
+    (document.getElementById('edit-last-name') as HTMLInputElement).value = user.last_name || '';
+    (document.getElementById('edit-email') as HTMLInputElement).value = user.email || '';
+    (document.getElementById('edit-role') as HTMLSelectElement).value = user.roles?.[0] || 'Member';
+    
+    document.getElementById('edit-user-modal')?.classList.remove('hidden');
+  }
+
+  function closeEditUserModal() {
+    document.getElementById('edit-user-modal')?.classList.add('hidden');
+    document.getElementById('edit-user-form')?.reset();
+  }
+
   function editUser(userId) {
-    alert('Edit user: ' + userId);
+    openEditUserModal(userId);
   }
 
   document.getElementById('invite-form')?.addEventListener('submit', async (e) => {
@@ -220,11 +279,39 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
     }
   });
 
+  document.getElementById('edit-user-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    const userId = (document.getElementById('edit-user-id') as HTMLInputElement)?.value;
+    const firstName = (document.getElementById('edit-first-name') as HTMLInputElement)?.value;
+    const lastName = (document.getElementById('edit-last-name') as HTMLInputElement)?.value;
+    const email = (document.getElementById('edit-email') as HTMLInputElement)?.value;
+    const role = (document.getElementById('edit-role') as HTMLSelectElement)?.value;
+
+    try {
+      const res = await fetch(`/api/v1/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ first_name: firstName, last_name: lastName, email, role_name: role })
+      });
+
+      if (res.ok) {
+        closeEditUserModal();
+        loadUsers();
+        alert('User updated successfully!');
+      } else {
+        const error = await res.json();
+        alert('Failed to update user: ' + (error.error?.message || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Update user failed:', err);
+    }
+  });
+
   loadUsers();
 </script>
-
-<style>
-  main {
-    margin-left: 220px;
-  }
-</style>
