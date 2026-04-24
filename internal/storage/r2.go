@@ -62,11 +62,6 @@ func (r *R2Client) EnsureBucket(ctx context.Context) error {
 		}
 	}
 
-	err = r.configureCORS(ctx)
-	if err != nil {
-		fmt.Printf("Warning: failed to configure CORS: %v\n", err)
-	}
-
 	return nil
 }
 
