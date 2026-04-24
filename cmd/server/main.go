@@ -107,7 +107,7 @@ func main() {
 	var uploadHandler *handlers.UploadHandler
 	if r2Client != nil {
 		userHandler = handlers.NewUserHandler(userRepo, roleRepo, r2Client)
-		uploadHandler = handlers.NewUploadHandler(r2Client, userRepo, brandingRepo)
+		uploadHandler = handlers.NewUploadHandler(r2Client, userRepo)
 	}
 
 	authMw := middleware.Auth(tokenManager)
