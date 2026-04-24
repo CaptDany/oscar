@@ -1,0 +1,102 @@
+---
+export const prerender = false;
+import AppLayout from '../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Support">
+  <main class="pt-10 px-8 pb-20">
+    <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Support</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Get help with Oscar CRM</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="mailto:support@oscar.com" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors group">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary">email</span>
+            </div>
+            <div>
+              <h3 class="font-semibold">Email Support</h3>
+              <p class="text-xs text-gray-500">support@oscar.com</p>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Send us an email and we'll get back to you within 24 hours.</p>
+        </a>
+
+        <a href="https://oscar.com/docs" target="_blank" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors group">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary">menu_book</span>
+            </div>
+            <div>
+              <h3 class="font-semibold">Documentation</h3>
+              <p class="text-xs text-gray-500">oscar.com/docs</p>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Browse our comprehensive documentation and guides.</p>
+        </a>
+
+        <a href="https://oscar.com/status" target="_blank" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors group">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary">emergency</span>
+            </div>
+            <div>
+              <h3 class="font-semibold">System Status</h3>
+              <p class="text-xs text-gray-500">oscar.com/status</p>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Check if there are any ongoing incidents.</p>
+        </a>
+
+        <a href="tel:+15225551234" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors group">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center">
+              <span class="material-symbols-outlined text-primary">phone</span>
+            </div>
+            <div>
+              <h3 class="font-semibold">Phone Support</h3>
+              <p class="text-xs text-gray-500">+1 (522) 555-1234</p>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">Available Mon-Fri, 9am-6pm EST.</p>
+        </a>
+      </div>
+
+      <section class="mt-12 bg-surface-container-low p-6 rounded-lg">
+        <h3 class="font-semibold mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">forum</span>
+          Frequently Asked Questions
+        </h3>
+        <div class="space-y-4">
+          <details class="group">
+            <summary class="flex items-center justify-between cursor-pointer list-none">
+              <span class="font-medium">How do I reset my password?</span>
+              <span class="material-symbols-outlined text-gray-500 group-open:rotate-180 transition-transform">expand_more</span>
+            </summary>
+            <p class="mt-2 text-sm text-gray-400">Go to Settings > Security and click "Reset Password". You'll receive an email with instructions.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-center justify-between cursor-pointer list-none">
+              <span class="font-medium">How do I invite team members?</span>
+              <span class="material-symbols-outlined text-gray-500 group-open:rotate-180 transition-transform">expand_more</span>
+            </summary>
+            <p class="mt-2 text-sm text-gray-400">Go to Settings > Users and click "Invite User". Enter their email and role.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-center justify-between cursor-pointer list-none">
+              <span class="font-medium">How do I export my data?</span>
+              <span class="material-symbols-outlined text-gray-500 group-open:rotate-180 transition-transform">expand_more</span>
+            </summary>
+            <p class="mt-2 text-sm text-gray-400">Go to Settings > My Profile and click "Export My Data" in the Danger Zone.</p>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+</AppLayout>

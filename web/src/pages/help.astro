@@ -1,0 +1,109 @@
+---
+export const prerender = false;
+import AppLayout from '../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Help">
+  <main class="pt-10 px-8 pb-20">
+    <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Help</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Learn how to use Oscar CRM</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <a href="/contacts" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-3xl text-primary mb-3">person</span>
+          <h3 class="font-semibold mb-2">Contacts</h3>
+          <p class="text-sm text-gray-400">Manage your contacts and leads</p>
+        </a>
+        <a href="/companies" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-3xl text-primary mb-3">domain</span>
+          <h3 class="font-semibold mb-2">Companies</h3>
+          <p class="text-sm text-gray-400">Track companies and accounts</p>
+        </a>
+        <a href="/deals" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-3xl text-primary mb-3">account_tree</span>
+          <h3 class="font-semibold mb-2">Deals</h3>
+          <p class="text-sm text-gray-400">Manage your sales pipeline</p>
+        </a>
+        <a href="/activities" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-3xl text-primary mb-3">event_note</span>
+          <h3 class="font-semibold mb-2">Activities</h3>
+          <p class="text-sm text-gray-400">Track tasks and meetings</p>
+        </a>
+        <a href="/teams" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-3xl text-primary mb-3">group</span>
+          <h3 class="font-semibold mb-2">Teams</h3>
+          <p class="text-sm text-gray-400">Manage team collaboration</p>
+        </a>
+        <a href="/automations" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-3xl text-primary mb-3">bolt</span>
+          <h3 class="font-semibold mb-2">Automations</h3>
+          <p class="text-sm text-gray-400">Automate workflows</p>
+        </a>
+      </div>
+
+      <section class="bg-surface-container-low p-6 rounded-lg mb-12">
+        <h3 class="font-semibold mb-6 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">keyboard</span>
+          Keyboard Shortcuts
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+            <span class="text-sm">Open Command Palette</span>
+            <kbd class="px-2 py-1 bg-surface-container-highest rounded text-xs font-mono">⌘ + K</kbd>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+            <span class="text-sm">Quick Search</span>
+            <kbd class="px-2 py-1 bg-surface-container-highest rounded text-xs font-mono">⌘ + F</kbd>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+            <span class="text-sm">New Contact</span>
+            <kbd class="px-2 py-1 bg-surface-container-highest rounded text-xs font-mono">⌘ + N</kbd>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-surface-container rounded-lg">
+            <span class="text-sm">Save</span>
+            <kbd class="px-2 py-1 bg-surface-container-highest rounded text-xs font-mono">⌘ + S</kbd>
+          </div>
+        </div>
+      </section>
+
+      <section class="bg-surface-container-low p-6 rounded-lg">
+        <h3 class="font-semibold mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">lightbulb</span>
+          Quick Tips
+        </h3>
+        <ul class="space-y-3">
+          <li class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+            <span class="text-sm">Use the command palette (⌘K) to quickly navigate and perform actions</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+            <span class="text-sm">Drag and drop contacts to deals to move them through your pipeline</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+            <span class="text-sm">Use automations to automatically assign deals and send follow-ups</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+            <span class="text-sm">Invite team members to collaborate on deals and activities</span>
+          </li>
+        </ul>
+      </section>
+
+      <div class="mt-8 text-center">
+        <p class="text-sm text-gray-500 mb-4">Need more help?</p>
+        <a href="/support" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-colors">
+          <span class="material-symbols-outlined text-sm">contact_support</span>
+          Contact Support
+        </a>
+      </div>
+    </div>
+  </main>
+</AppLayout>
