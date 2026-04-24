@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3_types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	appconfig "github.com/oscar/oscar/internal/config"
 )
@@ -60,7 +61,32 @@ func (r *R2Client) EnsureBucket(ctx context.Context) error {
 			return fmt.Errorf("failed to create bucket: %w", err)
 		}
 	}
+
+	err = r.configureCORS(ctx)
+	if err != nil {
+		fmt.Printf("Warning: failed to configure CORS: %v\n", err)
+	}
+
 	return nil
+}
+
+func (r *R2Client) configureCORS(ctx context.Context) error {
+	maxAge := int32(3600)
+	corsRule := s3_types.CORSRule{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "PUT", "POST", "DELETE", "HEAD"},
+		AllowedHeaders: []string{"*"},
+		ExposeHeaders:  []string{"ETag"},
+		MaxAgeSeconds:   &maxAge,
+	}
+
+	_, err := r.client.PutBucketCors(ctx, &s3.PutBucketCorsInput{
+		Bucket: aws.String(r.bucket),
+		CORSConfiguration: &s3_types.CORSConfiguration{
+			CORSRules: []s3_types.CORSRule{corsRule},
+		},
+	})
+	return err
 }
 
 func (r *R2Client) Upload(ctx context.Context, objectName string, reader io.Reader, size int64, contentType string) error {

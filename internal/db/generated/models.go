@@ -1034,12 +1034,12 @@ type TenantBranding struct {
 	SecondaryColor  pgtype.Text        `json:"secondary_color"`
 	AccentColor     pgtype.Text        `json:"accent_color"`
 	FontFamily      pgtype.Text        `json:"font_family"`
-	MonoFont        pgtype.Text        `json:"mono_font"`
 	AppName         pgtype.Text        `json:"app_name"`
 	CustomCss       pgtype.Text        `json:"custom_css"`
 	EmailHeaderHtml pgtype.Text        `json:"email_header_html"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	MonoFont        pgtype.Text        `json:"mono_font"`
 }
 
 type User struct {

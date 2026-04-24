@@ -42,6 +42,8 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 
 	api.GET("/invitations/:token/validate", h.Invitation.Validate)
 
+	api.GET("/avatar/:user_id", h.Upload.GetAvatarURL)
+
 	auth := api.Group("", authMiddleware)
 	auth.POST("/auth/logout", h.Auth.Logout)
 	auth.GET("/auth/me", h.Auth.Me)
@@ -49,11 +51,12 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	auth.POST("/upload/avatar/confirm", h.Upload.ConfirmAvatarUpload)
 
 	tenantScoped := auth.Group("", authMiddlewareWithTenant)
-	tenantScoped.GET("/avatar/:user_id", h.Upload.GetAvatarURL)
 
 	branding := tenantScoped.Group("/upload/branding")
 	branding.POST("/presigned", h.Upload.GetBrandingAssetPresignedURL)
 	branding.POST("/confirm", h.Upload.ConfirmBrandingAssetUpload)
+	branding.POST("/delete", h.Upload.DeleteBrandingAsset)
+	branding.GET("/asset", h.Upload.GetBrandingAsset)
 
 	settings := tenantScoped.Group("/settings")
 	settings.GET("", h.Settings.GetSettings)

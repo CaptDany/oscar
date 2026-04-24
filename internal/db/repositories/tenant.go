@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -196,6 +197,26 @@ func NewBrandingRepository(pool *pgxpool.Pool) *BrandingRepository {
 	return &BrandingRepository{pool: pool}
 }
 
+func (r *BrandingRepository) Get(ctx context.Context, tenantID uuid.UUID) (*tenant.TenantBranding, error) {
+	query := `SELECT * FROM tenant_branding WHERE tenant_id = $1`
+
+var row generated.TenantBranding
+	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
+		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
+		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
+		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
+		&row.CreatedAt, &row.UpdatedAt, &row.MonoFont,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("branding.Get: branding not found")
+		}
+		return nil, fmt.Errorf("branding.Get: %w", err)
+	}
+
+	return mapBrandingRowToDomain(&row), nil
+}
+
 func (r *BrandingRepository) Create(ctx context.Context, tenantID uuid.UUID) (*tenant.TenantBranding, error) {
 	query := `
 		INSERT INTO tenant_branding (tenant_id)
@@ -207,8 +228,8 @@ func (r *BrandingRepository) Create(ctx context.Context, tenantID uuid.UUID) (*t
 	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
 		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
+		&row.CreatedAt, &row.UpdatedAt, &row.MonoFont,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("branding.Create: %w", err)
@@ -228,8 +249,8 @@ func (r *BrandingRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID u
 	err := tx.QueryRow(ctx, query, tenantID).Scan(
 		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.FontFamily, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
+		&row.CreatedAt, &row.UpdatedAt, &row.MonoFont,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("branding.Create: %w", err)
@@ -238,60 +259,60 @@ func (r *BrandingRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID u
 	return mapBrandingRowToDomain(&row), nil
 }
 
-func (r *BrandingRepository) Get(ctx context.Context, tenantID uuid.UUID) (*tenant.TenantBranding, error) {
-	query := `SELECT * FROM tenant_branding WHERE tenant_id = $1`
+func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req *tenant.UpdateBrandingRequest) (*tenant.TenantBranding, error) {
+	setClauses := []string{}
+	args := []interface{}{}
 
-	var row generated.TenantBranding
-	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
-		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
-		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
-		&row.CreatedAt, &row.UpdatedAt,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("branding.Get: branding not found")
-		}
-		return nil, fmt.Errorf("branding.Get: %w", err)
+	if req.PrimaryColor != nil {
+		setClauses = append(setClauses, "primary_color")
+		args = append(args, *req.PrimaryColor)
+	}
+	if req.SecondaryColor != nil {
+		setClauses = append(setClauses, "secondary_color")
+		args = append(args, *req.SecondaryColor)
+	}
+	if req.AccentColor != nil {
+		setClauses = append(setClauses, "accent_color")
+		args = append(args, *req.AccentColor)
+	}
+	if req.FontFamily != nil {
+		setClauses = append(setClauses, "font_family")
+		args = append(args, *req.FontFamily)
+	}
+	if req.MonoFont != nil {
+		setClauses = append(setClauses, "mono_font")
+		args = append(args, *req.MonoFont)
+	}
+	if req.AppName != nil {
+		setClauses = append(setClauses, "app_name")
+		args = append(args, *req.AppName)
 	}
 
-	return mapBrandingRowToDomain(&row), nil
-}
+	if len(setClauses) == 0 {
+		return r.Get(ctx, tenantID)
+	}
 
-func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req *tenant.UpdateBrandingRequest) (*tenant.TenantBranding, error) {
-	query := `
-		UPDATE tenant_branding SET 
-			logo_light_url = COALESCE($2, logo_light_url),
-			logo_dark_url = COALESCE($3, logo_dark_url),
-			favicon_url = COALESCE($4, favicon_url),
-			primary_color = COALESCE($5, primary_color),
-			secondary_color = COALESCE($6, secondary_color),
-			accent_color = COALESCE($7, accent_color),
-			font_family = COALESCE($8, font_family),
-			mono_font = COALESCE($9, mono_font),
-			app_name = COALESCE($10, app_name),
-			custom_css = COALESCE($11, custom_css),
-			email_header_html = COALESCE($12, email_header_html)
-		WHERE tenant_id = $1
-		RETURNING *
-	`
+	placeholders := make([]string, len(setClauses))
+	updateSet := make([]string, len(setClauses))
+	for i := range setClauses {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		updateSet[i] = setClauses[i] + " = excluded." + setClauses[i]
+	}
 
-	var row generated.TenantBranding
-	err := r.pool.QueryRow(ctx, query,
-		tenantID, req.LogoLightURL, req.LogoDarkURL, req.FaviconURL,
-		req.PrimaryColor, req.SecondaryColor, req.AccentColor,
-		req.FontFamily, req.MonoFont, req.AppName, req.CustomCSS, req.EmailHeaderHTML,
-	).Scan(
-		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
-		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
-		&row.FontFamily, &row.MonoFont, &row.AppName, &row.CustomCss, &row.EmailHeaderHtml,
-		&row.CreatedAt, &row.UpdatedAt,
-	)
+	query := fmt.Sprintf(`
+		INSERT INTO tenant_branding (tenant_id, %s)
+		VALUES ($1, %s)
+		ON CONFLICT (tenant_id) DO UPDATE SET %s
+	`, strings.Join(setClauses, ", "), strings.Join(placeholders, ", "), strings.Join(updateSet, ", "))
+
+	args = append([]interface{}{tenantID}, args...)
+
+	_, err := r.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("branding.Update: %w", err)
 	}
 
-	return mapBrandingRowToDomain(&row), nil
+	return r.Get(ctx, tenantID)
 }
 
 func mapBrandingRowToDomain(row *generated.TenantBranding) *tenant.TenantBranding {
@@ -314,12 +335,12 @@ func mapBrandingRowToDomain(row *generated.TenantBranding) *tenant.TenantBrandin
 		SecondaryColor:  pgTextToStrStr(row.SecondaryColor),
 		AccentColor:     pgTextToStrStr(row.AccentColor),
 		FontFamily:      pgTextToStrStr(row.FontFamily),
-		MonoFont:        pgTextToStrStr(row.MonoFont),
 		AppName:         pgTextToStrStr(row.AppName),
 		CustomCSS:       pgTextToStr(row.CustomCss),
 		EmailHeaderHTML: pgTextToStr(row.EmailHeaderHtml),
 		CreatedAt:       *createdAt,
 		UpdatedAt:       *updatedAt,
+		MonoFont:        pgTextToStrStr(row.MonoFont),
 	}
 }
 

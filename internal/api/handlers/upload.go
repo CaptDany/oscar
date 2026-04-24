@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -18,21 +18,15 @@ import (
 	"github.com/oscar/oscar/pkg/errs"
 )
 
-type BrandAssetsUpdater interface {
-	UpdateBrandAssets(ctx context.Context, tenantID uuid.UUID, logoLightURL, logoDarkURL, faviconURL *string) error
-}
-
 type UploadHandler struct {
 	storage  *storage.R2Client
 	userRepo user.Repository
-	brandRepo BrandAssetsUpdater
 }
 
-func NewUploadHandler(storage *storage.R2Client, userRepo user.Repository, brandRepo BrandAssetsUpdater) *UploadHandler {
+func NewUploadHandler(storage *storage.R2Client, userRepo user.Repository) *UploadHandler {
 	return &UploadHandler{
 		storage:  storage,
 		userRepo: userRepo,
-		brandRepo: brandRepo,
 	}
 }
 
@@ -236,11 +230,6 @@ type ConfirmBrandingAssetRequest struct {
 }
 
 func (h *UploadHandler) ConfirmBrandingAssetUpload(c echo.Context) error {
-	tenantID := c.Get("tenant_id").(uuid.UUID)
-	if tenantID == uuid.Nil {
-		return errs.Unauthorized("Tenant not authenticated").HTTPError(c)
-	}
-
 	var req ConfirmBrandingAssetRequest
 	if err := c.Bind(&req); err != nil {
 		return errs.BadRequest("Invalid request body").HTTPError(c)
@@ -250,32 +239,65 @@ func (h *UploadHandler) ConfirmBrandingAssetUpload(c echo.Context) error {
 		return errs.ValidationFailed().HTTPError(c)
 	}
 
-	if h.brandRepo == nil {
-		return errs.Internal(fmt.Errorf("branding repository not configured")).HTTPError(c)
-	}
-
-	_, err := h.storage.GetPresignedURL(c.Request().Context(), req.ObjectKey, 24*time.Hour)
-	if err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
-
-	var logoLightURL, logoDarkURL, faviconURL *string
-	switch req.AssetType {
-	case "logo_light":
-		logoLightURL = &req.ObjectKey
-	case "logo_dark":
-		logoDarkURL = &req.ObjectKey
-	case "favicon":
-		faviconURL = &req.ObjectKey
-	}
-
-	err = h.brandRepo.UpdateBrandAssets(c.Request().Context(), tenantID, logoLightURL, logoDarkURL, faviconURL)
-	if err != nil {
-		return errs.Internal(err).HTTPError(c)
-	}
+	log.Printf("Branding asset uploaded: type=%s, key=%s", req.AssetType, req.ObjectKey)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"asset_type": req.AssetType,
 		"object_key": req.ObjectKey,
+	})
+}
+
+type GetBrandingAssetRequest struct {
+	ObjectKey string `query:"key" validate:"required"`
+}
+
+func (h *UploadHandler) GetBrandingAsset(c echo.Context) error {
+	objectKey := c.QueryParam("key")
+	if objectKey == "" {
+		return errs.BadRequest("object_key is required").HTTPError(c)
+	}
+
+	reader, err := h.storage.Download(c.Request().Context(), objectKey)
+	if err != nil {
+		return errs.NotFound("Asset not found").HTTPError(c)
+	}
+	defer reader.Close()
+
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return c.Blob(http.StatusOK, "image/svg+xml", data)
+}
+
+type DeleteBrandingAssetRequest struct {
+	ObjectKey string `json:"object_key" validate:"required"`
+}
+
+func (h *UploadHandler) DeleteBrandingAsset(c echo.Context) error {
+	tenantID := c.Get("tenant_id").(uuid.UUID)
+	if tenantID == uuid.Nil {
+		return errs.Unauthorized("Tenant not authenticated").HTTPError(c)
+	}
+
+	var req DeleteBrandingAssetRequest
+	if err := c.Bind(&req); err != nil {
+		return errs.BadRequest("Invalid request body").HTTPError(c)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return errs.ValidationFailed().HTTPError(c)
+	}
+
+	if err := h.storage.Delete(c.Request().Context(), req.ObjectKey); err != nil {
+		log.Printf("Failed to delete branding asset: %v", err)
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	log.Printf("Branding asset deleted: key=%s", req.ObjectKey)
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "Asset deleted successfully",
 	})
 }

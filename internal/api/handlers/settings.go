@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -95,6 +96,22 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 		return errs.BadRequest("Invalid request body").HTTPError(c)
 	}
 
+	if req.PrimaryColor != nil && *req.PrimaryColor == "" {
+		req.PrimaryColor = nil
+	}
+	if req.SecondaryColor != nil && *req.SecondaryColor == "" {
+		req.SecondaryColor = nil
+	}
+	if req.AccentColor != nil && *req.AccentColor == "" {
+		req.AccentColor = nil
+	}
+	if req.FontFamily != nil && *req.FontFamily == "" {
+		req.FontFamily = nil
+	}
+	if req.MonoFont != nil && *req.MonoFont == "" {
+		req.MonoFont = nil
+	}
+
 	tenantData, err := h.tenantRepo.GetByID(c.Request().Context(), tenantID)
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
@@ -119,6 +136,7 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 		Settings: settingsJSON,
 	})
 	if err != nil {
+		log.Printf("ERROR updating tenant: %v", err)
 		return errs.Internal(err).HTTPError(c)
 	}
 
@@ -135,6 +153,7 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 			FaviconURL:     req.FaviconURL,
 		})
 		if err != nil {
+			log.Printf("ERROR updating branding: %v", err)
 			return errs.Internal(err).HTTPError(c)
 		}
 	}
