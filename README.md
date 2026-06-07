@@ -4,6 +4,12 @@ A production-grade, open-source CRM backend built in Go with multi-tenant SaaS a
 
 ## Features
 
+<div align="center">
+  <img src=".github/assets/oscar-screenshot-dashboard.png" alt="oscar Dashboard Screenshot" width="700">
+  <br />
+  <em>Dashboard preview (screenshot placeholder)</em>
+</div>
+
 ### Core CRM
 - **Multi-tenant Architecture**: Complete tenant isolation with Row Level Security (RLS)
 - **Contacts Management**: Persons (leads, contacts, customers) with tags, scores, and custom fields
@@ -164,6 +170,15 @@ oscar/
 ```
 
 ## Architecture
+
+<div align="center">
+  <picture>
+    <source srcset=".github/assets/oscar-architecture-dark.svg" media="(prefers-color-scheme: dark)">
+    <img src=".github/assets/oscar-architecture-light.svg" alt="oscar Architecture Diagram" width="700">
+  </picture>
+  <br />
+  <em>System architecture overview (diagram placeholder)</em>
+</div>
 
 ### Layered Architecture
 
