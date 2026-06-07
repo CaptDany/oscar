@@ -256,7 +256,7 @@ func NewLineItemRepository(pool *pgxpool.Pool) *LineItemRepository {
 }
 
 func (r *LineItemRepository) Create(ctx context.Context, dealID uuid.UUID, req *product.CreateLineItemRequest) (*product.DealLineItem, error) {
-	total := req.Quantity * req.UnitPrice * (1 - req.DiscountPct/100)
+	total := calcTotal(req.Quantity, req.UnitPrice, req.DiscountPct)
 
 	query := `
 		INSERT INTO deal_line_items (deal_id, product_id, quantity, unit_price, discount_pct, total)
@@ -275,7 +275,13 @@ func (r *LineItemRepository) Create(ctx context.Context, dealID uuid.UUID, req *
 		return nil, fmt.Errorf("lineItem.Create: %w", err)
 	}
 
-	return mapLineItemRowToDomain(row), nil
+	item := mapLineItemRowToDomain(row)
+
+	if err := r.SyncDealValue(ctx, dealID); err != nil {
+		return nil, fmt.Errorf("lineItem.Create: %w", err)
+	}
+
+	return item, nil
 }
 
 func (r *LineItemRepository) GetByID(ctx context.Context, id uuid.UUID) (*product.DealLineItem, error) {
@@ -297,6 +303,16 @@ func (r *LineItemRepository) GetByID(ctx context.Context, id uuid.UUID) (*produc
 }
 
 func (r *LineItemRepository) Update(ctx context.Context, id uuid.UUID, req *product.UpdateLineItemRequest) (*product.DealLineItem, error) {
+	current, err := r.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	qty := nonNilF(req.Quantity, current.Quantity)
+	price := nonNilF(req.UnitPrice, current.UnitPrice)
+	disc := nonNilF(req.DiscountPct, current.DiscountPct)
+	total := calcTotal(qty, price, disc)
+
 	query := `
 		UPDATE deal_line_items
 		SET 
@@ -304,13 +320,14 @@ func (r *LineItemRepository) Update(ctx context.Context, id uuid.UUID, req *prod
 			quantity = COALESCE($3, quantity),
 			unit_price = COALESCE($4, unit_price),
 			discount_pct = COALESCE($5, discount_pct),
+			total = $6,
 			updated_at = NOW()
 		WHERE id = $1
 		RETURNING *
 	`
 
 	row := &generated.DealLineItem{}
-	err := r.pool.QueryRow(ctx, query, id, req.ProductID, req.Quantity, req.UnitPrice, req.DiscountPct).Scan(
+	err = r.pool.QueryRow(ctx, query, id, req.ProductID, req.Quantity, req.UnitPrice, req.DiscountPct, total).Scan(
 		&row.ID, &row.DealID, &row.ProductID, &row.Quantity, &row.UnitPrice,
 		&row.DiscountPct, &row.Total, &row.CreatedAt, &row.UpdatedAt,
 	)
@@ -318,15 +335,31 @@ func (r *LineItemRepository) Update(ctx context.Context, id uuid.UUID, req *prod
 		return nil, fmt.Errorf("lineItem.Update: %w", err)
 	}
 
-	return mapLineItemRowToDomain(row), nil
+	item := mapLineItemRowToDomain(row)
+
+	if err := r.SyncDealValue(ctx, item.DealID); err != nil {
+		return nil, fmt.Errorf("lineItem.Update: %w", err)
+	}
+
+	return item, nil
 }
 
 func (r *LineItemRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	item, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
 	query := `DELETE FROM deal_line_items WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id)
+	_, err = r.pool.Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("lineItem.Delete: %w", err)
 	}
+
+	if err := r.SyncDealValue(ctx, item.DealID); err != nil {
+		return fmt.Errorf("lineItem.Delete: %w", err)
+	}
+
 	return nil
 }
 
@@ -404,6 +437,34 @@ func mapLineItemRowToDomain(row *generated.DealLineItem) *product.DealLineItem {
 		CreatedAt:   row.CreatedAt.Time,
 		UpdatedAt:   row.UpdatedAt.Time,
 	}
+}
+
+func (r *LineItemRepository) SyncDealValue(ctx context.Context, dealID uuid.UUID) error {
+	total, err := r.GetDealTotal(ctx, dealID)
+	if err != nil {
+		return fmt.Errorf("lineItem.SyncDealValue: %w", err)
+	}
+
+	_, err = r.pool.Exec(ctx,
+		`UPDATE deals SET value = $1, updated_at = NOW() WHERE id = $2`,
+		total, dealID,
+	)
+	if err != nil {
+		return fmt.Errorf("lineItem.SyncDealValue: %w", err)
+	}
+
+	return nil
+}
+
+func calcTotal(quantity, unitPrice, discountPct float64) float64 {
+	return quantity * unitPrice * (1 - discountPct/100)
+}
+
+func nonNilF(v *float64, fallback float64) float64 {
+	if v != nil {
+		return *v
+	}
+	return fallback
 }
 
 func mapLineItemWithProductRowToDomain(row *generated.ListDealLineItemsRow) *product.DealLineItemWithProduct {

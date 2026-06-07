@@ -25,6 +25,34 @@ export interface Pipeline {
   updated_at: string;
 }
 
+export interface DealLineItem {
+  id: string;
+  deal_id: string;
+  product_id?: string;
+  product_name?: string;
+  product_sku?: string;
+  quantity: number;
+  unit_price: number;
+  discount_pct: number;
+  total: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateLineItemRequest {
+  product_id?: string;
+  quantity: number;
+  unit_price: number;
+  discount_pct?: number;
+}
+
+export interface UpdateLineItemRequest {
+  product_id?: string;
+  quantity?: number;
+  unit_price?: number;
+  discount_pct?: number;
+}
+
 export interface Stage {
   id: string;
   pipeline_id: string;

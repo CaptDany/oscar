@@ -253,6 +253,16 @@ export const api = {
       apiFetch<any>(`/deals/${id}`, { method: 'PATCH', body: JSON.stringify(data), token }),
     delete: (token: string, id: string) =>
       apiFetch<any>(`/deals/${id}`, { method: 'DELETE', token }),
+    lineItems: {
+      list: (token: string, dealId: string) =>
+        apiFetch<{ data: any[] }>(`/deals/${dealId}/line-items`, { token }),
+      create: (token: string, dealId: string, data: any) =>
+        apiFetch<any>(`/deals/${dealId}/line-items`, { method: 'POST', body: JSON.stringify(data), token }),
+      update: (token: string, dealId: string, itemId: string, data: any) =>
+        apiFetch<any>(`/deals/${dealId}/line-items/${itemId}`, { method: 'PATCH', body: JSON.stringify(data), token }),
+      delete: (token: string, dealId: string, itemId: string) =>
+        apiFetch<any>(`/deals/${dealId}/line-items/${itemId}`, { method: 'DELETE', token }),
+    },
   },
 
   activities: {

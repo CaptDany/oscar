@@ -1,0 +1,547 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+const { id } = Astro.params;
+
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Deal Details">
+  <div id="deal-data" data-id={id}></div>
+  <div class="p-6">
+    <div class="mb-6">
+      <a href="/deals" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-white transition-colors">
+        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+        Back to Deals
+      </a>
+    </div>
+
+    <div id="deal-header" class="flex items-start gap-6 mb-8">
+      <div class="w-20 h-20 rounded-2xl bg-primary-container flex items-center justify-center">
+        <span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 0, 'wght' 300">deal</span>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-2">
+          <h1 id="deal-title" class="text-3xl font-bold font-headline text-white">Loading...</h1>
+          <span id="deal-status" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">--</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <p id="deal-stage-name" class="text-gray-500 font-mono text-sm">--</p>
+          <span class="text-gray-600">|</span>
+          <p id="deal-owner" class="text-gray-500 font-mono text-sm">--</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="location.href='/deals'" class="flex items-center gap-2 px-4 py-2 bg-surface-container text-xs font-mono text-white rounded border border-outline-variant/10 hover:bg-surface-container-high transition-colors">
+          <span class="material-symbols-outlined text-[16px]">edit</span>
+          Edit Deal
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Deal Information</h2>
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">attach_money</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Value</p>
+                <p id="deal-value" class="text-white">--</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">trending_up</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Probability</p>
+                <p id="deal-probability" class="text-white">--</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">calendar_today</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Expected Close</p>
+                <p id="deal-close-date" class="text-white">--</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">business</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Company</p>
+                <p id="deal-company" class="text-white">--</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-gray-500">person</span>
+              <div>
+                <p class="text-xs text-gray-500 font-mono uppercase">Contact</p>
+                <p id="deal-contact" class="text-white">--</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Tags</h2>
+          <div id="deal-tags" class="flex flex-wrap gap-2">
+            <span class="text-gray-500 text-sm">No tags</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Products</h2>
+            <button onclick="openAddLineItemModal()" class="flex items-center gap-1 px-3 py-1.5 bg-primary-container text-xs font-mono text-primary rounded-lg hover:opacity-90 transition-opacity">
+              <span class="material-symbols-outlined text-[14px]">add</span>
+              Add Product
+            </button>
+          </div>
+          <div id="line-items-container">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-[10px] font-mono text-gray-500 uppercase tracking-widest border-b border-outline-variant/10">
+                    <th class="pb-3 pr-4">Product</th>
+                    <th class="pb-3 pr-4">SKU</th>
+                    <th class="pb-3 pr-4 text-right">Qty</th>
+                    <th class="pb-3 pr-4 text-right">Unit Price</th>
+                    <th class="pb-3 pr-4 text-right">Discount</th>
+                    <th class="pb-3 pr-4 text-right">Total</th>
+                    <th class="pb-3"></th>
+                  </tr>
+                </thead>
+                <tbody id="line-items-tbody">
+                  <tr>
+                    <td colspan="7" class="pt-4 text-center text-gray-500">No products added yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="line-items-total" class="mt-4 pt-4 border-t border-outline-variant/10 flex justify-end">
+              <div class="text-right">
+                <p class="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">Deal Total</p>
+                <p id="deal-total-amount" class="text-2xl font-bold font-headline text-primary">$0.00</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider">Activity</h2>
+          </div>
+          <div id="activity-list" class="space-y-4">
+            <p class="text-gray-500 text-sm">No activity yet</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-6">
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Pipeline Stage</h2>
+          <div id="deal-progress" class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500 font-mono">Stage</span>
+              <span id="deal-stage-badge" class="text-sm font-mono text-white">--</span>
+            </div>
+            <div class="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+              <div id="deal-progress-bar" class="bg-primary h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-gray-500 font-mono">
+              <span>Open</span>
+              <span id="deal-progress-pct">0%</span>
+              <span>Closed</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/5">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Details</h2>
+          <div class="space-y-3">
+            <div>
+              <p class="text-xs text-gray-500 font-mono uppercase">Created</p>
+              <p id="deal-created" class="text-white text-sm">--</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-mono uppercase">Last Updated</p>
+              <p id="deal-updated" class="text-white text-sm">--</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 font-mono uppercase">Pipeline</p>
+              <p id="deal-pipeline" class="text-white text-sm">--</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="add-line-item-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeAddLineItemModal()"></div>
+    <div class="relative w-full max-w-lg bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between sticky top-0 bg-surface-container z-10">
+        <h2 class="text-lg font-headline font-bold text-white">Add Product</h2>
+        <button onclick="closeAddLineItemModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+          <span class="material-symbols-outlined text-gray-400">close</span>
+        </button>
+      </div>
+      <form id="add-line-item-form" class="p-6 space-y-4">
+        <input type="hidden" id="edit-line-item-id" name="line_item_id" />
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Product <span class="text-red-400">*</span></label>
+          <select id="line-item-product" name="product_id" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="">Select a product</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Quantity <span class="text-red-400">*</span></label>
+            <input type="number" id="line-item-quantity" name="quantity" step="0.01" min="0.01" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" value="1" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Unit Price <span class="text-red-400">*</span></label>
+            <input type="number" id="line-item-unit-price" name="unit_price" step="0.01" min="0" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" value="0" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-400 uppercase tracking-widest mb-2">Discount %</label>
+          <input type="number" id="line-item-discount" name="discount_pct" step="0.01" min="0" max="100" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" value="0" />
+        </div>
+        <div class="flex justify-end items-center gap-4 pt-2">
+          <div class="text-right flex-1">
+            <p class="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Line Total</p>
+            <p id="line-item-preview-total" class="text-lg font-bold font-headline text-primary">$0.00</p>
+          </div>
+        </div>
+        <div id="line-item-form-error" class="hidden text-red-400 text-sm bg-red-400/10 p-3 rounded-lg"></div>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" onclick="closeAddLineItemModal()" class="px-4 py-2 text-sm font-mono text-gray-400 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" id="line-item-form-submit-btn" class="px-6 py-2 bg-primary-container text-white text-sm font-mono rounded-lg hover:opacity-90 transition-opacity">Add Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  const id = document.getElementById('deal-data')?.dataset.id;
+  let deal: any = null;
+  let lineItems: any[] = [];
+  let products: any[] = [];
+  let editingItemId: string | null = null;
+
+  async function loadDeal() {
+    const token = getToken();
+    if (!token) { window.location.href = '/login'; return; }
+    if (!id) { document.getElementById('deal-title').textContent = 'Invalid deal ID'; return; }
+
+    try {
+      const [dealRes, itemsRes] = await Promise.all([
+        fetch(`/api/v1/deals/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/v1/deals/${id}/line-items`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+
+      if (!dealRes.ok) {
+        if (dealRes.status === 404) document.getElementById('deal-title').textContent = 'Deal not found';
+        return;
+      }
+
+      const dealBody = await dealRes.json();
+      deal = dealBody.data || dealBody;
+
+      if (itemsRes.ok) {
+        const itemsBody = await itemsRes.json();
+        lineItems = itemsBody.data || [];
+      }
+
+      renderDeal();
+      renderLineItems();
+    } catch (err) {
+      console.error('Failed to load deal:', err);
+    }
+  }
+
+  function formatDate(dateStr?: string): string {
+    if (!dateStr) return '--';
+    return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function formatCurrency(amount: number, currency?: string): string {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(amount);
+  }
+
+  function renderDeal() {
+    if (!deal) return;
+
+    document.getElementById('deal-title').textContent = deal.title || 'Untitled Deal';
+    document.getElementById('deal-status').textContent = deal.status || 'open';
+
+    const statusEl = document.getElementById('deal-status');
+    if (deal.status === 'won') {
+      statusEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success-container/50 text-success border border-success/30';
+    } else if (deal.status === 'lost') {
+      statusEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-error-container/50 text-error border border-error/30';
+    } else {
+      statusEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20';
+    }
+
+    document.getElementById('deal-value').textContent = formatCurrency(deal.value || 0, deal.currency);
+    document.getElementById('deal-probability').textContent = deal.probability != null ? `${deal.probability}%` : '--';
+    document.getElementById('deal-close-date').textContent = formatDate(deal.expected_close_date);
+    document.getElementById('deal-company').textContent = deal.company_name || 'No company';
+    document.getElementById('deal-contact').textContent = '--';
+    document.getElementById('deal-stage-name').textContent = deal.stage_name || '--';
+    document.getElementById('deal-stage-badge').textContent = deal.stage_name || '--';
+    document.getElementById('deal-owner').textContent = '--';
+    document.getElementById('deal-created').textContent = formatDate(deal.created_at);
+    document.getElementById('deal-updated').textContent = formatDate(deal.updated_at);
+    document.getElementById('deal-pipeline').textContent = '--';
+
+    const prob = deal.probability || 0;
+    document.getElementById('deal-progress-bar').style.width = `${prob}%`;
+    document.getElementById('deal-progress-pct').textContent = `${prob}%`;
+
+    const tagsEl = document.getElementById('deal-tags');
+    if (deal.tags && deal.tags.length > 0) {
+      tagsEl.innerHTML = deal.tags.map((tag: string) =>
+        `<span class="px-2 py-1 rounded text-xs font-mono bg-surface-container-high text-gray-300">${tag}</span>`
+      ).join('');
+    } else {
+      tagsEl.innerHTML = '<span class="text-gray-500 text-sm">No tags</span>';
+    }
+  }
+
+  function renderLineItems() {
+    const tbody = document.getElementById('line-items-tbody');
+    if (!lineItems || lineItems.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="pt-4 text-center text-gray-500">No products added yet</td></tr>';
+      document.getElementById('deal-total-amount').textContent = formatCurrency(0);
+      return;
+    }
+
+    let grandTotal = 0;
+    tbody.innerHTML = lineItems.map((item: any) => {
+      grandTotal += item.total || 0;
+      return `<tr class="border-b border-outline-variant/5 hover:bg-surface-container-highest/30 transition-colors">
+        <td class="py-3 pr-4">
+          <p class="text-white font-medium">${item.product_name || 'Unknown Product'}</p>
+        </td>
+        <td class="py-3 pr-4">
+          <span class="text-gray-400 font-mono text-xs">${item.product_sku || '--'}</span>
+        </td>
+        <td class="py-3 pr-4 text-right font-mono text-white">${item.quantity}</td>
+        <td class="py-3 pr-4 text-right font-mono text-white">${formatCurrency(item.unit_price)}</td>
+        <td class="py-3 pr-4 text-right font-mono ${item.discount_pct > 0 ? 'text-error' : 'text-gray-500'}">${item.discount_pct > 0 ? `${item.discount_pct}%` : '--'}</td>
+        <td class="py-3 pr-4 text-right font-mono text-white font-bold">${formatCurrency(item.total)}</td>
+        <td class="py-3">
+          <div class="flex items-center gap-1">
+            <button onclick="editLineItem('${item.id}')" class="p-1 hover:bg-surface-container-high rounded transition-colors" title="Edit">
+              <span class="material-symbols-outlined text-[16px] text-gray-500">edit</span>
+            </button>
+            <button onclick="deleteLineItem('${item.id}')" class="p-1 hover:bg-error/10 rounded transition-colors" title="Delete">
+              <span class="material-symbols-outlined text-[16px] text-error">delete</span>
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    document.getElementById('deal-total-amount').textContent = formatCurrency(grandTotal);
+  }
+
+  async function loadProducts() {
+    const token = getToken();
+    if (!token || products.length > 0) return;
+
+    try {
+      const res = await fetch('/api/v1/products?limit=100&active_only=true', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const body = await res.json();
+      products = body.data || [];
+      populateProductDropdown();
+    } catch (err) {
+      console.error('Failed to load products:', err);
+    }
+  }
+
+  function populateProductDropdown() {
+    const select = document.getElementById('line-item-product') as HTMLSelectElement;
+    select.innerHTML = '<option value="">Select a product</option>';
+    products.forEach((p: any) => {
+      const option = document.createElement('option');
+      option.value = p.id;
+      option.textContent = `${p.name}${p.sku ? ` (${p.sku})` : ''}`;
+      option.dataset.price = p.price;
+      select.appendChild(option);
+    });
+  }
+
+  function openAddLineItemModal() {
+    editingItemId = null;
+    document.getElementById('edit-line-item-id').value = '';
+    (document.getElementById('line-item-product') as HTMLSelectElement).value = '';
+    (document.getElementById('line-item-quantity') as HTMLInputElement).value = '1';
+    (document.getElementById('line-item-unit-price') as HTMLInputElement).value = '0';
+    (document.getElementById('line-item-discount') as HTMLInputElement).value = '0';
+    document.getElementById('line-item-preview-total').textContent = formatCurrency(0);
+    document.getElementById('add-line-item-modal').querySelector('h2').textContent = 'Add Product';
+    document.getElementById('line-item-form-submit-btn').textContent = 'Add Product';
+    document.getElementById('line-item-form-error').classList.add('hidden');
+    loadProducts();
+    document.getElementById('add-line-item-modal').classList.remove('hidden');
+  }
+
+  function closeAddLineItemModal() {
+    document.getElementById('add-line-item-modal').classList.add('hidden');
+  }
+
+  function editLineItem(itemId: string) {
+    const item = lineItems.find((li: any) => li.id === itemId);
+    if (!item) return;
+
+    editingItemId = itemId;
+    document.getElementById('edit-line-item-id').value = itemId;
+    openAddLineItemModal();
+
+    setTimeout(() => {
+      (document.getElementById('line-item-product') as HTMLSelectElement).value = item.product_id || '';
+      (document.getElementById('line-item-quantity') as HTMLInputElement).value = item.quantity.toString();
+      (document.getElementById('line-item-unit-price') as HTMLInputElement).value = item.unit_price.toString();
+      (document.getElementById('line-item-discount') as HTMLInputElement).value = item.discount_pct.toString();
+      updateLineTotalPreview();
+      document.getElementById('add-line-item-modal').querySelector('h2').textContent = 'Edit Product';
+      document.getElementById('line-item-form-submit-btn').textContent = 'Save Changes';
+    }, 50);
+  }
+
+  function updateLineTotalPreview() {
+    const qty = parseFloat((document.getElementById('line-item-quantity') as HTMLInputElement).value) || 0;
+    const price = parseFloat((document.getElementById('line-item-unit-price') as HTMLInputElement).value) || 0;
+    const disc = parseFloat((document.getElementById('line-item-discount') as HTMLInputElement).value) || 0;
+    const total = qty * price * (1 - disc / 100);
+    document.getElementById('line-item-preview-total').textContent = formatCurrency(total);
+  }
+
+  async function deleteLineItem(itemId: string) {
+    if (!confirm('Remove this product from the deal?')) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`/api/v1/deals/${id}/line-items/${itemId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        lineItems = lineItems.filter((li: any) => li.id !== itemId);
+        renderLineItems();
+      } else {
+        console.error('Failed to delete line item');
+      }
+    } catch (err) {
+      console.error('Failed to delete line item:', err);
+    }
+  }
+
+  function getToken(): string | null {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  document.getElementById('line-item-product')?.addEventListener('change', (e) => {
+    const select = e.target as HTMLSelectElement;
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.dataset.price) {
+      (document.getElementById('line-item-unit-price') as HTMLInputElement).value = selectedOption.dataset.price;
+    }
+    updateLineTotalPreview();
+  });
+
+  document.getElementById('line-item-quantity')?.addEventListener('input', updateLineTotalPreview);
+  document.getElementById('line-item-unit-price')?.addEventListener('input', updateLineTotalPreview);
+  document.getElementById('line-item-discount')?.addEventListener('input', updateLineTotalPreview);
+
+  document.getElementById('add-line-item-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('line-item-form-submit-btn');
+    const errorEl = document.getElementById('line-item-form-error');
+
+    const token = getToken();
+    if (!token) return;
+
+    errorEl.classList.add('hidden');
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.textContent = editingItemId ? 'Saving...' : 'Adding...';
+
+    const payload: any = {
+      product_id: formData.get('product_id') || null,
+      quantity: parseFloat(formData.get('quantity') as string),
+      unit_price: parseFloat(formData.get('unit_price') as string),
+      discount_pct: parseFloat(formData.get('discount_pct') as string) || 0,
+    };
+
+    try {
+      const url = editingItemId
+        ? `/api/v1/deals/${id}/line-items/${editingItemId}`
+        : `/api/v1/deals/${id}/line-items`;
+      const method = editingItemId ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const item = await res.json();
+        if (editingItemId) {
+          const idx = lineItems.findIndex((li: any) => li.id === editingItemId);
+          if (idx >= 0) lineItems[idx] = item;
+        } else {
+          lineItems.push(item);
+        }
+        renderLineItems();
+        closeAddLineItemModal();
+      } else {
+        const errorData = await res.json();
+        let errorMsg = 'Failed to save product';
+        if (errorData.error?.details) {
+          errorMsg = errorData.error.details.map((d: any) => d.message || d.field).join(', ');
+        } else if (errorData.error?.message) {
+          errorMsg = errorData.error.message;
+        }
+        errorEl.textContent = errorMsg;
+        errorEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      console.error('Failed to save line item:', err);
+      errorEl.textContent = 'An unexpected error occurred';
+      errorEl.classList.remove('hidden');
+    } finally {
+      submitBtn.removeAttribute('disabled');
+      submitBtn.textContent = editingItemId ? 'Save Changes' : 'Add Product';
+    }
+  });
+
+  (window as any).openAddLineItemModal = openAddLineItemModal;
+  (window as any).closeAddLineItemModal = closeAddLineItemModal;
+  (window as any).editLineItem = editLineItem;
+  (window as any).deleteLineItem = deleteLineItem;
+
+  loadDeal();
+</script>

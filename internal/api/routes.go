@@ -24,6 +24,7 @@ type Handlers struct {
 	Product      *handlers.ProductHandler
 	Settings     *handlers.SettingsHandler
 	Invitation   *handlers.InvitationHandler
+	LineItem     *handlers.LineItemHandler
 }
 
 func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
@@ -102,6 +103,10 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	deals.PATCH("/:id/stage", h.Deal.MoveStage)
 	deals.POST("/:id/win", h.Deal.Win)
 	deals.POST("/:id/lose", h.Deal.Lose)
+	deals.GET("/:id/line-items", h.LineItem.ListByDeal)
+	deals.POST("/:id/line-items", h.LineItem.Create)
+	deals.PATCH("/:id/line-items/:line_item_id", h.LineItem.Update)
+	deals.DELETE("/:id/line-items/:line_item_id", h.LineItem.Delete)
 
 	activities := tenantScoped.Group("/activities")
 	activities.GET("", h.Activity.List)
