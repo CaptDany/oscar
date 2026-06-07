@@ -3,6 +3,8 @@ const API_BASE_URL = '/api/v1';
 export { auth } from './auth';
 export type { ApiError };
 
+import type { CustomFieldDefinition } from '../types/custom_field';
+
 interface ApiError {
   code: string;
   message: string;
@@ -427,6 +429,25 @@ export const api = {
       apiFetch<{ data: any }>('/invitations', { method: 'POST', body: JSON.stringify(data), token }),
     delete: (token: string, id: string) =>
       apiFetch<{ message: string }>(`/invitations/${id}`, { method: 'DELETE', token }),
+  },
+
+  customFields: {
+    list: (token: string, params?: { entity_type?: string }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.entity_type) searchParams.set('entity_type', params.entity_type);
+      const query = searchParams.toString();
+      return apiFetch<{ data: CustomFieldDefinition[] }>(`/custom-fields${query ? `?${query}` : ''}`, { token });
+    },
+    get: (token: string, id: string) =>
+      apiFetch<{ data: CustomFieldDefinition }>(`/custom-fields/${id}`, { token }),
+    create: (token: string, data: Partial<CustomFieldDefinition>) =>
+      apiFetch<{ data: CustomFieldDefinition }>('/custom-fields', { method: 'POST', body: JSON.stringify(data), token }),
+    update: (token: string, id: string, data: Partial<CustomFieldDefinition>) =>
+      apiFetch<{ data: CustomFieldDefinition }>(`/custom-fields/${id}`, { method: 'PATCH', body: JSON.stringify(data), token }),
+    delete: (token: string, id: string) =>
+      apiFetch<{ data: any }>(`/custom-fields/${id}`, { method: 'DELETE', token }),
+    reorder: (token: string, fieldIds: string[]) =>
+      apiFetch<{ data: any }>('/custom-fields/reorder', { method: 'POST', body: JSON.stringify({ field_ids: fieldIds }), token }),
   },
 };
 
