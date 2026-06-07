@@ -109,7 +109,7 @@ func main() {
 	var userHandler *handlers.UserHandler
 	var uploadHandler *handlers.UploadHandler
 	if r2Client != nil {
-		userHandler = handlers.NewUserHandler(userRepo, roleRepo, r2Client)
+		userHandler = handlers.NewUserHandler(userRepo, roleRepo, personRepo, dealRepo, r2Client)
 		uploadHandler = handlers.NewUploadHandler(r2Client, userRepo)
 	}
 

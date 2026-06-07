@@ -55,12 +55,13 @@ type ConvertPersonRequest struct {
 }
 
 type ListPersonsQuery struct {
-	Type    string `query:"type"`
-	Status  string `query:"status"`
-	OwnerID string `query:"owner_id"`
-	Search  string `query:"search"`
-	Cursor  string `query:"cursor"`
-	Limit   int    `query:"limit"`
+	Type      string `query:"type"`
+	Status    string `query:"status"`
+	OwnerID   string `query:"owner_id"`
+	CompanyID string `query:"company_id"`
+	Search    string `query:"search"`
+	Cursor    string `query:"cursor"`
+	Limit     int    `query:"limit"`
 }
 
 func (h *PersonHandler) List(c echo.Context) error {
@@ -91,6 +92,14 @@ func (h *PersonHandler) List(c echo.Context) error {
 			return errs.BadRequest("Invalid owner_id").HTTPError(c)
 		}
 		filter.OwnerID = &ownerID
+	}
+
+	if query.CompanyID != "" {
+		companyID, err := uuid.Parse(query.CompanyID)
+		if err != nil {
+			return errs.BadRequest("Invalid company_id").HTTPError(c)
+		}
+		filter.CompanyID = &companyID
 	}
 
 	persons, nextCursor, total, err := h.repo.List(c.Request().Context(), tenantID, filter)

@@ -232,6 +232,11 @@ func (r *DealRepository) List(ctx context.Context, tenantID uuid.UUID, filter *d
 		args = append(args, *filter.PersonID)
 		argIdx++
 	}
+	if filter.CompanyID != nil {
+		baseQuery += fmt.Sprintf(" AND d.company_id = $%d", argIdx)
+		args = append(args, *filter.CompanyID)
+		argIdx++
+	}
 	if filter.Search != "" {
 		baseQuery += fmt.Sprintf(" AND d.title ILIKE $%d", argIdx)
 		args = append(args, "%"+filter.Search+"%")
