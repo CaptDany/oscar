@@ -9,7 +9,6 @@ import (
 	"unicode"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 
@@ -267,26 +266,4 @@ func getStringFromMap(m map[string]interface{}, key, defaultVal string) string {
 	return defaultVal
 }
 
-type TenantContext interface {
-	GetTenantID() uuid.UUID
-	GetUserID() uuid.UUID
-	GetRoles() []string
-}
 
-type tenantContext struct {
-	tenantID uuid.UUID
-	userID   uuid.UUID
-	roles    []string
-}
-
-func (tc *tenantContext) GetTenantID() uuid.UUID {
-	return tc.tenantID
-}
-
-func (tc *tenantContext) GetUserID() uuid.UUID {
-	return tc.userID
-}
-
-func (tc *tenantContext) GetRoles() []string {
-	return tc.roles
-}

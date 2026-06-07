@@ -35,7 +35,7 @@ func (h *SettingsHandler) GetSettings(c echo.Context) error {
 
 	var settings map[string]interface{}
 	if tenantData.Settings != nil {
-		json.Unmarshal(tenantData.Settings, &settings)
+		_ = json.Unmarshal(tenantData.Settings, &settings)
 	}
 	if settings == nil {
 		settings = make(map[string]interface{})
@@ -119,7 +119,7 @@ func (h *SettingsHandler) UpdateSettings(c echo.Context) error {
 
 	settings := make(map[string]interface{})
 	if tenantData.Settings != nil {
-		json.Unmarshal(tenantData.Settings, &settings)
+		_ = json.Unmarshal(tenantData.Settings, &settings)
 	}
 
 	if req.Currency != nil {

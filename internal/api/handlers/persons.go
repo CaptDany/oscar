@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -343,28 +342,6 @@ func (h *PersonHandler) Search(c echo.Context) error {
 			"total": len(persons),
 		},
 	})
-}
-
-func parseUUID(s string) *uuid.UUID {
-	if s == "" {
-		return nil
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return nil
-	}
-	return &id
-}
-
-func parseTime(s string) *time.Time {
-	if s == "" {
-		return nil
-	}
-	t, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		return nil
-	}
-	return &t
 }
 
 func parseValidationError(err error, c echo.Context) error {

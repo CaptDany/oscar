@@ -22,10 +22,6 @@ func pgUUIDToPtr(v pgtype.UUID) *uuid.UUID {
 	return nil
 }
 
-func uuidToPgUUID(v uuid.UUID) pgtype.UUID {
-	return pgtype.UUID{Bytes: [16]byte(v), Valid: v != uuid.Nil}
-}
-
 func pgTextToStr(v pgtype.Text) *string {
 	if v.Valid {
 		return &v.String
@@ -40,26 +36,12 @@ func pgTextToStrStr(v pgtype.Text) string {
 	return ""
 }
 
-func strToPgText(v *string) pgtype.Text {
-	if v != nil {
-		return pgtype.Text{String: *v, Valid: true}
-	}
-	return pgtype.Text{Valid: false}
-}
-
 func pgTimestamptzToTime(v pgtype.Timestamptz) *time.Time {
 	if v.Valid {
 		t := v.Time
 		return &t
 	}
 	return nil
-}
-
-func timeToPgTimestamptz(v *time.Time) pgtype.Timestamptz {
-	if v != nil {
-		return pgtype.Timestamptz{Time: *v, Valid: true}
-	}
-	return pgtype.Timestamptz{Valid: false}
 }
 
 func pgInt4ToInt(v pgtype.Int4) int {
@@ -75,10 +57,6 @@ func pgInt4ToPtr(v pgtype.Int4) *int {
 		return &i
 	}
 	return nil
-}
-
-func intToPgInt4(v int) pgtype.Int4 {
-	return pgtype.Int4{Int32: int32(v), Valid: true}
 }
 
 func pgNumericToFloat(v pgtype.Numeric) float64 {
