@@ -344,6 +344,10 @@ func mapBrandingRowToDomain(row *generated.TenantBranding) *tenant.TenantBrandin
 	}
 }
 
+type ctxKey string
+
+const ctxKeyTx ctxKey = "tx"
+
 type TenantPool struct {
 	*pgxpool.Pool
 }
@@ -358,7 +362,7 @@ func (p *TenantPool) SetTenantContext(ctx context.Context, tenantID uuid.UUID) (
 		_ = tx.Rollback(ctx)
 		return ctx, nil, err
 	}
-	return context.WithValue(ctx, "tx", tx), tx, nil
+	return context.WithValue(ctx, ctxKeyTx, tx), tx, nil
 }
 
 func NewTenantPool(pool *pgxpool.Pool) *TenantPool {

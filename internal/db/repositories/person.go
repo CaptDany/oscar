@@ -23,7 +23,7 @@ func NewPersonRepository(pool *pgxpool.Pool) *PersonRepository {
 }
 
 func (r *PersonRepository) getQuerier(ctx context.Context) Querier {
-	if tx, ok := ctx.Value("tx").(pgx.Tx); ok {
+	if tx, ok := ctx.Value(ctxKeyTx).(pgx.Tx); ok {
 		return tx
 	}
 	return r.pool

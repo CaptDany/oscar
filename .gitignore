@@ -16,3 +16,5 @@ tmp/
 web/.astro/
 web/package-lock.json
 dump.rdb
+
+launch.ps1
