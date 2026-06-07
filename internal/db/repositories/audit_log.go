@@ -67,6 +67,14 @@ func (r *AuditLogRepository) List(ctx context.Context, tenantID uuid.UUID, filte
 		args = append(args, *filter.UserID)
 		argIdx++
 	}
+	if filter.Cursor != "" {
+		cursorID, err := uuid.Parse(filter.Cursor)
+		if err == nil {
+			baseQuery += fmt.Sprintf(" AND al.id < $%d", argIdx)
+			args = append(args, cursorID)
+			argIdx++
+		}
+	}
 
 	countQuery := `SELECT COUNT(*) FROM audit_logs al ` + baseQuery
 	var total int
@@ -78,8 +86,8 @@ func (r *AuditLogRepository) List(ctx context.Context, tenantID uuid.UUID, filte
 		SELECT al.id, al.tenant_id, al.user_id, al.action, al.entity_type, al.entity_id,
 		       al.diff, al.ip_address, al.user_agent, al.created_at
 		FROM audit_logs al
-		` + baseQuery + ` ORDER BY al.created_at DESC LIMIT $` + fmt.Sprintf("%d", argIdx) + ` OFFSET $` + fmt.Sprintf("%d", argIdx+1)
-	args = append(args, limit, 0)
+		` + baseQuery + ` ORDER BY al.created_at DESC, al.id DESC LIMIT $` + fmt.Sprintf("%d", argIdx)
+	args = append(args, limit+1)
 
 	rows, err := r.pool.Query(ctx, listQuery, args...)
 	if err != nil {
@@ -182,6 +190,27 @@ func (r *AuditLogRepository) ListByUser(ctx context.Context, tenantID, userID uu
 	}
 
 	return logs, nil
+}
+
+func (r *AuditLogRepository) GetByID(ctx context.Context, id uuid.UUID) (*audit_log.AuditLog, error) {
+	query := `
+		SELECT id, tenant_id, user_id, action, entity_type, entity_id,
+		       diff, ip_address, user_agent, created_at
+		FROM audit_logs
+		WHERE id = $1
+	`
+
+	row := &generated.AuditLog{}
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&row.ID, &row.TenantID, &row.UserID, &row.Action, &row.EntityType, &row.EntityID,
+		&row.Diff, &row.IpAddress, &row.UserAgent,
+		&row.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("auditLog.GetByID: %w", err)
+	}
+
+	return mapAuditLogRowToDomain(row), nil
 }
 
 func (r *AuditLogRepository) Count(ctx context.Context, tenantID uuid.UUID) (int, error) {

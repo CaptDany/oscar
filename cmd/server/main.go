@@ -83,6 +83,7 @@ func main() {
 	lineItemRepo := repositories.NewLineItemRepository(pool)
 	brandingRepo := repositories.NewBrandingRepository(pool)
 	invitationRepo := repositories.NewInvitationRepository(pool)
+	auditLogRepo := repositories.NewAuditLogRepository(pool)
 
 	server := api.New()
 
@@ -123,6 +124,7 @@ func main() {
 	invitationHandler := handlers.NewInvitationHandler(invitationRepo, userRepo, roleRepo, tenantRepo, cryptoSvc, &handlers.MockEmailSender{})
 	customFieldHandler := handlers.NewCustomFieldHandler(customFieldRepo)
 	lineItemHandler := handlers.NewLineItemHandler(lineItemRepo, dealRepo)
+	auditLogHandler := handlers.NewAuditLogHandler(auditLogRepo)
 
 	server.SetupRoutes(&api.Handlers{
 		Auth:         authHandler,
@@ -141,6 +143,7 @@ func main() {
 		Invitation:   invitationHandler,
 		CustomField:  customFieldHandler,
 		LineItem:     lineItemHandler,
+		AuditLog:     auditLogHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)

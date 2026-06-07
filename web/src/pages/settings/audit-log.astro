@@ -1,0 +1,288 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Audit Log">
+  <main class="pt-10 px-8 pb-20">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Audit Log</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Track changes made across your CRM</p>
+      </div>
+
+      <!-- Settings Navigation -->
+      <div class="flex gap-6 mb-8 border-b border-outline-variant/20 pb-4">
+        <a href="/settings" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Branding</a>
+        <a href="/settings/users" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Users</a>
+        <a href="/settings/security" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Security</a>
+        <a href="/settings/pipelines" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Pipelines</a>
+        <a href="/settings/custom-fields" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Custom Fields</a>
+        <a href="/settings/audit-log" class="text-primary border-b-2 border-primary pb-2 font-mono text-sm uppercase tracking-widest">Audit Log</a>
+        <a href="/settings/profile" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">My Profile</a>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap items-center gap-4 mb-6 p-4 bg-surface-container-low rounded-xl border border-outline-variant/5">
+        <div>
+          <label class="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">Entity Type</label>
+          <select id="filter-entity-type" class="bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="">All</option>
+            <option value="person">Person</option>
+            <option value="company">Company</option>
+            <option value="deal">Deal</option>
+            <option value="user">User</option>
+            <option value="activity">Activity</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">Entity ID</label>
+          <input type="text" id="filter-entity-id" placeholder="UUID..." class="bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary w-60 font-mono" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">User ID</label>
+          <input type="text" id="filter-user-id" placeholder="UUID..." class="bg-surface-container-highest border-none rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary w-60 font-mono" />
+        </div>
+        <div class="flex items-end gap-2">
+          <button onclick="applyFilters()" class="px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-opacity">Filter</button>
+          <button onclick="clearFilters()" class="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors">Clear</button>
+        </div>
+      </div>
+
+      <!-- Audit Log List -->
+      <div id="audit-log-container">
+        <div class="text-center py-8 text-gray-500">Loading audit log...</div>
+      </div>
+
+      <!-- Load More -->
+      <div id="load-more-container" class="hidden text-center py-6">
+        <button onclick="loadMore()" class="px-6 py-2 bg-surface-container-highest text-sm rounded-lg hover:bg-surface-container-high transition-colors">Load More</button>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<!-- Diff Modal -->
+<div id="diff-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeDiffModal()"></div>
+  <div class="relative w-full max-w-2xl bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh]">
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between sticky top-0 bg-surface-container z-10">
+      <h2 class="text-lg font-headline font-bold">Changes</h2>
+      <button onclick="closeDiffModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+        <span class="material-symbols-outlined text-gray-400">close</span>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto">
+      <pre id="diff-content" class="text-sm font-mono text-gray-300 whitespace-pre-wrap"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+  let logs = [];
+  let cursor = '';
+  let total = 0;
+  let loading = false;
+  let hasMore = true;
+
+  function getToken() {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function loadAuditLogs(reset = true) {
+    if (loading) return;
+    loading = true;
+
+    const token = getToken();
+    if (!token) return;
+
+    const params = new URLSearchParams();
+    if (!reset && cursor) params.set('cursor', cursor);
+    params.set('limit', '30');
+
+    const entityType = document.getElementById('filter-entity-type')?.value;
+    const entityId = document.getElementById('filter-entity-id')?.value.trim();
+    const userId = document.getElementById('filter-user-id')?.value.trim();
+
+    if (entityType && reset) params.set('entity_type', entityType);
+    if (entityId && reset) params.set('entity_id', entityId);
+    if (userId && reset) params.set('user_id', userId);
+
+    try {
+      const res = await fetch(`/api/v1/audit-logs?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const entries = data.data || [];
+        total = data.meta?.total || 0;
+        cursor = data.meta?.next_cursor || '';
+
+        if (reset) {
+          logs = entries;
+        } else {
+          logs = logs.concat(entries);
+        }
+
+        hasMore = !!data.meta?.next_cursor;
+        renderLogs();
+      }
+    } catch (err) {
+      console.error('Failed to load audit logs:', err);
+    } finally {
+      loading = false;
+    }
+  }
+
+  function renderLogs() {
+    const container = document.getElementById('audit-log-container');
+    const loadMoreContainer = document.getElementById('load-more-container');
+
+    if (!container) return;
+
+    if (logs.length === 0) {
+      container.innerHTML = '<div class="text-center py-12 text-gray-500"><span class="material-symbols-outlined text-4xl block mb-3">history</span><p class="font-mono text-sm">No audit log entries found</p></div>';
+      loadMoreContainer?.classList.add('hidden');
+      return;
+    }
+
+    loadMoreContainer?.classList.toggle('hidden', !hasMore);
+
+    container.innerHTML = `
+      <div class="bg-surface-container-low rounded-xl border border-outline-variant/5 overflow-hidden">
+        <div class="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between">
+          <h3 class="font-headline text-lg font-semibold">Activity History</h3>
+          <span class="text-xs font-mono text-gray-500">${total} entry${total !== 1 ? 'ies' : 'y'}</span>
+        </div>
+        <div class="divide-y divide-outline-variant/5">
+          ${logs.map(log => renderLogEntry(log)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderLogEntry(log) {
+    const actionLabel = formatAction(log.action);
+    const entityLabel = formatEntityType(log.entity_type);
+    const userName = log.first_name && log.last_name
+      ? `${log.first_name} ${log.last_name}`
+      : log.user_email || 'System';
+    const timeAgo = formatTimeAgo(log.created_at);
+    const hasDiff = log.diff && log.diff !== 'null' && Object.keys(log.diff).length > 0;
+
+    return `
+      <div class="px-6 py-4 hover:bg-surface-container/50 transition-colors">
+        <div class="flex items-start gap-4">
+          <div class="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-primary text-sm">${actionIcon(log.action)}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm font-semibold text-white">${userName}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-surface-container-highest text-gray-400">${actionLabel}</span>
+            </div>
+            <div class="flex items-center gap-3 text-xs text-gray-500">
+              <span class="font-mono">${entityLabel}</span>
+              ${log.entity_id ? `<span class="font-mono text-[10px] text-gray-600">${log.entity_id.substring(0, 8)}...</span>` : ''}
+              ${hasDiff ? `<button onclick="showDiff('${log.id}')" class="text-primary hover:underline cursor-pointer">View changes</button>` : ''}
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="text-xs text-gray-500 font-mono">${timeAgo}</div>
+            ${log.ip_address ? `<div class="text-[10px] text-gray-600 font-mono">${log.ip_address}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function actionIcon(action) {
+    const icons = {
+      'created': 'add_circle',
+      'updated': 'edit',
+      'deleted': 'delete',
+      'login': 'login',
+      'logout': 'logout',
+    };
+    return icons[action] || 'history';
+  }
+
+  function formatAction(action) {
+    return action ? action.charAt(0).toUpperCase() + action.slice(1) : 'Unknown';
+  }
+
+  function formatEntityType(type) {
+    const labels = {
+      'person': 'Contact',
+      'company': 'Company',
+      'deal': 'Deal',
+      'user': 'User',
+      'activity': 'Activity',
+    };
+    return labels[type] || type || 'System';
+  }
+
+  function formatTimeAgo(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHour < 24) return `${diffHour}h ago`;
+    if (diffDay < 30) return `${diffDay}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  function showDiff(logId) {
+    const log = logs.find(l => l.id === logId);
+    if (!log || !log.diff) return;
+
+    document.getElementById('diff-content').textContent = JSON.stringify(log.diff, null, 2);
+    document.getElementById('diff-modal')?.classList.remove('hidden');
+  }
+
+  function closeDiffModal() {
+    document.getElementById('diff-modal')?.classList.add('hidden');
+  }
+
+  function applyFilters() {
+    loadAuditLogs(true);
+  }
+
+  function clearFilters() {
+    document.getElementById('filter-entity-type').value = '';
+    document.getElementById('filter-entity-id').value = '';
+    document.getElementById('filter-user-id').value = '';
+    loadAuditLogs(true);
+  }
+
+  function loadMore() {
+    loadAuditLogs(false);
+  }
+
+  window.showDiff = showDiff;
+  window.closeDiffModal = closeDiffModal;
+  window.applyFilters = applyFilters;
+  window.clearFilters = clearFilters;
+  window.loadMore = loadMore;
+
+  loadAuditLogs(true);
+</script>
