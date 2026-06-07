@@ -279,12 +279,12 @@ func mapCompanyRowToDomain(row *generated.Company) *company.Company {
 
 	var address interface{}
 	if len(row.Address) > 0 {
-		json.Unmarshal(row.Address, &address)
+		_ = json.Unmarshal(row.Address, &address)
 	}
 
 	var customFields interface{}
 	if len(row.CustomFields) > 0 {
-		json.Unmarshal(row.CustomFields, &customFields)
+		_ = json.Unmarshal(row.CustomFields, &customFields)
 	}
 
 	return &company.Company{

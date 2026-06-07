@@ -27,10 +27,10 @@ func New() *Server {
 
 	v := validator.New()
 
-	v.RegisterValidation("titlecase", func(fl validator.FieldLevel) bool {
+	_ = v.RegisterValidation("titlecase", func(fl validator.FieldLevel) bool {
 		return isTitleCase(fl.Field().String())
 	})
-	v.RegisterValidation("phone", func(fl validator.FieldLevel) bool {
+	_ = v.RegisterValidation("phone", func(fl validator.FieldLevel) bool {
 		return isValidPhone(fl.Field().String())
 	})
 
@@ -227,7 +227,7 @@ func customErrorHandler(err error, c echo.Context) {
 		}
 	}
 
-	c.JSON(code, map[string]interface{}{
+	_ = c.JSON(code, map[string]interface{}{
 		"error": map[string]interface{}{
 			"code":       code,
 			"code_name":  codeName,

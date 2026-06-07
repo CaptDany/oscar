@@ -291,7 +291,7 @@ func (r *UserRepository) CreateOAuthUser(ctx context.Context, req *user.CreateOA
 	if err != nil {
 		return nil, fmt.Errorf("user.CreateOAuthUser begin: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	userQuery := `
 		INSERT INTO users (tenant_id, email, first_name, last_name, email_verified_at)
@@ -480,7 +480,7 @@ func (r *RoleRepository) SetUserRoles(ctx context.Context, userID uuid.UUID, rol
 	if err != nil {
 		return fmt.Errorf("role.SetUserRoles begin: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	deleteQuery := `DELETE FROM user_roles WHERE user_id = $1`
 	_, err = tx.Exec(ctx, deleteQuery, userID)
@@ -584,7 +584,7 @@ func (r *RoleRepository) Create(ctx context.Context, tenantID uuid.UUID, name st
 func mapRoleRowToDomain(row *generated.Role) *user.Role {
 	permissions := make(map[string]user.Permission)
 	if row.Permissions != nil {
-		json.Unmarshal(row.Permissions, &permissions)
+		_ = json.Unmarshal(row.Permissions, &permissions)
 	}
 	desc := pgTextToStr(row.Description)
 	createdAt := pgTimestamptzToTime(row.CreatedAt)

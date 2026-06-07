@@ -146,7 +146,7 @@ func (c *Client) WritePump() {
 		}
 	}
 
-	c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+	_ = c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 }
 
 type Message struct {

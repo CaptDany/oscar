@@ -355,7 +355,7 @@ func (p *TenantPool) SetTenantContext(ctx context.Context, tenantID uuid.UUID) (
 	}
 	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL app.current_tenant = '%s'", tenantID.String()))
 	if err != nil {
-		tx.Rollback(ctx)
+		_ = tx.Rollback(ctx)
 		return ctx, nil, err
 	}
 	return context.WithValue(ctx, "tx", tx), tx, nil
