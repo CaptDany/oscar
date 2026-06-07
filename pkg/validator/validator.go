@@ -12,13 +12,13 @@ var validate *validator.Validate
 func init() {
 	validate = validator.New()
 
-	validate.RegisterValidation("alphanumdash", func(fl validator.FieldLevel) bool {
+	_ = validate.RegisterValidation("alphanumdash", func(fl validator.FieldLevel) bool {
 		value := fl.Field().String()
 		match, _ := regexp.MatchString(`^[a-zA-Z0-9-_]+$`, value)
 		return match
 	})
 
-	validate.RegisterValidation("phone", func(fl validator.FieldLevel) bool {
+	_ = validate.RegisterValidation("phone", func(fl validator.FieldLevel) bool {
 		value := fl.Field().String()
 		if value == "" {
 			return true
@@ -27,7 +27,7 @@ func init() {
 		return match
 	})
 
-	validate.RegisterValidation("slug", func(fl validator.FieldLevel) bool {
+	_ = validate.RegisterValidation("slug", func(fl validator.FieldLevel) bool {
 		value := fl.Field().String()
 		match, _ := regexp.MatchString(`^[a-z0-9][a-z0-9-]{0,62}$`, strings.ToLower(value))
 		return match

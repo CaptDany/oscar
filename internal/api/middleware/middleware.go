@@ -94,10 +94,15 @@ func TenantResolver(tenantRepo TenantRepository, pool TenantPool) echo.Middlewar
 
 			err = next(c)
 			if err != nil {
-				tx.Rollback(ctxWithTx)
+				if rbErr := tx.Rollback(ctxWithTx); rbErr != nil {
+					fmt.Printf("[TenantResolver] rollback error: %v\n", rbErr)
+				}
 				return err
 			}
-			tx.Commit(ctxWithTx)
+			if cmtErr := tx.Commit(ctxWithTx); cmtErr != nil {
+				fmt.Printf("[TenantResolver] commit error: %v\n", cmtErr)
+				return errs.Internal(cmtErr).HTTPError(c)
+			}
 			return nil
 		}
 	}

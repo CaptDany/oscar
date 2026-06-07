@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	s3_types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	appconfig "github.com/oscar/oscar/internal/config"
 )
@@ -22,16 +21,9 @@ type R2Client struct {
 }
 
 func NewR2Client(cfg *appconfig.R2Config) (*R2Client, error) {
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		return aws.Endpoint{
-			URL: fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.AccountID),
-		}, nil
-	})
-
 	awsCfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")),
 		config.WithRegion("auto"),
-		config.WithEndpointResolverWithOptions(customResolver),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
@@ -63,25 +55,6 @@ func (r *R2Client) EnsureBucket(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (r *R2Client) configureCORS(ctx context.Context) error {
-	maxAge := int32(3600)
-	corsRule := s3_types.CORSRule{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"GET", "PUT", "POST", "DELETE", "HEAD"},
-		AllowedHeaders: []string{"*"},
-		ExposeHeaders:  []string{"ETag"},
-		MaxAgeSeconds:   &maxAge,
-	}
-
-	_, err := r.client.PutBucketCors(ctx, &s3.PutBucketCorsInput{
-		Bucket: aws.String(r.bucket),
-		CORSConfiguration: &s3_types.CORSConfiguration{
-			CORSRules: []s3_types.CORSRule{corsRule},
-		},
-	})
-	return err
 }
 
 func (r *R2Client) Upload(ctx context.Context, objectName string, reader io.Reader, size int64, contentType string) error {

@@ -39,8 +39,12 @@ func (db *DB) Close() {
 	db.Pool.Close()
 }
 
+type dbContextKey string
+
+const dbContextKeyTenantID dbContextKey = "tenant_id"
+
 func (db *DB) SetTenantContext(ctx context.Context, tenantID string) context.Context {
-	return context.WithValue(ctx, "tenant_id", tenantID)
+	return context.WithValue(ctx, dbContextKeyTenantID, tenantID)
 }
 
 func (db *DB) Health(ctx context.Context) error {
