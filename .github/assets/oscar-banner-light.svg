@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 120" width="600" height="120">
+  <rect width="600" height="120" fill="#ffffff" rx="12"/>
+  <text x="300" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="48" font-weight="700" text-anchor="middle" fill="#1a1a2e">
+    oscar CRM
+  </text>
+  <text x="300" y="95" font-family="system-ui, -apple-system, sans-serif" font-size="13" text-anchor="middle" fill="#64748b">
+    Open-Source Customer Relationship Management
+  </text>
+</svg>
