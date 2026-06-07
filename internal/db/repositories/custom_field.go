@@ -23,8 +23,8 @@ func NewCustomFieldRepository(pool *pgxpool.Pool) *CustomFieldRepository {
 
 func (r *CustomFieldRepository) Create(ctx context.Context, tenantID uuid.UUID, req *custom_field.CreateCustomFieldRequest) (*custom_field.CustomFieldDefinition, error) {
 	query := `
-		INSERT INTO custom_field_definitions (tenant_id, entity_type, field_key, label, field_type, options, is_required, show_in_list, show_in_card, position)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO custom_field_definitions (tenant_id, entity_type, field_key, label, field_type, options, is_required, show_in_list, show_in_card, position, role_visibility)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING *
 	`
 
@@ -32,10 +32,11 @@ func (r *CustomFieldRepository) Create(ctx context.Context, tenantID uuid.UUID, 
 	err := r.pool.QueryRow(ctx, query,
 		tenantID, req.EntityType, req.FieldKey, req.Label, req.FieldType,
 		req.Options, req.IsRequired, req.ShowInList, req.ShowInCard, req.Position,
+		req.RoleVisibility,
 	).Scan(
 		&row.ID, &row.TenantID, &row.EntityType, &row.FieldKey, &row.Label, &row.FieldType,
 		&row.Options, &row.IsRequired, &row.ShowInList, &row.ShowInCard, &row.Position,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.RoleVisibility, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("customField.Create: %w", err)
@@ -51,7 +52,7 @@ func (r *CustomFieldRepository) GetByID(ctx context.Context, id uuid.UUID) (*cus
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&row.ID, &row.TenantID, &row.EntityType, &row.FieldKey, &row.Label, &row.FieldType,
 		&row.Options, &row.IsRequired, &row.ShowInList, &row.ShowInCard, &row.Position,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.RoleVisibility, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -82,7 +83,7 @@ func (r *CustomFieldRepository) ListByEntity(ctx context.Context, tenantID uuid.
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.EntityType, &row.FieldKey, &row.Label, &row.FieldType,
 			&row.Options, &row.IsRequired, &row.ShowInList, &row.ShowInCard, &row.Position,
-			&row.CreatedAt, &row.UpdatedAt,
+			&row.RoleVisibility, &row.CreatedAt, &row.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("customField.ListByEntity scan: %w", err)
@@ -112,7 +113,7 @@ func (r *CustomFieldRepository) ListAll(ctx context.Context, tenantID uuid.UUID)
 		err := rows.Scan(
 			&row.ID, &row.TenantID, &row.EntityType, &row.FieldKey, &row.Label, &row.FieldType,
 			&row.Options, &row.IsRequired, &row.ShowInList, &row.ShowInCard, &row.Position,
-			&row.CreatedAt, &row.UpdatedAt,
+			&row.RoleVisibility, &row.CreatedAt, &row.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("customField.ListAll scan: %w", err)
@@ -132,7 +133,8 @@ func (r *CustomFieldRepository) Update(ctx context.Context, id uuid.UUID, req *c
 			is_required = COALESCE($5, is_required),
 			show_in_list = COALESCE($6, show_in_list),
 			show_in_card = COALESCE($7, show_in_card),
-			position = COALESCE($8, position)
+			position = COALESCE($8, position),
+			role_visibility = COALESCE($9, role_visibility)
 		WHERE id = $1
 		RETURNING *
 	`
@@ -141,10 +143,11 @@ func (r *CustomFieldRepository) Update(ctx context.Context, id uuid.UUID, req *c
 	err := r.pool.QueryRow(ctx, query,
 		id, req.Label, req.FieldType, req.Options,
 		req.IsRequired, req.ShowInList, req.ShowInCard, req.Position,
+		req.RoleVisibility,
 	).Scan(
 		&row.ID, &row.TenantID, &row.EntityType, &row.FieldKey, &row.Label, &row.FieldType,
 		&row.Options, &row.IsRequired, &row.ShowInList, &row.ShowInCard, &row.Position,
-		&row.CreatedAt, &row.UpdatedAt,
+		&row.RoleVisibility, &row.CreatedAt, &row.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("customField.Update: %w", err)
@@ -187,18 +190,19 @@ func mapCustomFieldRowToDomain(row *generated.CustomFieldDefinition) *custom_fie
 		updatedAt = &t
 	}
 	return &custom_field.CustomFieldDefinition{
-		ID:           pgUUIDToUUID(row.ID),
-		TenantID:     pgUUIDToUUID(row.TenantID),
-		EntityType:   custom_field.EntityType(row.EntityType),
-		FieldKey:     row.FieldKey,
-		Label:        row.Label,
-		FieldType:    custom_field.FieldType(row.FieldType),
-		Options:      row.Options,
-		IsRequired:   row.IsRequired,
-		ShowInList:   row.ShowInList,
-		ShowInCard:   row.ShowInCard,
-		Position:     int(row.Position),
-		CreatedAt:    *createdAt,
-		UpdatedAt:    *updatedAt,
+		ID:             pgUUIDToUUID(row.ID),
+		TenantID:       pgUUIDToUUID(row.TenantID),
+		EntityType:     custom_field.EntityType(row.EntityType),
+		FieldKey:       row.FieldKey,
+		Label:          row.Label,
+		FieldType:      custom_field.FieldType(row.FieldType),
+		Options:        row.Options,
+		IsRequired:     row.IsRequired,
+		ShowInList:     row.ShowInList,
+		ShowInCard:     row.ShowInCard,
+		Position:       int(row.Position),
+		RoleVisibility: row.RoleVisibility,
+		CreatedAt:      *createdAt,
+		UpdatedAt:      *updatedAt,
 	}
 }

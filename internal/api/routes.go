@@ -24,6 +24,7 @@ type Handlers struct {
 	Product      *handlers.ProductHandler
 	Settings     *handlers.SettingsHandler
 	Invitation   *handlers.InvitationHandler
+	CustomField  *handlers.CustomFieldHandler
 }
 
 func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
@@ -150,6 +151,14 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	invitations.GET("", h.Invitation.List, RequirePermission("users", "edit"))
 	invitations.POST("", h.Invitation.Create, RequirePermission("users", "edit"))
 	invitations.DELETE("/:id", h.Invitation.Delete, RequirePermission("users", "edit"))
+
+	customFields := tenantScoped.Group("/custom-fields")
+	customFields.GET("", h.CustomField.List, RequirePermission("custom_fields", "view"))
+	customFields.POST("", h.CustomField.Create, RequirePermission("custom_fields", "edit"))
+	customFields.POST("/reorder", h.CustomField.Reorder, RequirePermission("custom_fields", "edit"))
+	customFields.GET("/:id", h.CustomField.Get, RequirePermission("custom_fields", "view"))
+	customFields.PATCH("/:id", h.CustomField.Update, RequirePermission("custom_fields", "edit"))
+	customFields.DELETE("/:id", h.CustomField.Delete, RequirePermission("custom_fields", "edit"))
 }
 
 func GetTenantID(c echo.Context) uuid.UUID {
@@ -201,38 +210,43 @@ func RequirePermission(resource, action string) echo.MiddlewareFunc {
 func hasPermission(role, resource, action string) bool {
 	permissions := map[string]map[string]string{
 		"Owner": {
-			"persons":    "all",
-			"companies":  "all",
-			"deals":      "all",
-			"activities": "all",
-			"settings":   "all",
-			"users":      "all",
+			"persons":       "all",
+			"companies":     "all",
+			"deals":         "all",
+			"activities":    "all",
+			"settings":      "all",
+			"users":         "all",
+			"custom_fields": "all",
 		},
 		"Admin": {
-			"persons":    "all",
-			"companies":  "all",
-			"deals":      "all",
-			"activities": "all",
-			"settings":   "all",
-			"users":      "all",
+			"persons":       "all",
+			"companies":     "all",
+			"deals":         "all",
+			"activities":    "all",
+			"settings":      "all",
+			"users":         "all",
+			"custom_fields": "all",
 		},
 		"Manager": {
-			"persons":    "team",
-			"companies":  "team",
-			"deals":      "team",
-			"activities": "team",
+			"persons":       "team",
+			"companies":     "team",
+			"deals":         "team",
+			"activities":    "team",
+			"custom_fields": "all",
 		},
 		"Sales Rep": {
-			"persons":    "own",
-			"companies":  "own",
-			"deals":      "own",
-			"activities": "own",
+			"persons":       "own",
+			"companies":     "own",
+			"deals":         "own",
+			"activities":    "own",
+			"custom_fields": "own",
 		},
 		"Read Only": {
-			"persons":    "team",
-			"companies":  "team",
-			"deals":      "team",
-			"activities": "team",
+			"persons":       "team",
+			"companies":     "team",
+			"deals":         "team",
+			"activities":    "team",
+			"custom_fields": "team",
 		},
 	}
 
