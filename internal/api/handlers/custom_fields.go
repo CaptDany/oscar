@@ -114,7 +114,7 @@ func (h *CustomFieldHandler) Create(c echo.Context) error {
 	field, err := h.repo.Create(c.Request().Context(), tenantID, createReq)
 	if err != nil {
 		if isDuplicateKeyError(err) {
-			return errs.Conflict("A custom field with key '" + req.FieldKey + "' already exists for this entity type").HTTPError(c)
+			return errs.Conflict("A custom field with key '%s' already exists for this entity type", req.FieldKey).HTTPError(c)
 		}
 		return errs.Internal(err).HTTPError(c)
 	}
@@ -222,7 +222,7 @@ func (h *CustomFieldHandler) Reorder(c echo.Context) error {
 	for i, idStr := range req.FieldIDs {
 		fieldID, err := uuid.Parse(idStr)
 		if err != nil {
-			return errs.BadRequest("Invalid field ID: " + idStr).HTTPError(c)
+			return errs.BadRequest("Invalid field ID: %s", idStr).HTTPError(c)
 		}
 		fieldIDs[i] = fieldID
 	}
