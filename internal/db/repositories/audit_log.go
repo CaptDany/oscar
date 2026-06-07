@@ -184,6 +184,27 @@ func (r *AuditLogRepository) ListByUser(ctx context.Context, tenantID, userID uu
 	return logs, nil
 }
 
+func (r *AuditLogRepository) GetByID(ctx context.Context, id uuid.UUID) (*audit_log.AuditLog, error) {
+	query := `
+		SELECT id, tenant_id, user_id, action, entity_type, entity_id,
+		       diff, ip_address, user_agent, created_at
+		FROM audit_logs
+		WHERE id = $1
+	`
+
+	row := &generated.AuditLog{}
+	err := r.pool.QueryRow(ctx, query, id).Scan(
+		&row.ID, &row.TenantID, &row.UserID, &row.Action, &row.EntityType, &row.EntityID,
+		&row.Diff, &row.IpAddress, &row.UserAgent,
+		&row.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("auditLog.GetByID: %w", err)
+	}
+
+	return mapAuditLogRowToDomain(row), nil
+}
+
 func (r *AuditLogRepository) Count(ctx context.Context, tenantID uuid.UUID) (int, error) {
 	query := `SELECT COUNT(*) FROM audit_logs WHERE tenant_id = $1`
 

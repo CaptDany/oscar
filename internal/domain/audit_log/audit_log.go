@@ -34,6 +34,7 @@ type ListAuditLogsFilter struct {
 
 type Repository interface {
 	Create(ctx context.Context, tenantID uuid.UUID, userID *uuid.UUID, action, entityType string, entityID uuid.UUID, diff json.RawMessage, ipAddress, userAgent *string) (*AuditLog, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*AuditLog, error)
 	List(ctx context.Context, tenantID uuid.UUID, filter *ListAuditLogsFilter) ([]*AuditLog, string, int, error)
 	ListByEntity(ctx context.Context, tenantID uuid.UUID, entityType string, entityID uuid.UUID, limit, offset int) ([]*AuditLog, error)
 	ListByUser(ctx context.Context, tenantID, userID uuid.UUID, limit, offset int) ([]*AuditLog, error)

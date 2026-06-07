@@ -4,6 +4,7 @@ export { auth } from './auth';
 export type { ApiError };
 
 import type { CustomFieldDefinition } from '../types/custom_field';
+import type { AuditLogEntry, ListAuditLogsParams, ListAuditLogsResponse } from '../types/audit_log';
 
 interface ApiError {
   code: string;
@@ -448,6 +449,21 @@ export const api = {
       apiFetch<{ data: any }>(`/custom-fields/${id}`, { method: 'DELETE', token }),
     reorder: (token: string, fieldIds: string[]) =>
       apiFetch<{ data: any }>('/custom-fields/reorder', { method: 'POST', body: JSON.stringify({ field_ids: fieldIds }), token }),
+  },
+
+  auditLogs: {
+    list: (token: string, params?: ListAuditLogsParams) => {
+      const searchParams = new URLSearchParams();
+      if (params?.entity_type) searchParams.set('entity_type', params.entity_type);
+      if (params?.entity_id) searchParams.set('entity_id', params.entity_id);
+      if (params?.user_id) searchParams.set('user_id', params.user_id);
+      if (params?.cursor) searchParams.set('cursor', params.cursor);
+      if (params?.limit) searchParams.set('limit', String(params.limit));
+      const query = searchParams.toString();
+      return apiFetch<ListAuditLogsResponse>(`/audit-logs${query ? `?${query}` : ''}`, { token });
+    },
+    get: (token: string, id: string) =>
+      apiFetch<{ data: AuditLogEntry }>(`/audit-logs/${id}`, { token }),
   },
 };
 

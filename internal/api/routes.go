@@ -26,6 +26,7 @@ type Handlers struct {
 	Invitation   *handlers.InvitationHandler
 	CustomField  *handlers.CustomFieldHandler
 	LineItem     *handlers.LineItemHandler
+	AuditLog     *handlers.AuditLogHandler
 }
 
 func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
@@ -164,6 +165,10 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	customFields.GET("/:id", h.CustomField.Get, RequirePermission("custom_fields", "view"))
 	customFields.PATCH("/:id", h.CustomField.Update, RequirePermission("custom_fields", "edit"))
 	customFields.DELETE("/:id", h.CustomField.Delete, RequirePermission("custom_fields", "edit"))
+
+	auditLogs := tenantScoped.Group("/audit-logs")
+	auditLogs.GET("", h.AuditLog.List, RequirePermission("audit_logs", "view"))
+	auditLogs.GET("/:id", h.AuditLog.Get, RequirePermission("audit_logs", "view"))
 }
 
 func GetTenantID(c echo.Context) uuid.UUID {
@@ -222,6 +227,7 @@ func hasPermission(role, resource, action string) bool {
 			"settings":      "all",
 			"users":         "all",
 			"custom_fields": "all",
+			"audit_logs":    "all",
 		},
 		"Admin": {
 			"persons":       "all",
@@ -231,6 +237,7 @@ func hasPermission(role, resource, action string) bool {
 			"settings":      "all",
 			"users":         "all",
 			"custom_fields": "all",
+			"audit_logs":    "all",
 		},
 		"Manager": {
 			"persons":       "team",
@@ -238,6 +245,7 @@ func hasPermission(role, resource, action string) bool {
 			"deals":         "team",
 			"activities":    "team",
 			"custom_fields": "all",
+			"audit_logs":    "team",
 		},
 		"Sales Rep": {
 			"persons":       "own",
@@ -245,6 +253,7 @@ func hasPermission(role, resource, action string) bool {
 			"deals":         "own",
 			"activities":    "own",
 			"custom_fields": "own",
+			"audit_logs":    "own",
 		},
 		"Read Only": {
 			"persons":       "team",
@@ -252,6 +261,7 @@ func hasPermission(role, resource, action string) bool {
 			"deals":         "team",
 			"activities":    "team",
 			"custom_fields": "team",
+			"audit_logs":    "team",
 		},
 	}
 
