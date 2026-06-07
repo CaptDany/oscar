@@ -5,6 +5,7 @@ coverage.out
 coverage.html
 *.log
 .DS_Store
+*.bak
 *.swp
 *.swo
 .vscode/
