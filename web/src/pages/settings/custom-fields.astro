@@ -1,0 +1,595 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+
+const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
+---
+
+<AppLayout title="Custom Fields">
+  <main class="pt-10 px-8 pb-20">
+    <div class="max-w-6xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Custom Fields</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Define custom fields for contacts, companies, and deals</p>
+      </div>
+
+      <!-- Settings Navigation -->
+      <div class="flex gap-6 mb-8 border-b border-outline-variant/20 pb-4">
+        <a href="/settings" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Branding</a>
+        <a href="/settings/users" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Users</a>
+        <a href="/settings/security" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Security</a>
+        <a href="/settings/pipelines" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">Pipelines</a>
+        <a href="/settings/custom-fields" class="text-primary border-b-2 border-primary pb-2 font-mono text-sm uppercase tracking-widest">Custom Fields</a>
+        <a href="/settings/profile" class="text-gray-500 hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">My Profile</a>
+      </div>
+
+      {isAdmin && (
+        <div class="flex justify-end mb-6">
+          <button onclick="openCreateModal()" class="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-colors">
+            <span class="material-symbols-outlined text-sm">add</span>
+            Create Field
+          </button>
+        </div>
+      )}
+
+      <!-- Fields by Entity Type -->
+      <div id="fields-container" class="space-y-8">
+        <div class="text-center py-8 text-gray-500">
+          Loading custom fields...
+        </div>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<!-- Create Field Modal -->
+<div id="create-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeCreateModal()"></div>
+  <div class="relative w-full max-w-lg bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between sticky top-0 bg-surface-container z-10">
+      <h2 class="text-lg font-headline font-bold">Create Custom Field</h2>
+      <button onclick="closeCreateModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+        <span class="material-symbols-outlined text-gray-400">close</span>
+      </button>
+    </div>
+    <form id="create-form" class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Entity Type <span class="text-red-400">*</span></label>
+          <select id="cf-entity-type" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="person">Person</option>
+            <option value="company">Company</option>
+            <option value="deal">Deal</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Field Type <span class="text-red-400">*</span></label>
+          <select id="cf-field-type" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="date">Date</option>
+            <option value="select">Select</option>
+            <option value="multi_select">Multi Select</option>
+            <option value="boolean">Boolean</option>
+            <option value="url">URL</option>
+            <option value="currency">Currency</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Field Key <span class="text-red-400">*</span></label>
+        <input type="text" id="cf-field-key" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="e.g. twitter_handle" />
+        <p class="text-[10px] text-gray-500 mt-1">Unique identifier, lowercase with underscores</p>
+      </div>
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Label <span class="text-red-400">*</span></label>
+        <input type="text" id="cf-label" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" placeholder="e.g. Twitter Handle" />
+      </div>
+      <div id="options-field" class="hidden">
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Options</label>
+        <textarea id="cf-options" rows="3" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary font-mono" placeholder='["Option 1", "Option 2", "Option 3"]'></textarea>
+        <p class="text-[10px] text-gray-500 mt-1">JSON array of options (required for Select and Multi Select types)</p>
+      </div>
+      <div class="flex items-center gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="cf-is-required" class="w-4 h-4 rounded bg-surface-container-highest border-outline-variant/30 text-primary focus:ring-primary" />
+          <span class="text-sm text-gray-300">Required</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="cf-show-in-list" class="w-4 h-4 rounded bg-surface-container-highest border-outline-variant/30 text-primary focus:ring-primary" />
+          <span class="text-sm text-gray-300">Show in list</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="cf-show-in-card" checked class="w-4 h-4 rounded bg-surface-container-highest border-outline-variant/30 text-primary focus:ring-primary" />
+          <span class="text-sm text-gray-300">Show in card</span>
+        </label>
+      </div>
+      <div id="create-form-error" class="hidden text-red-400 text-sm bg-red-400/10 p-3 rounded-lg"></div>
+      <div class="flex justify-end gap-3 pt-4">
+        <button type="button" onclick="closeCreateModal()" class="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors">Cancel</button>
+        <button type="submit" class="px-6 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-opacity">Create Field</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Field Modal -->
+<div id="edit-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-background/60 backdrop-blur-md" onclick="closeEditModal()"></div>
+  <div class="relative w-full max-w-lg bg-surface-container border border-outline-variant/20 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div class="px-6 py-5 border-b border-outline-variant/10 flex items-center justify-between sticky top-0 bg-surface-container z-10">
+      <h2 class="text-lg font-headline font-bold">Edit Custom Field</h2>
+      <button onclick="closeEditModal()" class="p-1 hover:bg-surface-container-high rounded transition-colors">
+        <span class="material-symbols-outlined text-gray-400">close</span>
+      </button>
+    </div>
+    <form id="edit-form" class="p-6 space-y-4">
+      <div>
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Label <span class="text-red-400">*</span></label>
+        <input type="text" id="edit-cf-label" required class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Field Type</label>
+          <select id="edit-cf-field-type" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary cursor-pointer">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="date">Date</option>
+            <option value="select">Select</option>
+            <option value="multi_select">Multi Select</option>
+            <option value="boolean">Boolean</option>
+            <option value="url">URL</option>
+            <option value="currency">Currency</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Position</label>
+          <input type="number" id="edit-cf-position" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary" />
+        </div>
+      </div>
+      <div id="edit-options-field" class="hidden">
+        <label class="block text-[11px] font-mono text-gray-500 uppercase tracking-widest mb-2">Options</label>
+        <textarea id="edit-cf-options" rows="3" class="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-sm focus:ring-1 focus:ring-primary font-mono"></textarea>
+      </div>
+      <div class="flex items-center gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="edit-cf-is-required" class="w-4 h-4 rounded bg-surface-container-highest border-outline-variant/30 text-primary focus:ring-primary" />
+          <span class="text-sm text-gray-300">Required</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="edit-cf-show-in-list" class="w-4 h-4 rounded bg-surface-container-highest border-outline-variant/30 text-primary focus:ring-primary" />
+          <span class="text-sm text-gray-300">Show in list</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="edit-cf-show-in-card" class="w-4 h-4 rounded bg-surface-container-highest border-outline-variant/30 text-primary focus:ring-primary" />
+          <span class="text-sm text-gray-300">Show in card</span>
+        </label>
+      </div>
+      <div id="edit-form-error" class="hidden text-red-400 text-sm bg-red-400/10 p-3 rounded-lg"></div>
+      <div class="flex justify-between pt-4 border-t border-outline-variant/10">
+        <button type="button" onclick="deleteField()" class="px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">delete</span>
+          Delete Field
+        </button>
+        <div class="flex gap-3">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 text-sm text-gray-500 hover:text-white transition-colors">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-primary text-on-primary text-sm rounded-lg hover:opacity-90 transition-opacity">Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let fields = [];
+  let currentField = null;
+
+  function getToken() {
+    const stored = localStorage.getItem('oscar_auth');
+    if (stored) {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    }
+    const cookies = Object.fromEntries(
+      document.cookie.split('; ').map(c => c.split('='))
+    );
+    return cookies['oscar_token'] || null;
+  }
+
+  async function loadFields() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/custom-fields', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        fields = data.data || [];
+        renderFields();
+      }
+    } catch (err) {
+      console.error('Failed to load custom fields:', err);
+    }
+  }
+
+  function renderFields() {
+    const container = document.getElementById('fields-container');
+    if (!container) return;
+
+    if (fields.length === 0) {
+      container.innerHTML = '<div class="text-center py-12 text-gray-500"><span class="material-symbols-outlined text-4xl block mb-3">view_column</span><p class="font-mono text-sm">No custom fields defined yet</p></div>';
+      return;
+    }
+
+    const groups = { person: [], company: [], deal: [] };
+    const entityLabels = { person: 'Contacts', company: 'Companies', deal: 'Deals' };
+
+    fields.forEach(f => {
+      if (groups[f.entity_type]) groups[f.entity_type].push(f);
+    });
+
+    container.innerHTML = Object.entries(groups).map(([type, typeFields]) => {
+      if (typeFields.length === 0) return '';
+
+      return `
+        <div class="bg-surface-container-low rounded-xl border border-outline-variant/5 overflow-hidden">
+          <div class="px-6 py-4 border-b border-outline-variant/10 flex items-center justify-between">
+            <h3 class="font-headline text-lg font-semibold">${entityLabels[type] || type}</h3>
+            <span class="text-xs font-mono text-gray-500">${typeFields.length} field${typeFields.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="p-4 space-y-3">
+            ${typeFields.map(f => `
+              <div class="flex items-center gap-4 p-4 bg-surface-container rounded-lg">
+                <div class="w-10 h-10 rounded-lg bg-primary-container/20 flex items-center justify-center flex-shrink-0">
+                  <span class="material-symbols-outlined text-primary text-sm">${fieldIcon(f.field_type)}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-sm font-semibold text-white">${f.label}</span>
+                    ${f.is_required ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-red-400/10 text-red-400 border border-red-400/20">Required</span>' : ''}
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs font-mono text-gray-500">${f.field_key}</span>
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-surface-container-highest text-gray-400">${f.field_type}</span>
+                    ${f.show_in_list ? '<span class="text-[10px] text-gray-500">Shown in list</span>' : ''}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <button onclick="moveField('${f.id}', -1)" class="p-1.5 hover:bg-surface-container-highest rounded transition-colors text-gray-500 hover:text-white" title="Move up">
+                    <span class="material-symbols-outlined text-sm">keyboard_arrow_up</span>
+                  </button>
+                  <button onclick="moveField('${f.id}', 1)" class="p-1.5 hover:bg-surface-container-highest rounded transition-colors text-gray-500 hover:text-white" title="Move down">
+                    <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+                  </button>
+                  <button onclick="openEditModal('${f.id}')" class="p-1.5 hover:bg-surface-container-highest rounded transition-colors text-gray-500 hover:text-white" title="Edit">
+                    <span class="material-symbols-outlined text-sm">edit</span>
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function fieldIcon(type) {
+    const icons = {
+      text: 'text_fields',
+      number: 'numbers',
+      date: 'calendar_today',
+      select: 'arrow_drop_down_circle',
+      multi_select: 'checklist',
+      boolean: 'toggle_on',
+      url: 'link',
+      currency: 'attach_money',
+    };
+    return icons[type] || 'view_column';
+  }
+
+  async function moveField(fieldId, direction) {
+    const idx = fields.findIndex(f => f.id === fieldId);
+    if (idx === -1) return;
+
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= fields.length) return;
+
+    // Get fields in the same entity_type group
+    const entityType = fields[idx].entity_type;
+    const groupFields = fields.filter(f => f.entity_type === entityType);
+    const localIdx = groupFields.findIndex(f => f.id === fieldId);
+    const localTarget = localIdx + direction;
+    if (localTarget < 0 || localTarget >= groupFields.length) return;
+
+    // Swap positions in the group
+    [groupFields[localIdx], groupFields[localTarget]] = [groupFields[localTarget], groupFields[localIdx]];
+
+    // Reindex positions
+    const fieldIds = groupFields.map(f => f.id);
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/v1/custom-fields/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ field_ids: fieldIds })
+      });
+
+      if (res.ok) {
+        loadFields();
+      }
+    } catch (err) {
+      console.error('Failed to reorder fields:', err);
+    }
+  }
+
+  function openCreateModal() {
+    document.getElementById('create-modal')?.classList.remove('hidden');
+    document.getElementById('cf-field-key')?.focus();
+  }
+
+  function closeCreateModal() {
+    document.getElementById('create-modal')?.classList.add('hidden');
+    document.getElementById('create-form')?.reset();
+    document.getElementById('options-field')?.classList.add('hidden');
+    document.getElementById('create-form-error')?.classList.add('hidden');
+  }
+
+  function openEditModal(fieldId) {
+    currentField = fields.find(f => f.id === fieldId);
+    if (!currentField) return;
+
+    document.getElementById('edit-cf-label').value = currentField.label;
+    document.getElementById('edit-cf-field-type').value = currentField.field_type;
+    document.getElementById('edit-cf-position').value = currentField.position;
+    document.getElementById('edit-cf-is-required').checked = currentField.is_required;
+    document.getElementById('edit-cf-show-in-list').checked = currentField.show_in_list;
+    document.getElementById('edit-cf-show-in-card').checked = currentField.show_in_card;
+
+    const optionsField = document.getElementById('edit-options-field');
+    if (currentField.field_type === 'select' || currentField.field_type === 'multi_select') {
+      optionsField?.classList.remove('hidden');
+      document.getElementById('edit-cf-options').value = currentField.options ? JSON.stringify(currentField.options, null, 2) : '';
+    } else {
+      optionsField?.classList.add('hidden');
+    }
+
+    document.getElementById('edit-modal')?.classList.remove('hidden');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal')?.classList.add('hidden');
+    currentField = null;
+    document.getElementById('edit-form-error')?.classList.add('hidden');
+  }
+
+  async function deleteField() {
+    if (!currentField || !confirm(`Delete "${currentField.label}"? This cannot be undone.`)) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`/api/v1/custom-fields/${currentField.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        closeEditModal();
+        loadFields();
+      } else {
+        const err = await res.json();
+        alert(err.error?.message || 'Failed to delete field');
+      }
+    } catch (err) {
+      console.error('Failed to delete field:', err);
+      alert('Failed to delete field');
+    }
+  }
+
+  // Create form submit
+  document.getElementById('create-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) return;
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const errorEl = document.getElementById('create-form-error');
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.textContent = 'Creating...';
+    errorEl?.classList.add('hidden');
+
+    let options = null;
+    const fieldType = document.getElementById('cf-field-type').value;
+    if (fieldType === 'select' || fieldType === 'multi_select') {
+      try {
+        const raw = document.getElementById('cf-options').value.trim();
+        if (raw) {
+          options = JSON.parse(raw);
+          if (!Array.isArray(options)) throw new Error('Must be an array');
+        }
+      } catch (parseErr) {
+        errorEl.textContent = 'Options must be a valid JSON array like ["Option 1", "Option 2"]';
+        errorEl?.classList.remove('hidden');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.textContent = 'Create Field';
+        return;
+      }
+    }
+
+    const payload = {
+      entity_type: document.getElementById('cf-entity-type').value,
+      field_key: document.getElementById('cf-field-key').value.trim(),
+      label: document.getElementById('cf-label').value.trim(),
+      field_type: fieldType,
+      is_required: document.getElementById('cf-is-required').checked,
+      show_in_list: document.getElementById('cf-show-in-list').checked,
+      show_in_card: document.getElementById('cf-show-in-card').checked,
+    };
+
+    if (options) payload.options = options;
+
+    try {
+      const res = await fetch('/api/v1/custom-fields', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeCreateModal();
+        loadFields();
+      } else {
+        const err = await res.json();
+        let msg = 'Failed to create field';
+        if (err.error?.details) {
+          msg = err.error.details.map(d => d.message || d.field).join(', ');
+        } else if (err.error?.message) {
+          msg = err.error.message;
+        }
+        errorEl.textContent = msg;
+        errorEl?.classList.remove('hidden');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.textContent = 'Create Field';
+      }
+    } catch (err) {
+      console.error('Failed to create field:', err);
+      errorEl.textContent = 'An unexpected error occurred';
+      errorEl?.classList.remove('hidden');
+      submitBtn.removeAttribute('disabled');
+      submitBtn.textContent = 'Create Field';
+    }
+  });
+
+  // Edit form submit
+  document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentField) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const errorEl = document.getElementById('edit-form-error');
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.textContent = 'Saving...';
+    errorEl?.classList.add('hidden');
+
+    const payload = {};
+
+    const label = document.getElementById('edit-cf-label').value.trim();
+    if (label && label !== currentField.label) payload.label = label;
+
+    const fieldType = document.getElementById('edit-cf-field-type').value;
+    if (fieldType !== currentField.field_type) payload.field_type = fieldType;
+
+    const position = parseInt(document.getElementById('edit-cf-position').value);
+    if (!isNaN(position) && position !== currentField.position) payload.position = position;
+
+    const isRequired = document.getElementById('edit-cf-is-required').checked;
+    if (isRequired !== currentField.is_required) payload.is_required = isRequired;
+
+    const showInList = document.getElementById('edit-cf-show-in-list').checked;
+    if (showInList !== currentField.show_in_list) payload.show_in_list = showInList;
+
+    const showInCard = document.getElementById('edit-cf-show-in-card').checked;
+    if (showInCard !== currentField.show_in_card) payload.show_in_card = showInCard;
+
+    const fType = fieldType || currentField.field_type;
+    if (fType === 'select' || fType === 'multi_select') {
+      try {
+        const raw = document.getElementById('edit-cf-options').value.trim();
+        if (raw) {
+          payload.options = JSON.parse(raw);
+          if (!Array.isArray(payload.options)) throw new Error('Must be an array');
+        }
+      } catch (parseErr) {
+        errorEl.textContent = 'Options must be a valid JSON array';
+        errorEl?.classList.remove('hidden');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.textContent = 'Save Changes';
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/v1/custom-fields/${currentField.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        closeEditModal();
+        loadFields();
+      } else {
+        const err = await res.json();
+        let msg = 'Failed to save field';
+        if (err.error?.details) {
+          msg = err.error.details.map(d => d.message || d.field).join(', ');
+        } else if (err.error?.message) {
+          msg = err.error.message;
+        }
+        errorEl.textContent = msg;
+        errorEl?.classList.remove('hidden');
+        submitBtn.removeAttribute('disabled');
+        submitBtn.textContent = 'Save Changes';
+      }
+    } catch (err) {
+      console.error('Failed to save field:', err);
+      errorEl.textContent = 'An unexpected error occurred';
+      errorEl?.classList.remove('hidden');
+      submitBtn.removeAttribute('disabled');
+      submitBtn.textContent = 'Save Changes';
+    }
+  });
+
+  // Show/hide options textarea when field type changes
+  document.getElementById('cf-field-type')?.addEventListener('change', (e) => {
+    const type = e.target.value;
+    const optionsField = document.getElementById('options-field');
+    if (type === 'select' || type === 'multi_select') {
+      optionsField?.classList.remove('hidden');
+    } else {
+      optionsField?.classList.add('hidden');
+    }
+  });
+
+  document.getElementById('edit-cf-field-type')?.addEventListener('change', (e) => {
+    const type = e.target.value;
+    const optionsField = document.getElementById('edit-options-field');
+    if (type === 'select' || type === 'multi_select') {
+      optionsField?.classList.remove('hidden');
+    } else {
+      optionsField?.classList.add('hidden');
+    }
+  });
+
+  // Expose functions globally for inline onclick handlers
+  window.openCreateModal = openCreateModal;
+  window.closeCreateModal = closeCreateModal;
+  window.openEditModal = openEditModal;
+  window.closeEditModal = closeEditModal;
+  window.deleteField = deleteField;
+  window.moveField = moveField;
+
+  loadFields();
+</script>
