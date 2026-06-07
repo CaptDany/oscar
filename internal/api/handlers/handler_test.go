@@ -150,7 +150,3 @@ func (m *mockCompanyRepo) Count(ctx context.Context, tenantID uuid.UUID, filter 
 	return m.countFn(ctx, tenantID, filter)
 }
 
-func uuidPtr(s string) *uuid.UUID {
-	id := uuid.MustParse(s)
-	return &id
-}

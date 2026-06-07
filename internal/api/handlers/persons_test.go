@@ -62,13 +62,10 @@ func TestPersonHandler_List(t *testing.T) {
 			},
 		}
 		h := NewPersonHandler(mock)
-		c, rec := newGetContext(e, "/api/v1/persons", opts)
+		c, _ := newGetContext(e, "/api/v1/persons", opts)
 
-		err := h.List(c)
-		if err == nil {
+		if err := h.List(c); err == nil {
 			t.Fatal("expected error, got nil")
-		}
-		if rec.Code != http.StatusOK && rec.Code != http.StatusInternalServerError {
 		}
 	})
 }

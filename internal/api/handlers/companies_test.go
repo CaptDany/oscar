@@ -49,8 +49,7 @@ func TestCompanyHandler_List(t *testing.T) {
 		if err := h.List(c); err == nil {
 			t.Fatal("expected error")
 		}
-		if rec.Code != http.StatusOK {
-		}
+		_ = rec.Code
 	})
 }
 

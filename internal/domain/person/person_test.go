@@ -70,25 +70,6 @@ func TestPersonConstants(t *testing.T) {
 	}
 }
 
-func TestPersonTypeTransitions(t *testing.T) {
-	tests := []struct {
-		from PersonType
-		to   PersonType
-		ok   bool
-	}{
-		{PersonTypeLead, PersonTypeContact, true},
-		{PersonTypeLead, PersonTypeCustomer, true},
-		{PersonTypeContact, PersonTypeCustomer, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.from)+"_to_"+string(tt.to), func(t *testing.T) {
-			if tt.ok && tt.from != tt.to {
-			}
-		})
-	}
-}
-
 func TestPersonStruct(t *testing.T) {
 	now := time.Now()
 	uid := uuid.New()
