@@ -1,7 +1,6 @@
 import { defineConfig } from 'astro/config';
 import preact from '@astrojs/preact';
 import node from '@astrojs/node';
-import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   output: 'static',
@@ -17,7 +16,6 @@ export default defineConfig({
     host: true,
   },
   vite: {
-    plugins: [tailwindcss()],
     server: {
       proxy: {
         '/api/v1': {
