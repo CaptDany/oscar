@@ -1,6 +1,12 @@
-# oscar CRM
-
-A production-grade, open-source CRM backend built in Go with multi-tenant SaaS architecture, designed for scalability and performance.
+<div align="center">
+  <picture>
+    <source srcset=".github/assets/oscar-banner-dark.svg" media="(prefers-color-scheme: dark)">
+    <img src=".github/assets/oscar-banner-light.svg" alt="oscar CRM" width="600">
+  </picture>
+  <br />
+  <br />
+  <p><em>A production-grade, open-source CRM backend built in Go with multi-tenant SaaS architecture, designed for scalability and performance.</em></p>
+</div>
 
 ## Features
 
@@ -81,7 +87,8 @@ oscar/
 │   │   │   ├── invitations.go
 │   │   │   ├── settings.go  # Tenant settings
 │   │   │   ├── upload.go    # File uploads
-│   │   │   └── custom_fields.go # Custom fields (pending)
+│   │   │   ├── custom_fields.go # Custom fields (pending)
+│   │   │   └── audit_log.go # Audit log
 │   │   ├── middleware/      # HTTP middleware
 │   │   │   └── middleware.go# Auth, tenant resolution, rate limiting
 │   │   ├── routes.go        # Route definitions
@@ -108,7 +115,7 @@ oscar/
 │   │   │   ├── custom_field.go
 │   │   │   ├── automation.go # Automation rules (API pending)
 │   │   │   ├── notification.go
-│   │   │   ├── audit_log.go  # Audit log (API pending)
+│   │   │   ├── audit_log.go  # Audit log
 │   │   │   ├── invitation.go
 │   │   │   ├── product.go   # Product catalog
 │   │   │   └── helpers.go   # Type conversion utilities
@@ -136,7 +143,7 @@ oscar/
 │   │   ├── notification/
 │   │   │   └── notification.go
 │   │   ├── audit_log/
-│   │   │   └── audit_log.go # Audit log (API pending)
+│   │   │   └── audit_log.go # Audit log
 │   │   └── product/
 │   │       └── product.go   # Product types
 │   │
@@ -273,7 +280,7 @@ Examples:
 - `automation_actions` - Automation action steps (API pending)
 - `automation_runs` - Automation execution logs (API pending)
 - `notifications` - User notifications
-- `audit_logs` - Audit trail (API pending)
+- `audit_logs` - Audit trail
 - `invitations` - Team invitations
 
 ### Row Level Security
@@ -417,6 +424,13 @@ CREATE POLICY tenant_isolation ON persons
 | DELETE | `/api/v1/invitations/:id` | Cancel invitation |
 | GET | `/api/v1/invitations/:token/validate` | Validate token |
 
+### Audit Logs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/audit-logs` | List audit logs with filtering |
+| GET | `/api/v1/audit-logs/:id` | Get audit log by ID |
+
 ### Settings & Uploads
 
 | Method | Endpoint | Description |
@@ -435,7 +449,6 @@ CREATE POLICY tenant_isolation ON persons
 |---------|--------|-------------|
 | Custom Fields API | Pending | CRUD for custom field definitions |
 | Automation API | Pending | CRUD for automation rules |
-| Audit Log API | Pending | Audit trail access |
 | Deal Line Items API | Pending | Products on deals |
 
 ## Quick Start
@@ -594,7 +607,7 @@ GNU GPLv3 - see LICENSE file for details.
 - [ ] **Custom Fields UI** — Render dynamic fields in forms
 - [ ] **Deal Line Items API** — Connect existing table to deals
 - [ ] **Contact/Company/Deal Detail Views** — Replace stubs with real data
-- [ ] **Audit Log API** — Expose audit logs
+- [x] **Audit Log API** — Expose audit logs
 - [ ] **Redis Integration** — Wire up caching for sessions and hot data
 - [ ] **File Attachments** — Attach documents to any record
 
