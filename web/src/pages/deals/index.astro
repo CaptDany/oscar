@@ -385,6 +385,9 @@ if (!user) return Astro.redirect('/login');
         <div class="text-lg font-bold font-headline mb-4">$${(deal.value || 0).toLocaleString()}</div>
         <div class="flex justify-between items-center">
           <span class="text-[10px] font-mono text-gray-500">Updated ${formatTimeAgo(deal.updated_at)}</span>
+          <button onclick="event.stopPropagation(); window.location.href='/deals/${deal.id}'" class="text-gray-600 hover:text-primary transition-colors" title="View Details">
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+          </button>
         </div>
       </div>
     `;
