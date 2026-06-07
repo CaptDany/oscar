@@ -62,10 +62,11 @@ func TestPersonHandler_List(t *testing.T) {
 			},
 		}
 		h := NewPersonHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/persons", opts)
+		c, rec := newGetContext(e, "/api/v1/persons", opts)
 
-		if err := h.List(c); err == nil {
-			t.Fatal("expected error, got nil")
+		_ = h.List(c)
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 		}
 	})
 }
@@ -106,24 +107,26 @@ func TestPersonHandler_Get(t *testing.T) {
 			},
 		}
 		h := NewPersonHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/persons/"+uuid.New().String(), opts)
+		c, rec := newGetContext(e, "/api/v1/persons/"+uuid.New().String(), opts)
 		c.SetParamNames("id")
 		c.SetParamValues(uuid.New().String())
 
-		if err := h.Get(c); err == nil {
-			t.Fatal("expected error for not found")
+		_ = h.Get(c)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusNotFound)
 		}
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
 		mock := &mockPersonRepo{}
 		h := NewPersonHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/persons/invalid", opts)
+		c, rec := newGetContext(e, "/api/v1/persons/invalid", opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Get(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Get(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -162,10 +165,11 @@ func TestPersonHandler_Create(t *testing.T) {
 	t.Run("invalid body", func(t *testing.T) {
 		mock := &mockPersonRepo{}
 		h := NewPersonHandler(mock)
-		c, _ := newPostContext(e, "/api/v1/persons", "invalid json", opts)
+		c, rec := newPostContext(e, "/api/v1/persons", "invalid json", opts)
 
-		if err := h.Create(c); err == nil {
-			t.Fatal("expected error for invalid body")
+		_ = h.Create(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -204,12 +208,13 @@ func TestPersonHandler_Update(t *testing.T) {
 		mock := &mockPersonRepo{}
 		h := NewPersonHandler(mock)
 		body := `{"first_name":"Test"}`
-		c, _ := newPutContext(e, "/api/v1/persons/invalid", body, opts)
+		c, rec := newPutContext(e, "/api/v1/persons/invalid", body, opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Update(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Update(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -246,12 +251,13 @@ func TestPersonHandler_Delete(t *testing.T) {
 	t.Run("invalid id", func(t *testing.T) {
 		mock := &mockPersonRepo{}
 		h := NewPersonHandler(mock)
-		c, _ := newDeleteContext(e, "/api/v1/persons/invalid", opts)
+		c, rec := newDeleteContext(e, "/api/v1/persons/invalid", opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Delete(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Delete(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -287,10 +293,11 @@ func TestPersonHandler_Search(t *testing.T) {
 	t.Run("missing query", func(t *testing.T) {
 		mock := &mockPersonRepo{}
 		h := NewPersonHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/persons/search", opts)
+		c, rec := newGetContext(e, "/api/v1/persons/search", opts)
 
-		if err := h.Search(c); err == nil {
-			t.Fatal("expected error for missing query")
+		_ = h.Search(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }

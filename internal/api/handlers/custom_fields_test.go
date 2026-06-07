@@ -92,10 +92,11 @@ func TestCustomFieldHandler_List(t *testing.T) {
 	t.Run("invalid entity type", func(t *testing.T) {
 		mock := &mockCustomFieldRepo{}
 		h := NewCustomFieldHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/custom-fields?entity_type=invalid", opts)
+		c, rec := newGetContext(e, "/api/v1/custom-fields?entity_type=invalid", opts)
 
-		if err := h.List(c); err == nil {
-			t.Fatal("expected error for invalid entity type")
+		_ = h.List(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -139,10 +140,11 @@ func TestCustomFieldHandler_Create(t *testing.T) {
 	t.Run("invalid body", func(t *testing.T) {
 		mock := &mockCustomFieldRepo{}
 		h := NewCustomFieldHandler(mock)
-		c, _ := newPostContext(e, "/api/v1/custom-fields", "invalid json", opts)
+		c, rec := newPostContext(e, "/api/v1/custom-fields", "invalid json", opts)
 
-		if err := h.Create(c); err == nil {
-			t.Fatal("expected error for invalid body")
+		_ = h.Create(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -179,12 +181,13 @@ func TestCustomFieldHandler_Get(t *testing.T) {
 	t.Run("invalid id", func(t *testing.T) {
 		mock := &mockCustomFieldRepo{}
 		h := NewCustomFieldHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/custom-fields/invalid", opts)
+		c, rec := newGetContext(e, "/api/v1/custom-fields/invalid", opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Get(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Get(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -223,12 +226,13 @@ func TestCustomFieldHandler_Delete(t *testing.T) {
 			},
 		}
 		h := NewCustomFieldHandler(mock)
-		c, _ := newDeleteContext(e, "/api/v1/custom-fields/"+uuid.New().String(), opts)
+		c, rec := newDeleteContext(e, "/api/v1/custom-fields/"+uuid.New().String(), opts)
 		c.SetParamNames("id")
 		c.SetParamValues(uuid.New().String())
 
-		if err := h.Delete(c); err == nil {
-			t.Fatal("expected error for delete failure")
+		_ = h.Delete(c)
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 		}
 	})
 }
@@ -265,10 +269,11 @@ func TestCustomFieldHandler_Reorder(t *testing.T) {
 		mock := &mockCustomFieldRepo{}
 		h := NewCustomFieldHandler(mock)
 		body := `{"field_ids":["invalid-uuid"]}`
-		c, _ := newPostContext(e, "/api/v1/custom-fields/reorder", body, opts)
+		c, rec := newPostContext(e, "/api/v1/custom-fields/reorder", body, opts)
 
-		if err := h.Reorder(c); err == nil {
-			t.Fatal("expected error for invalid UUID")
+		_ = h.Reorder(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }

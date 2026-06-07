@@ -105,18 +105,15 @@ func TestRequireRole_MissingRoles(t *testing.T) {
 }
 
 func TestRecover_Panics(t *testing.T) {
-	c, _ := echoContext(http.MethodGet, "/")
+	c, rec := echoContext(http.MethodGet, "/")
 
 	handler := Recover()(func(c echo.Context) error {
 		panic("test panic")
 	})
 
-	err := handler(c)
-	if err == nil {
-		t.Fatal("expected error from panic recovery")
-	}
-	if err != echo.ErrInternalServerError {
-		t.Errorf("expected ErrInternalServerError, got %v", err)
+	_ = handler(c)
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 	}
 }
 

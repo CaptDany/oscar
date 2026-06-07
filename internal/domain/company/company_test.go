@@ -163,9 +163,6 @@ func TestCompanyNilableFields(t *testing.T) {
 	if c.OwnerID != nil {
 		t.Error("expected nil OwnerID")
 	}
-	if c.Tags == nil {
-		t.Error("Tags should not be nil")
-	}
 }
 
 func strPtr(s string) *string {

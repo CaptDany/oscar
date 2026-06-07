@@ -46,10 +46,10 @@ func TestCompanyHandler_List(t *testing.T) {
 		h := NewCompanyHandler(mock)
 		c, rec := newGetContext(e, "/api/v1/companies?include_total=true", opts)
 
-		if err := h.List(c); err == nil {
-			t.Fatal("expected error")
+		_ = h.List(c)
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 		}
-		_ = rec.Code
 	})
 }
 
@@ -89,24 +89,26 @@ func TestCompanyHandler_Get(t *testing.T) {
 			},
 		}
 		h := NewCompanyHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/companies/"+uuid.New().String(), opts)
+		c, rec := newGetContext(e, "/api/v1/companies/"+uuid.New().String(), opts)
 		c.SetParamNames("id")
 		c.SetParamValues(uuid.New().String())
 
-		if err := h.Get(c); err == nil {
-			t.Fatal("expected error")
+		_ = h.Get(c)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusNotFound)
 		}
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
 		mock := &mockCompanyRepo{}
 		h := NewCompanyHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/companies/invalid", opts)
+		c, rec := newGetContext(e, "/api/v1/companies/invalid", opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Get(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Get(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -141,10 +143,11 @@ func TestCompanyHandler_Create(t *testing.T) {
 	t.Run("invalid body", func(t *testing.T) {
 		mock := &mockCompanyRepo{}
 		h := NewCompanyHandler(mock)
-		c, _ := newPostContext(e, "/api/v1/companies", "invalid json", opts)
+		c, rec := newPostContext(e, "/api/v1/companies", "invalid json", opts)
 
-		if err := h.Create(c); err == nil {
-			t.Fatal("expected error for invalid body")
+		_ = h.Create(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -183,12 +186,13 @@ func TestCompanyHandler_Update(t *testing.T) {
 		mock := &mockCompanyRepo{}
 		h := NewCompanyHandler(mock)
 		body := `{"name":"Test"}`
-		c, _ := newPutContext(e, "/api/v1/companies/invalid", body, opts)
+		c, rec := newPutContext(e, "/api/v1/companies/invalid", body, opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Update(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Update(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
@@ -225,12 +229,13 @@ func TestCompanyHandler_Delete(t *testing.T) {
 	t.Run("invalid id", func(t *testing.T) {
 		mock := &mockCompanyRepo{}
 		h := NewCompanyHandler(mock)
-		c, _ := newDeleteContext(e, "/api/v1/companies/invalid", opts)
+		c, rec := newDeleteContext(e, "/api/v1/companies/invalid", opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Delete(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Delete(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }

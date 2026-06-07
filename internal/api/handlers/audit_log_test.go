@@ -89,10 +89,11 @@ func TestAuditLogHandler_List(t *testing.T) {
 			},
 		}
 		h := NewAuditLogHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/audit-logs", opts)
+		c, rec := newGetContext(e, "/api/v1/audit-logs", opts)
 
-		if err := h.List(c); err == nil {
-			t.Fatal("expected error")
+		_ = h.List(c)
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
 		}
 	})
 }
@@ -135,24 +136,26 @@ func TestAuditLogHandler_Get(t *testing.T) {
 			},
 		}
 		h := NewAuditLogHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/audit-logs/"+uuid.New().String(), opts)
+		c, rec := newGetContext(e, "/api/v1/audit-logs/"+uuid.New().String(), opts)
 		c.SetParamNames("id")
 		c.SetParamValues(uuid.New().String())
 
-		if err := h.Get(c); err == nil {
-			t.Fatal("expected error")
+		_ = h.Get(c)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusNotFound)
 		}
 	})
 
 	t.Run("invalid id", func(t *testing.T) {
 		mock := &mockAuditLogRepo{}
 		h := NewAuditLogHandler(mock)
-		c, _ := newGetContext(e, "/api/v1/audit-logs/invalid", opts)
+		c, rec := newGetContext(e, "/api/v1/audit-logs/invalid", opts)
 		c.SetParamNames("id")
 		c.SetParamValues("invalid")
 
-		if err := h.Get(c); err == nil {
-			t.Fatal("expected error for invalid id")
+		_ = h.Get(c)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 		}
 	})
 }
