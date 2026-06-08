@@ -1,13 +1,28 @@
 replicaCount: 1
 
 image:
-  repository: oscar/oscar
-  pullPolicy: IfNotPresent
+  repository: ghcr.io/captdany/oscar
+  pullPolicy: Always
   tag: "latest"
 
-imagePullSecrets: []
+imagePullSecrets:
+  - name: ghcr-pull
+# Provider-agnostic: works with any K8s cluster.
+# For OKE free tier: create pull secret manually (no OIDC free support):
+#   kubectl create secret docker-registry ghcr-pull \
+#     --docker-server=ghcr.io \
+#     --docker-username=<user> \
+#     --docker-password=<PAT> \
+#     -n <namespace>
+# For GKE/AKS/EKS with OIDC: remove this block and rely on Workload Identity.
+# See docs/CI-CD.md: "Provider Migration" for switching instructions.
+
 nameOverride: ""
 fullnameOverride: ""
+
+ci:
+  buildNumber: ""
+  commitSha: ""
 
 serviceAccount:
   create: true
@@ -42,14 +57,14 @@ ingress:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   hosts:
-    - host: crm.example.com
+    - host: oscar-crm.cc
       paths:
         - path: /
           pathType: Prefix
   tls:
     - secretName: oscar-tls
       hosts:
-        - crm.example.com
+        - oscar-crm.cc
 
 resources:
   limits:
@@ -67,7 +82,6 @@ autoscaling:
   targetMemoryUtilizationPercentage: 80
 
 nodeSelector: {}
-
 tolerations: []
 
 affinity:
@@ -86,6 +100,7 @@ affinity:
 env:
   APP_ENV: production
   APP_PORT: "8080"
+  APP_BASE_URL: "https://oscar-crm.cc"
   DATABASE_URL: ""
   REDIS_URL: ""
   R2_ACCOUNT_ID: ""
@@ -98,9 +113,6 @@ secret:
   enabled: true
   annotations: {}
   data: {}
-  # Example:
-  # data:
-  #   APP_SECRET: ZW5jb2RlZC1zZWNyZXQtaGVyZS1tdXN0LWJlLWF0LWxlYXN0LTI1Ni1iaXRz
 
 livenessProbe:
   httpGet:
@@ -122,8 +134,7 @@ readinessProbe:
 
 postgresql:
   enabled: false
-  # Set to true if you want to deploy PostgreSQL as part of this chart
-  # external database recommended for production
+  # Set to true only if deploying Postgres via Helm
   externalHost: ""
   externalPort: 5432
   database: oscar
@@ -131,7 +142,6 @@ postgresql:
 
 redis:
   enabled: false
-  # Set to true if you want to deploy Redis as part of this chart
-  # external redis recommended for production
+  # Set to true only if deploying Redis via Helm
   externalHost: ""
   externalPort: 6379
