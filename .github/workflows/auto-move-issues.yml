@@ -1,0 +1,59 @@
+name: Auto-Move Issues on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  close-linked-issues:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract issue references from PR
+        id: extract
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const title = context.payload.pull_request.title;
+            const regex = /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+#(\d+)/gi;
+            const titleRegex = /#(\d+)/;
+            let match = regex.exec(body);
+            let issueNum = match ? match[1] : null;
+            if (!issueNum) {
+              const tMatch = title.match(titleRegex);
+              issueNum = tMatch ? tMatch[1] : null;
+            }
+            return issueNum || '';
+
+      - name: Add done label and comment
+        if: steps.extract.outputs.result != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const issueNumber = parseInt('${{ steps.extract.outputs.result }}');
+            if (isNaN(issueNumber)) return;
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['status/done']
+              });
+            } catch (e) {
+              console.log('Label may not exist:', e.message);
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: '✅ Delivered in PR #' + context.payload.pull_request.number
+            });

@@ -191,8 +191,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("%w: %s", ErrInvalidDatabase, c.Database.URL)
 	}
 
-	if _, err := url.Parse(c.Redis.URL); err != nil || c.Redis.URL == "" {
-		return fmt.Errorf("%w: %s", ErrInvalidRedis, c.Redis.URL)
+	if c.Redis.URL != "" {
+		if _, err := url.Parse(c.Redis.URL); err != nil {
+			return fmt.Errorf("%w: %s", ErrInvalidRedis, c.Redis.URL)
+		}
 	}
 
 	return nil

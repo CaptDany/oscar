@@ -17,6 +17,7 @@ import (
 	"github.com/oscar/oscar/internal/api"
 	"github.com/oscar/oscar/internal/api/handlers"
 	"github.com/oscar/oscar/internal/api/middleware"
+	"github.com/oscar/oscar/internal/cache"
 	"github.com/oscar/oscar/internal/config"
 	"github.com/oscar/oscar/internal/db/repositories"
 	"github.com/oscar/oscar/internal/email"
@@ -42,21 +43,32 @@ func main() {
 
 	var redisClient *redis.Client
 	var rateLimiter *middleware.InMemoryRateLimiter
+	var cacheSvc cache.Cache
 
 	if cfg.Redis.URL != "" {
 		u, err := url.Parse(cfg.Redis.URL)
 		if err != nil {
-			log.Printf("[RateLimit] Invalid Redis URL: %v", err)
+			log.Printf("[Cache] Invalid Redis URL: %v", err)
 		} else {
+			var password string
+			if u.User != nil {
+				password, _ = u.User.Password()
+			}
+
 			redisClient = redis.NewClient(&redis.Options{
-				Addr: u.Host,
+				Addr:        u.Host,
+				Password:    password,
+				DB:          cfg.Redis.DB,
+				PoolSize:    cfg.Redis.PoolSize,
+				PoolTimeout: cfg.Redis.PoolTimeout,
 			})
 
 			if err := redisClient.Ping(context.Background()).Err(); err != nil {
-				log.Printf("[RateLimit] Redis unavailable, using in-memory fallback: %v", err)
+				log.Printf("[Cache] Redis unavailable, using in-memory fallback: %v", err)
 				redisClient = nil
 			} else {
-				log.Println("[RateLimit] Redis connected successfully")
+				log.Println("[Cache] Redis connected successfully")
+				cacheSvc = cache.NewRedisCache(redisClient)
 			}
 		}
 	}
@@ -85,6 +97,11 @@ func main() {
 	invitationRepo := repositories.NewInvitationRepository(pool)
 	auditLogRepo := repositories.NewAuditLogRepository(pool)
 	apiKeyRepo := repositories.NewAPIKeyRepository(pool)
+
+	if cacheSvc != nil {
+		tenantRepo.SetCache(cacheSvc)
+		brandingRepo.SetCache(cacheSvc)
+	}
 
 	server := api.New()
 
