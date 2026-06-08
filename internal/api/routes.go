@@ -50,6 +50,8 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	auth := api.Group("", authMiddleware)
 	auth.POST("/auth/logout", h.Auth.Logout)
 	auth.GET("/auth/me", h.Auth.Me)
+	auth.PATCH("/users/me", h.User.UpdateMe)
+	auth.GET("/export", h.User.Export)
 	auth.POST("/upload/avatar", h.Upload.GetAvatarPresignedURL)
 	auth.POST("/upload/avatar/confirm", h.Upload.ConfirmAvatarUpload)
 

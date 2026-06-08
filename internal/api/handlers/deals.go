@@ -59,6 +59,7 @@ type ListDealsQuery struct {
 	StageID    string `query:"stage_id"`
 	PipelineID string `query:"pipeline_id"`
 	OwnerID    string `query:"owner_id"`
+	CompanyID  string `query:"company_id"`
 	Search     string `query:"search"`
 	Cursor     string `query:"cursor"`
 	Limit      int    `query:"limit"`
@@ -101,6 +102,14 @@ func (h *DealHandler) List(c echo.Context) error {
 			return errs.BadRequest("Invalid owner_id").HTTPError(c)
 		}
 		filter.OwnerID = &ownerID
+	}
+
+	if query.CompanyID != "" {
+		companyID, err := uuid.Parse(query.CompanyID)
+		if err != nil {
+			return errs.BadRequest("Invalid company_id").HTTPError(c)
+		}
+		filter.CompanyID = &companyID
 	}
 
 	deals, nextCursor, total, err := h.dealRepo.List(c.Request().Context(), tenantID, filter)

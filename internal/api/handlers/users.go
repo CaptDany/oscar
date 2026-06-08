@@ -7,22 +7,28 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
+	"github.com/oscar/oscar/internal/domain/deal"
+	"github.com/oscar/oscar/internal/domain/person"
 	"github.com/oscar/oscar/internal/domain/user"
 	"github.com/oscar/oscar/internal/storage"
 	"github.com/oscar/oscar/pkg/errs"
 )
 
 type UserHandler struct {
-	userRepo user.Repository
-	roleRepo user.RoleRepository
-	storage  *storage.R2Client
+	userRepo   user.Repository
+	roleRepo   user.RoleRepository
+	personRepo person.Repository
+	dealRepo   deal.Repository
+	storage    *storage.R2Client
 }
 
-func NewUserHandler(userRepo user.Repository, roleRepo user.RoleRepository, storage *storage.R2Client) *UserHandler {
+func NewUserHandler(userRepo user.Repository, roleRepo user.RoleRepository, personRepo person.Repository, dealRepo deal.Repository, storage *storage.R2Client) *UserHandler {
 	return &UserHandler{
-		userRepo: userRepo,
-		roleRepo: roleRepo,
-		storage:  storage,
+		userRepo:   userRepo,
+		roleRepo:   roleRepo,
+		personRepo: personRepo,
+		dealRepo:   dealRepo,
+		storage:    storage,
 	}
 }
 
@@ -250,5 +256,97 @@ func (h *UserHandler) Update(c echo.Context) error {
 		"locale":     updatedUser.Locale,
 		"is_active":  updatedUser.IsActive,
 		"roles":      roleNames,
+	})
+}
+
+func (h *UserHandler) UpdateMe(c echo.Context) error {
+	userID := c.Get("user_id").(uuid.UUID)
+
+	var req UpdateUserRequest
+	if err := c.Bind(&req); err != nil {
+		return errs.BadRequest("Invalid request body").HTTPError(c)
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return errs.ValidationFailed().HTTPError(c)
+	}
+
+	domainReq := &user.UpdateUserRequest{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		AvatarURL: req.AvatarURL,
+		Timezone:  req.Timezone,
+		Locale:    req.Locale,
+	}
+
+	updatedUser, err := h.userRepo.Update(c.Request().Context(), userID, domainReq)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	roles, _ := h.roleRepo.GetUserRoles(c.Request().Context(), updatedUser.ID)
+	var roleNames []string
+	for _, r := range roles {
+		roleNames = append(roleNames, r.Name)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"id":         updatedUser.ID,
+		"tenant_id":  updatedUser.TenantID,
+		"email":      updatedUser.Email,
+		"first_name": updatedUser.FirstName,
+		"last_name":  updatedUser.LastName,
+		"avatar_url": h.getAvatarURL(c, updatedUser.AvatarURL),
+		"timezone":   updatedUser.Timezone,
+		"locale":     updatedUser.Locale,
+		"is_active":  updatedUser.IsActive,
+		"roles":      roleNames,
+	})
+}
+
+func (h *UserHandler) Export(c echo.Context) error {
+	userID := c.Get("user_id").(uuid.UUID)
+
+	u, err := h.userRepo.GetByID(c.Request().Context(), userID)
+	if err != nil {
+		return errs.NotFound("User not found").HTTPError(c)
+	}
+
+	tenantID := u.TenantID
+
+	roles, _ := h.roleRepo.GetUserRoles(c.Request().Context(), u.ID)
+	var roleNames []string
+	for _, r := range roles {
+		roleNames = append(roleNames, r.Name)
+	}
+
+	personCount := 0
+	personFilter := &person.ListPersonsFilter{Limit: 1}
+	_, _, personTotal, err := h.personRepo.List(c.Request().Context(), tenantID, personFilter)
+	if err == nil {
+		personCount = personTotal
+	}
+
+	dealCount := 0
+	dealFilter := &deal.ListDealsFilter{Limit: 1}
+	_, _, dealTotal, err := h.dealRepo.List(c.Request().Context(), tenantID, dealFilter)
+	if err == nil {
+		dealCount = dealTotal
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"user": map[string]interface{}{
+			"id":         u.ID,
+			"email":      u.Email,
+			"first_name": u.FirstName,
+			"last_name":  u.LastName,
+			"is_active":  u.IsActive,
+			"created_at": u.CreatedAt,
+			"roles":      roleNames,
+		},
+		"stats": map[string]int{
+			"persons_count": personCount,
+			"deals_count":   dealCount,
+		},
 	})
 }

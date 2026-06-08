@@ -111,6 +111,7 @@ type ListDealsFilter struct {
 	PipelineID *uuid.UUID
 	OwnerID    *uuid.UUID
 	PersonID   *uuid.UUID
+	CompanyID  *uuid.UUID
 	Search     string
 	Cursor     string
 	Limit      int
