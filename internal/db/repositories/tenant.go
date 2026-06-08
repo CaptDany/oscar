@@ -11,16 +11,28 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/oscar/oscar/internal/cache"
 	"github.com/oscar/oscar/internal/db/generated"
 	"github.com/oscar/oscar/internal/domain/tenant"
 )
 
+const (
+	cacheKeyTenant    = "cache:tenant:%s"
+	cacheKeyBranding  = "cache:branding:%s"
+	cacheTTL          = 10 * time.Minute
+)
+
 type TenantRepository struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache cache.Cache
 }
 
 func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
 	return &TenantRepository{pool: pool}
+}
+
+func (r *TenantRepository) SetCache(c cache.Cache) {
+	r.cache = c
 }
 
 func (r *TenantRepository) Create(ctx context.Context, req *tenant.CreateTenantRequest) (*tenant.Tenant, error) {
@@ -78,6 +90,14 @@ func (r *TenantRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *tenant.
 }
 
 func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*tenant.Tenant, error) {
+	if r.cache != nil {
+		key := fmt.Sprintf(cacheKeyTenant, id.String())
+		var cached tenant.Tenant
+		if err := r.cache.Get(ctx, key, &cached); err == nil {
+			return &cached, nil
+		}
+	}
+
 	query := `SELECT id, slug, name, status, subscription_tier, settings, created_at, updated_at, invite_only FROM tenants WHERE id = $1`
 
 	var row generated.Tenant
@@ -92,7 +112,14 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*tenant.T
 		return nil, fmt.Errorf("tenant.GetByID: %w", err)
 	}
 
-	return mapTenantRowToDomain(&row), nil
+	result := mapTenantRowToDomain(&row)
+
+	if r.cache != nil {
+		key := fmt.Sprintf(cacheKeyTenant, id.String())
+		_ = r.cache.Set(ctx, key, result, cacheTTL)
+	}
+
+	return result, nil
 }
 
 func (r *TenantRepository) GetBySlug(ctx context.Context, slug string) (*tenant.Tenant, error) {
@@ -140,7 +167,14 @@ func (r *TenantRepository) Update(ctx context.Context, id uuid.UUID, req *tenant
 		return nil, fmt.Errorf("tenant.Update: %w", err)
 	}
 
-	return mapTenantRowToDomain(&row), nil
+	result := mapTenantRowToDomain(&row)
+
+	if r.cache != nil {
+		key := fmt.Sprintf(cacheKeyTenant, id.String())
+		_ = r.cache.Set(ctx, key, result, cacheTTL)
+	}
+
+	return result, nil
 }
 
 func (r *TenantRepository) SeedRoles(ctx context.Context, tenantID uuid.UUID) error {
@@ -190,17 +224,30 @@ func mapTenantRowToDomain(row *generated.Tenant) *tenant.Tenant {
 }
 
 type BrandingRepository struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache cache.Cache
 }
 
 func NewBrandingRepository(pool *pgxpool.Pool) *BrandingRepository {
 	return &BrandingRepository{pool: pool}
 }
 
+func (r *BrandingRepository) SetCache(c cache.Cache) {
+	r.cache = c
+}
+
 func (r *BrandingRepository) Get(ctx context.Context, tenantID uuid.UUID) (*tenant.TenantBranding, error) {
+	if r.cache != nil {
+		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
+		var cached tenant.TenantBranding
+		if err := r.cache.Get(ctx, key, &cached); err == nil {
+			return &cached, nil
+		}
+	}
+
 	query := `SELECT * FROM tenant_branding WHERE tenant_id = $1`
 
-var row generated.TenantBranding
+	var row generated.TenantBranding
 	err := r.pool.QueryRow(ctx, query, tenantID).Scan(
 		&row.TenantID, &row.LogoLightUrl, &row.LogoDarkUrl, &row.FaviconUrl,
 		&row.PrimaryColor, &row.SecondaryColor, &row.AccentColor,
@@ -214,7 +261,14 @@ var row generated.TenantBranding
 		return nil, fmt.Errorf("branding.Get: %w", err)
 	}
 
-	return mapBrandingRowToDomain(&row), nil
+	result := mapBrandingRowToDomain(&row)
+
+	if r.cache != nil {
+		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
+		_ = r.cache.Set(ctx, key, result, cacheTTL)
+	}
+
+	return result, nil
 }
 
 func (r *BrandingRepository) Create(ctx context.Context, tenantID uuid.UUID) (*tenant.TenantBranding, error) {
@@ -235,7 +289,14 @@ func (r *BrandingRepository) Create(ctx context.Context, tenantID uuid.UUID) (*t
 		return nil, fmt.Errorf("branding.Create: %w", err)
 	}
 
-	return mapBrandingRowToDomain(&row), nil
+	result := mapBrandingRowToDomain(&row)
+
+	if r.cache != nil {
+		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
+		_ = r.cache.Set(ctx, key, result, cacheTTL)
+	}
+
+	return result, nil
 }
 
 func (r *BrandingRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*tenant.TenantBranding, error) {
@@ -257,6 +318,13 @@ func (r *BrandingRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID u
 	}
 
 	return mapBrandingRowToDomain(&row), nil
+}
+
+func (r *BrandingRepository) invalidateBrandingCache(ctx context.Context, tenantID uuid.UUID) {
+	if r.cache != nil {
+		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
+		_ = r.cache.Delete(ctx, key)
+	}
 }
 
 func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req *tenant.UpdateBrandingRequest) (*tenant.TenantBranding, error) {
@@ -311,6 +379,8 @@ func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req
 	if err != nil {
 		return nil, fmt.Errorf("branding.Update: %w", err)
 	}
+
+	r.invalidateBrandingCache(ctx, tenantID)
 
 	return r.Get(ctx, tenantID)
 }
@@ -382,6 +452,8 @@ func (r *BrandingRepository) UpdateBrandAssets(ctx context.Context, tenantID uui
 	if err != nil {
 		return fmt.Errorf("branding.UpdateBrandAssets: %w", err)
 	}
+
+	r.invalidateBrandingCache(ctx, tenantID)
 	return nil
 }
 
