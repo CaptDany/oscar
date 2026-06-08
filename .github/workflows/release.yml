@@ -1,48 +1,92 @@
-name: Create Release
+name: Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump (ignored on tag push)"
+        required: false
+        default: minor
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      preid:
+        description: "Pre-release identifier (e.g., rc, beta)"
+        required: false
+        type: string
 
-permissions:
-  contents: write
-  discussions: write
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
+    name: Create Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Generate release notes
-        id: release
-        uses: actions/github-script@v6
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Tag push — use the tag name
+            TAG="${{ github.ref }}"
+            TAG="${TAG#refs/tags/}"
+            echo "new_tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "source=tag" >> "$GITHUB_OUTPUT"
+          else
+            # Manual dispatch — calculate from conventional commits
+            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            MAJOR=$(echo "$LAST_TAG" | sed 's/v//' | cut -d. -f1)
+            MINOR=$(echo "$LAST_TAG" | sed 's/v//' | cut -d. -f2)
+            PATCH=$(echo "$LAST_TAG" | sed 's/v//' | cut -d. -f3)
+            case "${{ github.event.inputs.bump }}" in
+              major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+              minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+              patch) PATCH=$((PATCH+1)) ;;
+            esac
+            NEW_TAG="v$MAJOR.$MINOR.$PATCH"
+            [ -n "${{ github.event.inputs.preid }}" ] && NEW_TAG="${NEW_TAG}-${{ github.event.inputs.preid }}.1"
+            echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+            echo "source=manual" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create git tag (manual only)
+        if: steps.version.outputs.source == 'manual'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.new_tag }}" -m "Release ${{ steps.version.outputs.new_tag }}"
+          git push origin "${{ steps.version.outputs.new_tag }}"
+
+      - name: Generate changelog
+        id: changelog
+        uses: actions/github-script@v7
         with:
           script: |
-            const tag = context.ref.replace('refs/tags/', '');
-            const response = await github.rest.repos.generateReleaseNotes({
+            const tag = '${{ steps.version.outputs.new_tag }}';
+            const { data: notes } = await github.rest.repos.generateReleaseNotes({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
             });
-            core.setOutput('notes', response.data.body);
+            return notes.body;
 
-      - name: Create Release
-        uses: actions/github-script@v6
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          script: |
-            const tag = context.ref.replace('refs/tags/', '');
-            const notes = `${{ steps.release.outputs.notes }}`;
-
-            await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: tag,
-              name: tag,
-              body: notes,
-              generate_release_notes: true
-            });
+          tag_name: ${{ steps.version.outputs.new_tag }}
+          name: Release ${{ steps.version.outputs.new_tag }}
+          body: ${{ steps.changelog.outputs.result }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.new_tag, '-') }}

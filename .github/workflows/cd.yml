@@ -1,0 +1,219 @@
+name: CD
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+env:
+  GO_VERSION: "1.24"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DOCKERFILE: docker/Dockerfile
+
+jobs:
+  version:
+    name: Calculate Version
+    runs-on: ubuntu-latest
+    outputs:
+      semver: ${{ steps.semver.outputs.semver }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Calculate semantic version
+        id: semver
+        run: |
+          if git describe --tags --abbrev=0 2>/dev/null; then
+            LAST_TAG=$(git describe --tags --abbrev=0)
+            COMMITS=$(git rev-list --count "$LAST_TAG"..HEAD)
+            MAJOR=$(echo "$LAST_TAG" | sed 's/v//' | cut -d. -f1)
+            MINOR=$(echo "$LAST_TAG" | cut -d. -f2)
+            PATCH=$(echo "$LAST_TAG" | cut -d. -f3)
+          else
+            MAJOR=0; MINOR=1; PATCH=0; COMMITS=0
+          fi
+          [ "$COMMITS" -gt 0 ] && PATCH=$COMMITS
+          echo "semver=$MAJOR.$MINOR.$PATCH+${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    name: Build & Push Image
+    needs: [version]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    outputs:
+      image-ref: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.semver }}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+      - uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - id: image
+        run: echo "ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+  deploy-dev:
+    name: Deploy to Dev
+    needs: [version, build-and-push]
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: ${{ steps.deploy-url.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure kubectl (provider-agnostic via kubeconfig secret)
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
+      - name: Deploy Helm chart
+        run: |
+          helm upgrade --install oscar deploy/helm/opencrm \
+            --namespace oscar-dev --create-namespace \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.version.outputs.semver }} \
+            --set image.pullPolicy=Always \
+            --set ci.buildNumber=${{ github.run_id }} \
+            --set ci.commitSha=${{ github.sha }} \
+            --set env.APP_ENV=development \
+            --set env.APP_BASE_URL=https://dev.oscar-crm.cc \
+            --atomic --wait --timeout 5m
+      - id: deploy-url
+        run: echo "url=https://dev.oscar-crm.cc" >> "$GITHUB_OUTPUT"
+      - name: Smoke test
+        run: |
+          sleep 10
+          curl -sf --retry 10 --retry-delay 5 --retry-connrefused \
+            https://dev.oscar-crm.cc/health || exit 1
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [version, build-and-push, deploy-dev]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy-url.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+      - name: Deploy Helm chart
+        run: |
+          helm upgrade --install oscar deploy/helm/opencrm \
+            --namespace oscar-staging --create-namespace \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.version.outputs.semver }} \
+            --set image.pullPolicy=Always \
+            --set ci.buildNumber=${{ github.run_id }} \
+            --set ci.commitSha=${{ github.sha }} \
+            --set replicaCount=2 \
+            --set env.APP_ENV=staging \
+            --set env.APP_BASE_URL=https://staging.oscar-crm.cc \
+            --atomic --wait --timeout 5m
+      - id: deploy-url
+        run: echo "url=https://staging.oscar-crm.cc" >> "$GITHUB_OUTPUT"
+      - name: Smoke test
+        run: |
+          sleep 10
+          curl -sf --retry 10 --retry-delay 5 --retry-connrefused \
+            https://staging.oscar-crm.cc/health || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [version, build-and-push, deploy-staging]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy-url.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+      - name: Deploy Helm chart
+        run: |
+          helm upgrade --install oscar deploy/helm/opencrm \
+            --namespace oscar-production --create-namespace \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.version.outputs.semver }} \
+            --set image.pullPolicy=Always \
+            --set ci.buildNumber=${{ github.run_id }} \
+            --set ci.commitSha=${{ github.sha }} \
+            --set replicaCount=3 \
+            --set env.APP_ENV=production \
+            --set env.APP_BASE_URL=https://oscar-crm.cc \
+            --set autoscaling.enabled=true \
+            --set autoscaling.minReplicas=2 \
+            --set autoscaling.maxReplicas=10 \
+            --atomic --wait --timeout 10m
+      - id: deploy-url
+        run: echo "url=https://oscar-crm.cc" >> "$GITHUB_OUTPUT"
+      - name: Canary smoke test
+        run: |
+          for i in $(seq 1 20); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://oscar-crm.cc/health)
+            if [ "$STATUS" = "200" ]; then
+              echo "Passed"; exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+      - name: Record deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'production',
+              auto_merge: false,
+              required_contexts: []
+            });
