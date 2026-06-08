@@ -3,11 +3,14 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
+
+var ErrCacheMiss = errors.New("cache miss")
 
 type Cache interface {
 	Get(ctx context.Context, key string, dest interface{}) error
@@ -15,6 +18,15 @@ type Cache interface {
 	Delete(ctx context.Context, key string) error
 	Exists(ctx context.Context, key string) (bool, error)
 }
+
+type noopCache struct{}
+
+func (noopCache) Get(_ context.Context, key string, _ interface{}) error { return fmt.Errorf("%w: %s", ErrCacheMiss, key) }
+func (noopCache) Set(_ context.Context, _ string, _ interface{}, _ time.Duration) error { return nil }
+func (noopCache) Delete(_ context.Context, _ string) error { return nil }
+func (noopCache) Exists(_ context.Context, _ string) (bool, error) { return false, nil }
+
+func NewNoopCache() Cache { return noopCache{} }
 
 type RedisCache struct {
 	client *redis.Client
@@ -27,7 +39,7 @@ func NewRedisCache(client *redis.Client) *RedisCache {
 func (c *RedisCache) Get(ctx context.Context, key string, dest interface{}) error {
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err == redis.Nil {
-		return fmt.Errorf("cache miss: %s", key)
+		return fmt.Errorf("%w: %s", ErrCacheMiss, key)
 	}
 	if err != nil {
 		return fmt.Errorf("cache get: %w", err)

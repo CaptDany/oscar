@@ -28,7 +28,7 @@ type TenantRepository struct {
 }
 
 func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
-	return &TenantRepository{pool: pool}
+	return &TenantRepository{pool: pool, cache: cache.NewNoopCache()}
 }
 
 func (r *TenantRepository) SetCache(c cache.Cache) {
@@ -90,12 +90,10 @@ func (r *TenantRepository) CreateTx(ctx context.Context, tx pgx.Tx, req *tenant.
 }
 
 func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*tenant.Tenant, error) {
-	if r.cache != nil {
-		key := fmt.Sprintf(cacheKeyTenant, id.String())
-		var cached tenant.Tenant
-		if err := r.cache.Get(ctx, key, &cached); err == nil {
-			return &cached, nil
-		}
+	key := fmt.Sprintf(cacheKeyTenant, id.String())
+	var cached tenant.Tenant
+	if err := r.cache.Get(ctx, key, &cached); err == nil {
+		return &cached, nil
 	}
 
 	query := `SELECT id, slug, name, status, subscription_tier, settings, created_at, updated_at, invite_only FROM tenants WHERE id = $1`
@@ -114,10 +112,8 @@ func (r *TenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*tenant.T
 
 	result := mapTenantRowToDomain(&row)
 
-	if r.cache != nil {
-		key := fmt.Sprintf(cacheKeyTenant, id.String())
-		_ = r.cache.Set(ctx, key, result, cacheTTL)
-	}
+	key = fmt.Sprintf(cacheKeyTenant, id.String())
+	_ = r.cache.Set(ctx, key, result, cacheTTL)
 
 	return result, nil
 }
@@ -169,10 +165,8 @@ func (r *TenantRepository) Update(ctx context.Context, id uuid.UUID, req *tenant
 
 	result := mapTenantRowToDomain(&row)
 
-	if r.cache != nil {
-		key := fmt.Sprintf(cacheKeyTenant, id.String())
-		_ = r.cache.Set(ctx, key, result, cacheTTL)
-	}
+	key := fmt.Sprintf(cacheKeyTenant, id.String())
+	_ = r.cache.Set(ctx, key, result, cacheTTL)
 
 	return result, nil
 }
@@ -229,7 +223,7 @@ type BrandingRepository struct {
 }
 
 func NewBrandingRepository(pool *pgxpool.Pool) *BrandingRepository {
-	return &BrandingRepository{pool: pool}
+	return &BrandingRepository{pool: pool, cache: cache.NewNoopCache()}
 }
 
 func (r *BrandingRepository) SetCache(c cache.Cache) {
@@ -237,12 +231,10 @@ func (r *BrandingRepository) SetCache(c cache.Cache) {
 }
 
 func (r *BrandingRepository) Get(ctx context.Context, tenantID uuid.UUID) (*tenant.TenantBranding, error) {
-	if r.cache != nil {
-		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
-		var cached tenant.TenantBranding
-		if err := r.cache.Get(ctx, key, &cached); err == nil {
-			return &cached, nil
-		}
+	key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
+	var cached tenant.TenantBranding
+	if err := r.cache.Get(ctx, key, &cached); err == nil {
+		return &cached, nil
 	}
 
 	query := `SELECT * FROM tenant_branding WHERE tenant_id = $1`
@@ -263,10 +255,8 @@ func (r *BrandingRepository) Get(ctx context.Context, tenantID uuid.UUID) (*tena
 
 	result := mapBrandingRowToDomain(&row)
 
-	if r.cache != nil {
-		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
-		_ = r.cache.Set(ctx, key, result, cacheTTL)
-	}
+	key = fmt.Sprintf(cacheKeyBranding, tenantID.String())
+	_ = r.cache.Set(ctx, key, result, cacheTTL)
 
 	return result, nil
 }
@@ -291,10 +281,8 @@ func (r *BrandingRepository) Create(ctx context.Context, tenantID uuid.UUID) (*t
 
 	result := mapBrandingRowToDomain(&row)
 
-	if r.cache != nil {
-		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
-		_ = r.cache.Set(ctx, key, result, cacheTTL)
-	}
+	key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
+	_ = r.cache.Set(ctx, key, result, cacheTTL)
 
 	return result, nil
 }
@@ -321,10 +309,8 @@ func (r *BrandingRepository) CreateTx(ctx context.Context, tx pgx.Tx, tenantID u
 }
 
 func (r *BrandingRepository) invalidateBrandingCache(ctx context.Context, tenantID uuid.UUID) {
-	if r.cache != nil {
-		key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
-		_ = r.cache.Delete(ctx, key)
-	}
+	key := fmt.Sprintf(cacheKeyBranding, tenantID.String())
+	_ = r.cache.Delete(ctx, key)
 }
 
 func (r *BrandingRepository) Update(ctx context.Context, tenantID uuid.UUID, req *tenant.UpdateBrandingRequest) (*tenant.TenantBranding, error) {
