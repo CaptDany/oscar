@@ -84,6 +84,7 @@ func main() {
 	brandingRepo := repositories.NewBrandingRepository(pool)
 	invitationRepo := repositories.NewInvitationRepository(pool)
 	auditLogRepo := repositories.NewAuditLogRepository(pool)
+	apiKeyRepo := repositories.NewAPIKeyRepository(pool)
 
 	server := api.New()
 
@@ -125,6 +126,7 @@ func main() {
 	customFieldHandler := handlers.NewCustomFieldHandler(customFieldRepo)
 	lineItemHandler := handlers.NewLineItemHandler(lineItemRepo, dealRepo)
 	auditLogHandler := handlers.NewAuditLogHandler(auditLogRepo)
+	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeyRepo)
 
 	server.SetupRoutes(&api.Handlers{
 		Auth:         authHandler,
@@ -144,6 +146,7 @@ func main() {
 		CustomField:  customFieldHandler,
 		LineItem:     lineItemHandler,
 		AuditLog:     auditLogHandler,
+		APIKey:       apiKeyHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
