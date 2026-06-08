@@ -97,6 +97,7 @@ func main() {
 	invitationRepo := repositories.NewInvitationRepository(pool)
 	auditLogRepo := repositories.NewAuditLogRepository(pool)
 	apiKeyRepo := repositories.NewAPIKeyRepository(pool)
+	attachmentRepo := repositories.NewAttachmentRepository(pool)
 
 	if cacheSvc != nil {
 		tenantRepo.SetCache(cacheSvc)
@@ -126,9 +127,11 @@ func main() {
 
 	var userHandler *handlers.UserHandler
 	var uploadHandler *handlers.UploadHandler
+	var attachmentHandler *handlers.AttachmentHandler
 	if r2Client != nil {
 		userHandler = handlers.NewUserHandler(userRepo, roleRepo, personRepo, dealRepo, r2Client)
 		uploadHandler = handlers.NewUploadHandler(r2Client, userRepo)
+		attachmentHandler = handlers.NewAttachmentHandler(attachmentRepo, r2Client)
 	}
 
 	authMw := middleware.Auth(tokenManager)
@@ -164,6 +167,7 @@ func main() {
 		LineItem:     lineItemHandler,
 		AuditLog:     auditLogHandler,
 		APIKey:       apiKeyHandler,
+		Attachment:   attachmentHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
