@@ -4,6 +4,9 @@
 **Phase:** Phase 1 — Foundation Gaps (Core CRM Completion)
 **Sprint:** Pre-Sprint 0 (prior to Sprint 1 establishment)
 
+> **Navigation:** [Documentation Index](../docs/README.md) → Phase 1 Retrospective
+> **See also:** [Risk Register](RISK_REGISTER.md), [Sprint 1 Board](https://github.com/users/CaptDany/projects/2)
+
 ---
 
 ## 1. What Happened

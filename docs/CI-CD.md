@@ -1,5 +1,7 @@
 # CI/CD Strategy — oscar CRM
 
+> **Navigation:** [Documentation Index](README.md) → CI/CD
+
 ## Overview
 
 This document defines the CI/CD pipeline for oscar, a multi-tenant CRM (Go 1.24+ / Echo v4 / PostgreSQL 16 / Astro). Every decision maps to Lean (Poppendieck), Continuous Delivery (Humble & Farley), and DORA (Accelerate) principles.

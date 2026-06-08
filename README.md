@@ -8,6 +8,19 @@
   <p><em>A production-grade, open-source CRM backend built in Go with multi-tenant SaaS architecture, designed for scalability and performance.</em></p>
 </div>
 
+## Quick Links
+
+| Area | Location |
+|---|---|
+| 📋 **Project Board** | [Oscar Delivery](https://github.com/users/CaptDany/projects/2) — Sprint tracking, WSJF backlog |
+| 📚 **Documentation Index** | [`docs/README.md`](docs/README.md) — All docs in one place |
+| 📖 **Frontend Docs** | [`web/README.md`](web/README.md) |
+| 📜 **Project Charter** | [`.github/PROJECT_CHARTER.md`](.github/PROJECT_CHARTER.md) — Vision, scope, risks, MVP |
+| ⚠️ **Risk Register** | [`.github/RISK_REGISTER.md`](.github/RISK_REGISTER.md) — Active risks with mitigation |
+| 🏷️ **Issue Templates** | [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) — User Story, Bug, Task, Spike, Epic |
+| 📢 **Sprint Reports** | [Discussions](https://github.com/CaptDany/oscar/discussions) — Retrospectives and status |
+| 🔄 **CI/CD** | [`docs/CI-CD.md`](docs/CI-CD.md) — Pipeline architecture, DORA metrics, runbooks |
+
 ## Features
 
 <div align="center">

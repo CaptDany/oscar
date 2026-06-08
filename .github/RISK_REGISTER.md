@@ -1,6 +1,9 @@
 # Oscar — Risk Register
 
 **PMBOK Process Group:** Risk Management (11.2 Identify Risks, 11.3 Perform Qualitative Risk Analysis)
+
+> **Navigation:** [Documentation Index](../docs/README.md) → Risk Register
+> **See also:** [Project Charter](PROJECT_CHARTER.md), [Project Board](https://github.com/users/CaptDany/projects/2)
 **Last Updated:** 2026-06-07
 **Review Cadence:** Start of every sprint
 

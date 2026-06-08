@@ -1,6 +1,9 @@
 # Oscar — Project Charter
 
 **PMBOK Process Group:** Initiation (4.1 Develop Project Charter)
+
+> **Navigation:** [Documentation Index](../docs/README.md) → Project Charter
+> **See also:** [Risk Register](RISK_REGISTER.md), [Project Board](https://github.com/users/CaptDany/projects/2)
 **Date:** 2026-06-07
 **Author:** PM (via integrated Lean-Agile-PMI framework)
 
