@@ -11,7 +11,7 @@ type APIKey struct {
 	ID         uuid.UUID  `json:"id"`
 	TenantID   uuid.UUID  `json:"tenant_id"`
 	UserID     uuid.UUID  `json:"user_id"`
-	KeyPrefix  string     `json:"key_prefix"`
+	KeyPrefix  string     `json:"key_prefix,omitempty"`
 	Name       string     `json:"name"`
 	LastUsedAt *time.Time `json:"last_used_at"`
 	ExpiresAt  *time.Time `json:"expires_at"`

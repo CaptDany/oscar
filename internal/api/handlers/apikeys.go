@@ -50,6 +50,9 @@ func (h *APIKeyHandler) Create(c echo.Context) error {
 	if err := c.Bind(&req); err != nil {
 		return errs.BadRequest("Invalid request body").HTTPError(c)
 	}
+	if err := c.Validate(&req); err != nil {
+		return errs.ValidationFailed().HTTPError(c)
+	}
 
 	fullKey, keyHash, keyPrefix, err := repositories.GenerateAPIKey()
 	if err != nil {

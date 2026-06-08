@@ -164,9 +164,12 @@ func (r *APIKeyRepository) GetByHash(ctx context.Context, hash string) (*apikey.
 
 func (r *APIKeyRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM api_keys WHERE id = $1`
-	_, err := r.pool.Exec(ctx, query, id)
+	ct, err := r.pool.Exec(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("apikey.Delete: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("apikey.Delete: not found")
 	}
 	return nil
 }
