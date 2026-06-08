@@ -600,72 +600,74 @@ GNU GPLv3 - see LICENSE file for details.
 
 ## Roadmap
 
-### Phase 1: Foundation Gaps (1-2 months)
+### Phase 1: Foundation Gaps (1-2 months) — Due Aug 2026
 *Completes the core CRM feature set*
 
-- [ ] **Custom Fields API** — Add CRUD for custom field definitions
-- [ ] **Custom Fields UI** — Render dynamic fields in forms
-- [ ] **Deal Line Items API** — Connect existing table to deals
-- [ ] **Contact/Company/Deal Detail Views** — Replace stubs with real data
-- [x] **Audit Log API** — Expose audit logs
-- [ ] **Redis Integration** — Wire up caching for sessions and hot data
-- [ ] **File Attachments** — Attach documents to any record
+- [#6](https://github.com/CaptDany/oscar/issues/6) **Company Detail View** — Individual company page with contacts, deals, activity
+- [#41](https://github.com/CaptDany/oscar/issues/41) **Custom Fields API** — CRUD for custom field definitions
+- [#42](https://github.com/CaptDany/oscar/issues/42) **Custom Fields UI** — Render dynamic fields in forms
+- [#43](https://github.com/CaptDany/oscar/issues/43) **Deal Line Items API** — Connect existing table to deals
+- [#44](https://github.com/CaptDany/oscar/issues/44) **Deal Detail View** — Individual deal page with stage progression
+- [#45](https://github.com/CaptDany/oscar/issues/45) **Contact Detail View** — Individual person detail page
+- [#10](https://github.com/CaptDany/oscar/issues/10) **Redis Integration** — Wire up caching for sessions and hot data
+- [#11](https://github.com/CaptDany/oscar/issues/11) **File Attachments** — Attach documents to any record
+- [#8](https://github.com/CaptDany/oscar/issues/8) **API Key Management** — Manage API keys in settings
+- [#9](https://github.com/CaptDany/oscar/issues/9) **Profile Page Routes** — Fix backend profile endpoints
 
-### Phase 2: Analytics & Insights (2-3 months)
+### Phase 2: Analytics & Insights (2-3 months) — Due Oct 2026
 *Competes with basic reporting in HubSpot Free / Zoho Standard*
 
-- [ ] **Reports Dashboard** — Revenue by period, pipeline velocity, conversion rates
-- [ ] **Sales Forecasting** — Run rate, weighted pipeline, forecast by rep/team
-- [ ] **Activity Reports** — Calls, emails, meetings logged per rep
-- [ ] **Goal Tracking** — Set quotas per rep/team, show progress vs target
-- [ ] **Global Search** — Full-text search across contacts, companies, deals
+- [#13](https://github.com/CaptDany/oscar/issues/13) **Reports Dashboard** — Revenue by period, pipeline velocity, conversion rates
+- [#14](https://github.com/CaptDany/oscar/issues/14) **Sales Forecasting** — Run rate, weighted pipeline, forecast by rep/team
+- [#46](https://github.com/CaptDany/oscar/issues/46) **Activity Reports** — Calls, emails, meetings logged per rep
+- [#15](https://github.com/CaptDany/oscar/issues/15) **Goal Tracking** — Set quotas per rep/team, show progress vs target
+- [#16](https://github.com/CaptDany/oscar/issues/16) **Global Search** — Full-text search across contacts, companies, deals
 
-### Phase 3: Communication Layer (2-3 months)
+### Phase 3: Communication Layer (2-3 months) — Due Dec 2026
 *Competes with Zoho email sequences + HubSpot Sales Hub*
 
-- [ ] **Email Templates** — Template editor with merge tags, categories
-- [ ] **Email Sequences** — Drip campaigns linked to contacts/deals
-- [ ] **Email Tracking** — Open/click tracking via pixel
-- [ ] **Twilio SMS Integration** — Send SMS from activity timeline
-- [ ] **Bulk Email** — Mass email from contact/company lists
-- [ ] **CSV Import** — Full import wizard
+- [#17](https://github.com/CaptDany/oscar/issues/17) **Email Templates & Sequences** — Template editor, drip campaigns, merge tags
+- [#47](https://github.com/CaptDany/oscar/issues/47) **Email Tracking** — Open/click tracking via pixel and link wrapping
+- [#26](https://github.com/CaptDany/oscar/issues/26) **Twilio SMS Integration** — Send SMS from activity timeline
+- [#48](https://github.com/CaptDany/oscar/issues/48) **Bulk Email** — Mass email from contact/company lists
+- [#49](https://github.com/CaptDany/oscar/issues/49) **CSV Import** — Full import wizard with column mapping and preview
 
-### Phase 4: Automation Engine (3-4 months)
+### Phase 4: Automation Engine (3-4 months) — Due Mar 2027
 *Competes with HubSpot workflows + Zoho Blueprint*
 
-- [ ] **Automation API** — CRUD for automation rules
-- [ ] **Workflow Builder UI** — Visual drag-and-drop editor
-- [ ] **Automation Execution** — Fire automations on events
-- [ ] **Outbound Webhooks** — Execute HTTP webhooks as actions
-- [ ] **Workflow Analytics** — Track automation runs
+- [#7](https://github.com/CaptDany/oscar/issues/7) **Automation API** — CRUD for automation rules
+- [#12](https://github.com/CaptDany/oscar/issues/12) **Workflow Builder UI** — Visual drag-and-drop editor
+- [#18](https://github.com/CaptDany/oscar/issues/18) **Automation Execution** — Fire automations on events
+- [#19](https://github.com/CaptDany/oscar/issues/19) **Outbound Webhooks** — Execute HTTP webhooks as actions
+- [#27](https://github.com/CaptDany/oscar/issues/27) **Workflow Analytics** — Track automation runs
 
-### Phase 5: AI Features (3-4 months)
+### Phase 5: AI Features (3-4 months) — Due Jun 2027
 *Competes with Zia AI, Einstein AI, Breeze AI*
 
-- [ ] **AI Lead Scoring** — Score contacts/deals based on signals
-- [ ] **AI Next Best Action** — Recommend next step for each deal
-- [ ] **Deal Health Score** — Alert on deals going stale
-- [ ] **AI Write Assist** — Generate email drafts
-- [ ] **Sentiment Analysis** — Analyze activity sentiment
+- [#20](https://github.com/CaptDany/oscar/issues/20) **AI Lead Scoring** — Score contacts/deals based on signals
+- [#28](https://github.com/CaptDany/oscar/issues/28) **AI Next Best Action** — Recommend next step for each deal
+- [#29](https://github.com/CaptDany/oscar/issues/29) **Deal Health Score** — Alert on deals going stale
+- [#50](https://github.com/CaptDany/oscar/issues/50) **AI Write Assist** — Generate email drafts from prompts
+- [#51](https://github.com/CaptDany/oscar/issues/51) **Sentiment Analysis** — Analyze activity sentiment
 
-### Phase 6: Productivity & Integrations (2-3 months)
+### Phase 6: Productivity & Integrations (2-3 months) — Due Aug 2027
 *Competes with HubSpot's ease-of-use*
 
-- [ ] **Calendar View** — Monthly/weekly view of activities
-- [ ] **Google Calendar Sync** — Bidirectional sync
-- [ ] **Meeting Scheduler** — Booking links
-- [ ] **2FA (TOTP)** — Google Authenticator support
-- [ ] **OpenAPI Docs** — Auto-generated API documentation
-- [ ] **Slack Integration** — Notifications to Slack
-- [ ] **Zapier/Make Integration** — Third-party automation
+- [#21](https://github.com/CaptDany/oscar/issues/21) **Calendar View** — Monthly/weekly view of activities
+- [#52](https://github.com/CaptDany/oscar/issues/52) **Google Calendar Sync** — Bidirectional sync
+- [#53](https://github.com/CaptDany/oscar/issues/53) **Meeting Scheduler** — Booking links
+- [#22](https://github.com/CaptDany/oscar/issues/22) **2FA (TOTP)** — Google Authenticator support
+- [#31](https://github.com/CaptDany/oscar/issues/31) **OpenAPI Docs** — Auto-generated API documentation
+- [#30](https://github.com/CaptDany/oscar/issues/30) **Slack Integration** — Notifications to Slack
+- [#54](https://github.com/CaptDany/oscar/issues/54) **Zapier/Make Integration** — Third-party automation
 
-### Phase 7: Advanced (ongoing)
+### Phase 7: Advanced (ongoing) — Due Dec 2027
 *Competes with Salesforce Enterprise + Zoho Enterprise*
 
-- [ ] **Quotes & Invoices** — Generate PDFs from deals
-- [ ] **CPQ** — Configure-Price-Quote
-- [ ] **SSO (SAML/OIDC)** — Enterprise identity provider integration
-- [ ] **Mobile App** — iOS/Android app
-- [ ] **WhatsApp Integration** — Send/receive via Twilio
-- [ ] **Knowledge Base** — Self-serve help center
-- [ ] **Partner Portal** — External access for partners
+- [#32](https://github.com/CaptDany/oscar/issues/32) **Quotes & Invoices** — Generate PDFs from deals
+- [#55](https://github.com/CaptDany/oscar/issues/55) **CPQ** — Configure-Price-Quote
+- [#33](https://github.com/CaptDany/oscar/issues/33) **SSO (SAML/OIDC)** — Enterprise identity provider integration
+- [#56](https://github.com/CaptDany/oscar/issues/56) **Mobile App** — iOS/Android app
+- [#57](https://github.com/CaptDany/oscar/issues/57) **WhatsApp Integration** — Send/receive via Twilio
+- [#58](https://github.com/CaptDany/oscar/issues/58) **Knowledge Base** — Self-serve help center
+- [#59](https://github.com/CaptDany/oscar/issues/59) **Partner Portal** — External access for partners
