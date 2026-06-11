@@ -3,7 +3,7 @@ import preact from '@astrojs/preact';
 import node from '@astrojs/node';
 
 export default defineConfig({
-  output: 'static',
+  output: 'hybrid',
   adapter: node({
     mode: 'standalone'
   }),

@@ -1,9 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "oscar.fullname" . }}
+  name: {{ include "oscar.fullname" . }}-backend
   labels:
     {{- include "oscar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
   annotations:
     oscar.dev/ci-build: "{{ .Values.ci.buildNumber | default "manual" }}"
     oscar.dev/ci-commit: "{{ .Values.ci.commitSha | default "unknown" }}"
@@ -18,6 +19,7 @@ spec:
   selector:
     matchLabels:
       {{- include "oscar.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
   template:
     metadata:
       annotations:
@@ -25,6 +27,7 @@ spec:
         rollme: {{ randAlphaNum 5 | quote }}
       labels:
         {{- include "oscar.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -102,9 +105,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "oscar.fullname" . }}
+  name: {{ include "oscar.fullname" . }}-api
   labels:
     {{- include "oscar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -114,6 +118,7 @@ spec:
       name: http
   selector:
     {{- include "oscar.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
 ---
 {{- if .Values.secret.enabled }}
 apiVersion: v1

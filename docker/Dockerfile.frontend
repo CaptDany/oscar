@@ -1,0 +1,18 @@
+FROM node:22-alpine AS builder
+WORKDIR /app
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ .
+RUN npm run build
+
+FROM node:22-alpine
+RUN apk add --no-cache ca-certificates tzdata
+WORKDIR /app
+COPY --from=builder /app/dist /app/web/dist
+COPY --from=builder /app/node_modules /app/web/node_modules
+RUN addgroup -g 1000 -S appgroup && adduser -u 1000 -S appuser -G appgroup
+RUN chown -R appuser:appgroup /app
+USER appuser
+EXPOSE 4321
+ENV HOST=0.0.0.0
+CMD ["node", "/app/web/dist/server/entry.mjs"]

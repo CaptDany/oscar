@@ -10,19 +10,32 @@ metadata:
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   rules:
+    {{- $fullname := include "oscar.fullname" $ }}
     {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            pathType: {{ .pathType }}
+          - path: /health
+            pathType: Exact
             backend:
               service:
-                name: {{ include "oscar.fullname" $ }}
+                name: {{ $fullname }}-api
                 port:
                   number: {{ $.Values.service.port }}
-          {{- end }}
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-api
+                port:
+                  number: {{ $.Values.service.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $fullname }}-frontend
+                port:
+                  number: {{ $.Values.frontend.service.port }}
     {{- end }}
   {{- if .Values.ingress.tls }}
   tls:

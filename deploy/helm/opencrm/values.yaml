@@ -5,6 +5,45 @@ image:
   pullPolicy: Always
   tag: "latest"
 
+frontend:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/captdany/oscar-frontend
+    pullPolicy: Always
+    tag: "latest"
+  service:
+    type: ClusterIP
+    port: 4321
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "4321"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  livenessProbe:
+    tcpSocket:
+      port: 4321
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    tcpSocket:
+      port: 4321
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
 imagePullSecrets:
   - name: ghcr-pull
 # Provider-agnostic: works with any K8s cluster.
