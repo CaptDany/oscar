@@ -48,7 +48,7 @@ jobs:
             MAJOR=0; MINOR=1; PATCH=0; COMMITS=0
           fi
           [ "$COMMITS" -gt 0 ] && PATCH=$COMMITS
-          echo "semver=$MAJOR.$MINOR.$PATCH+${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "semver=$MAJOR.$MINOR.$PATCH-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
 
   build-and-push:
     name: Build & Push Image
