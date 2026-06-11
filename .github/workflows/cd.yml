@@ -138,6 +138,11 @@ jobs:
             --set env.APP_ENV=development \
             --set env.APP_BASE_URL=https://dev.oscar-crm.cc \
             --set secret.data.database-url=postgres://oscar:oscar@postgres.oscar-dev.svc.cluster.local:5432/oscar \
+            --set ingress.hosts[0].host=dev.oscar-crm.cc \
+            --set ingress.hosts[0].paths[0].path=/ \
+            --set ingress.hosts[0].paths[0].pathType=Prefix \
+            --set ingress.tls[0].secretName=oscar-tls \
+            --set ingress.tls[0].hosts[0]=dev.oscar-crm.cc \
             --atomic --wait --timeout 10m
       - id: deploy-url
         run: echo "url=https://dev.oscar-crm.cc" >> "$GITHUB_OUTPUT"
@@ -189,6 +194,11 @@ jobs:
             --set env.APP_ENV=staging \
             --set env.APP_BASE_URL=https://staging.oscar-crm.cc \
             --set secret.data.database-url=postgres://oscar:oscar@postgres.oscar-staging.svc.cluster.local:5432/oscar \
+            --set ingress.hosts[0].host=staging.oscar-crm.cc \
+            --set ingress.hosts[0].paths[0].path=/ \
+            --set ingress.hosts[0].paths[0].pathType=Prefix \
+            --set ingress.tls[0].secretName=oscar-tls \
+            --set ingress.tls[0].hosts[0]=staging.oscar-crm.cc \
             --atomic --wait --timeout 10m
       - id: deploy-url
         run: echo "url=https://staging.oscar-crm.cc" >> "$GITHUB_OUTPUT"
@@ -240,6 +250,11 @@ jobs:
             --set env.APP_ENV=production \
             --set env.APP_BASE_URL=https://oscar-crm.cc \
             --set secret.data.database-url=postgres://oscar:oscar@postgres.oscar-production.svc.cluster.local:5432/oscar \
+            --set ingress.hosts[0].host=oscar-crm.cc \
+            --set ingress.hosts[0].paths[0].path=/ \
+            --set ingress.hosts[0].paths[0].pathType=Prefix \
+            --set ingress.tls[0].secretName=oscar-tls \
+            --set ingress.tls[0].hosts[0]=oscar-crm.cc \
             --set autoscaling.enabled=true \
             --set autoscaling.minReplicas=2 \
             --set autoscaling.maxReplicas=10 \
