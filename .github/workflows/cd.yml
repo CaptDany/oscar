@@ -106,13 +106,14 @@ jobs:
       url: ${{ steps.deploy-url.outputs.url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install OCI CLI
-        run: |
-          pip install oci-cli
       - name: Configure kubectl (provider-agnostic via kubeconfig secret)
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
+      - name: Verify cluster access
+        run: |
+          kubectl version --short
+          kubectl get nodes
       - name: Deploy Helm chart
         run: |
           helm upgrade --install oscar deploy/helm/opencrm \
@@ -142,13 +143,14 @@ jobs:
       url: ${{ steps.deploy-url.outputs.url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install OCI CLI
-        run: |
-          pip install oci-cli
       - name: Configure kubectl
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
+      - name: Verify cluster access
+        run: |
+          kubectl version --short
+          kubectl get nodes
       - name: Deploy Helm chart
         run: |
           helm upgrade --install oscar deploy/helm/opencrm \
@@ -179,13 +181,14 @@ jobs:
       url: ${{ steps.deploy-url.outputs.url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install OCI CLI
-        run: |
-          pip install oci-cli
       - name: Configure kubectl
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
+      - name: Verify cluster access
+        run: |
+          kubectl version --short
+          kubectl get nodes
       - name: Deploy Helm chart
         run: |
           helm upgrade --install oscar deploy/helm/opencrm \
