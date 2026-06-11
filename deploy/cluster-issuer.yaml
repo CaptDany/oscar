@@ -6,7 +6,7 @@ metadata:
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: hello@danytellez.cc
+    email: admin@oscar-crm.cc
     privateKeySecretRef:
       name: letsencrypt-staging
     solvers:
@@ -21,7 +21,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: hello@danytellez.cc
+    email: admin@oscar-crm.cc
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:

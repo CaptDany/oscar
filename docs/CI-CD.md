@@ -199,10 +199,19 @@ oci ce cluster create-kubeconfig --cluster-id <cluster-ocid> \
   --file ~/.kube/oscar-config --region mx-queretaro-1
 
 # After generation, update the kubeconfig to use full path to oci:
-#   command: oci  →  command: /usr/local/bin/oci  (or C:\oci\Scripts\oci.exe on Windows)
+# Linux/macOS:
+sed -i 's|command: oci|command: /usr/local/bin/oci|' ~/.kube/oscar-config
+# Windows PowerShell:
+(Get-Content ~\.kube\oscar-config) -replace 'command: oci', 'command: C:\oci\Scripts\oci.exe' | Set-Content ~\.kube\oscar-config
 
 # Base64-encode for GitHub secrets
+# macOS:
 base64 -w0 ~/.kube/oscar-config | pbcopy
+# Linux:
+base64 -w0 ~/.kube/oscar-config
+# Windows PowerShell:
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content ~\.kube\oscar-config -Raw)))
+
 # Paste into GitHub: Settings → Environments → dev/staging/prod → KUBECONFIG_DEV / _STAGING / _PROD
 ```
 
@@ -246,10 +255,24 @@ helm install ingress-nginx ingress-nginx/ingress-nginx \
   --set controller.service.type=ClusterIP
 ```
 
-The ingress controller will bind directly to the node's network ports (80/443). Ensure the VCN security list allows inbound TCP 80 and 443 from `0.0.0.0/0`.
+The ingress controller will bind directly to the node's network ports (80/443). Update the VCN security list to allow inbound TCP 80 and 443 from `0.0.0.0/0`:
+
+```bash
+oci network security-list update --security-list-id <security-list-ocid> \
+  --ingress-security-rules '[
+    {"source":"0.0.0.0/0","protocol":"6","tcp-options":{"destination-port-range":{"min":80,"max":80}}},
+    {"source":"0.0.0.0/0","protocol":"6","tcp-options":{"destination-port-range":{"min":443,"max":443}}},
+    {"source":"0.0.0.0/0","protocol":"6","tcp-options":{"destination-port-range":{"min":22,"max":22}}},
+    {"source":"0.0.0.0/0","protocol":"1","icmp-options":{"type":3,"code":4}},
+    {"source":"10.0.0.0/16","protocol":"1","icmp-options":{"type":3}}
+  ]' --force
+```
+
+> **Note:** On Windows PowerShell, use `--%` to bypass PowerShell's JSON mangling, or write the JSON to a file and use `--from-json file://path/to/file`.
 
 ### 5. Create Let's Encrypt ClusterIssuer
 ```bash
+# Run from repository root (e.g. ~/Documents/GitHub/oscar/)
 kubectl apply -f deploy/cluster-issuer.yaml
 ```
 
@@ -314,7 +337,9 @@ az aks create --resource-group oscar --name oscar --enable-oidc-issuer
 
 No cloud API keys are stored — only kubeconfigs (which contain short-lived certs).
 
-> **Setup:** All three kubeconfig secrets currently contain the same `oscar-cluster` kubeconfig. Deployments target different namespaces (`oscar-dev`, `oscar-staging`, `oscar-production`) via `helm --namespace <ns>`. When migrating to a multi-cluster setup, replace each secret with the corresponding cluster's kubeconfig.
+> **Setup:** All three kubeconfig secrets currently contain the same `oscar-cluster` kubeconfig. Deployments target different namespaces (`oscar-dev`, `oscar-staging`, `oscar-production`) via `helm --namespace <ns>`.
+>
+> **⚠ Single-cluster risk:** Namespace isolation reduces blast radius for most failure modes (e.g. a bad deploy in `oscar-dev` won't affect `oscar-production`), but a cluster-wide failure (control plane outage, node failure, CVE in kubelet) takes down all three environments simultaneously. To eliminate this shared-fate risk, migrate to separate clusters per environment. This is particularly important when moving past MVP.
 
 ---
 
