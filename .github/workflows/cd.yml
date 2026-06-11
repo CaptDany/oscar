@@ -112,7 +112,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
       - name: Verify cluster access
         run: |
-          kubectl version --short
+          kubectl version --client
           kubectl get nodes
       - name: Deploy Helm chart
         run: |
@@ -149,7 +149,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > ~/.kube/config
       - name: Verify cluster access
         run: |
-          kubectl version --short
+          kubectl version --client
           kubectl get nodes
       - name: Deploy Helm chart
         run: |
@@ -187,7 +187,7 @@ jobs:
           echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
       - name: Verify cluster access
         run: |
-          kubectl version --short
+          kubectl version --client
           kubectl get nodes
       - name: Deploy Helm chart
         run: |
