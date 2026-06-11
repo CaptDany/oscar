@@ -5,6 +5,7 @@ metadata:
   labels:
     name: oscar
 ---
+{{- if .Values.postgresql.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -16,7 +17,8 @@ spec:
   resources:
     requests:
       storage: 10Gi
----
+{{- end }}
+{{- if .Values.redis.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -28,7 +30,9 @@ spec:
   resources:
     requests:
       storage: 1Gi
+{{- end }}
 ---
+{{- if .Values.postgresql.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -98,7 +102,9 @@ spec:
       targetPort: 5432
   selector:
     app: postgres
+{{- end }}
 ---
+{{- if .Values.redis.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -161,3 +167,4 @@ spec:
       targetPort: 6379
   selector:
     app: redis
+{{- end }}

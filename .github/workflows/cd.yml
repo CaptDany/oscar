@@ -137,7 +137,7 @@ jobs:
             --set ci.commitSha=${{ github.sha }} \
             --set env.APP_ENV=development \
             --set env.APP_BASE_URL=https://dev.oscar-crm.cc \
-            --atomic --wait --timeout 5m
+            --atomic --wait --timeout 10m
       - id: deploy-url
         run: echo "url=https://dev.oscar-crm.cc" >> "$GITHUB_OUTPUT"
       - name: Smoke test
@@ -187,7 +187,7 @@ jobs:
             --set replicaCount=2 \
             --set env.APP_ENV=staging \
             --set env.APP_BASE_URL=https://staging.oscar-crm.cc \
-            --atomic --wait --timeout 5m
+            --atomic --wait --timeout 10m
       - id: deploy-url
         run: echo "url=https://staging.oscar-crm.cc" >> "$GITHUB_OUTPUT"
       - name: Smoke test
