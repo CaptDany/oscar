@@ -83,11 +83,13 @@ PR / Push → detect-changes → ┌──────────────�
 
 ## GitHub Environments
 
-| Environment | Manual Approval | URL |
-|---|---|---|
-| `dev` | No | `https://dev.oscar-crm.cc` |
-| `staging` | Yes | `https://staging.oscar-crm.cc` |
-| `production` | Yes | `https://oscar-crm.cc` |
+| Environment | Manual Approval | URL | Namespace |
+|---|---|---|---|
+| `dev` | No | `https://dev.oscar-crm.cc` | `oscar-dev` |
+| `staging` | Yes | `https://staging.oscar-crm.cc` | `oscar-staging` |
+| `production` | Yes | `https://oscar-crm.cc` | `oscar-production` |
+
+All three environments share one OKE cluster with namespace-based isolation. Each has its own `KUBECONFIG_<ENV>` secret in GitHub (all three contain the same cluster kubeconfig for now).
 
 ---
 
@@ -130,89 +132,172 @@ Kubeconfigs contain cluster certificate authority data and user credentials. Rot
 
 ## OKE (Oracle Kubernetes Engine) — Bootstrap Runbook
 
+### Cluster Details (mx-queretaro-1, June 2026)
+
+| Resource | Value |
+|---|---|
+| Region | `mx-queretaro-1` (Mexico Central Querétaro) |
+| Kubernetes | v1.35.2 |
+| VCN | `oscar-vcn` (10.0.0.0/16) |
+| Worker subnet | `oscar-workers-subnet` (10.0.1.0/24, public, with IGW route) |
+| Endpoint subnet | `oscar-endpoint-subnet` (10.0.32.0/24) |
+| Node shape | `VM.Standard2.1` (1 OCPU, 15 GB RAM, Intel Skylake) |
+| Node count | 1 |
+| Node public IP | `159.54.137.54` |
+| Node pool image | `Oracle-Linux-8.10-2026.04.30-3-OKE-1.35.2-1462` |
+| Worker subnet OCID | `ocid1.subnet.oc1.mx-queretaro-1.aaaaaaaa66pizbng6pbiizde3varx257objaspnxoyxgffhlbogaix6tqpfq` |
+| Cluster OCID | `ocid1.cluster.oc1.mx-queretaro-1.aaaaaaaaggeuom6sy26ehogcbrlk3jsgllij63h5oyccstzplcvld6nsjk6a` |
+
 ### Prerequisites
-- OCI CLI installed (`brew install oci` or `curl -L -O https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh`)
+- OCI CLI installed (`C:\oci\Scripts\oci.exe` on Windows, or via `pip install oci-cli`)
 - OCI config at `~/.oci/config` with valid credentials
 - `kubectl` and `helm` installed
+- `oci` must be in PATH or referenced by full path in `~/.kube/config`
 
-### 1. Create OKE cluster (free tier)
+### 1. Create OKE cluster
 ```bash
-# Create VCN and networking (or use existing)
-oci network vcn create \
-  --cidr-block 10.0.0.0/16 \
-  --display-name oscar-vcn \
+# Create VCN
+oci network vcn create --cidr-block 10.0.0.0/16 --display-name oscar-vcn \
   --compartment-id <compartment-ocid>
 
-# Create OKE cluster (free: VM.Standard.E2.1.Micro shape × 2)
-oci ce cluster create \
-  --name oscar \
-  --compartment-id <compartment-ocid> \
-  --vcn-id <vcn-ocid> \
-  --kubernetes-version v1.28.5 \
-  --node-image-id ocid1.image.oc1..<latest-olk> \
-  --node-shape VM.Standard.E2.1.Micro \
-  --node-count 2 \
-  --wait-for-state SUCCEEDED
+# Create Internet Gateway + Route Table
+oci network internet-gateway create --vcn-id <vcn-ocid> --is-enabled true \
+  --compartment-id <compartment-ocid>
+oci network route-table create --vcn-id <vcn-ocid> --route-rules \
+  '[{"cidrBlock":"0.0.0.0/0","networkEntityId":"<igw-ocid>"}]' \
+  --compartment-id <compartment-ocid>
+
+# Create subnets
+oci network subnet create --vcn-id <vcn-ocid> --cidr-block 10.0.1.0/24 \
+  --route-table-id <rt-ocid> --compartment-id <compartment-ocid>
+oci network subnet create --vcn-id <vcn-ocid> --cidr-block 10.0.32.0/24 \
+  --route-table-id <rt-ocid> --compartment-id <compartment-ocid>
+
+# Create OKE cluster
+oci ce cluster create --name oscar-cluster --compartment-id <compartment-ocid> \
+  --vcn-id <vcn-ocid> --kubernetes-version v1.35.2 \
+  --endpoint-subnet-id <endpoint-subnet-ocid> \
+  --endpoint-public-ip true
+
+# Create node pool (use an x86 OKE image from Oracle docs)
+oci ce node-pool create --cluster-id <cluster-ocid> \
+  --compartment-id <compartment-ocid> --name oscar-nodepool \
+  --node-shape VM.Standard2.1 --size 1 \
+  --node-source-details '{"sourceType":"IMAGE","imageId":"<x86-oke-image-ocid>"}' \
+  --placement-configs '[{"availabilityDomain":"<ad-name>","subnetId":"<worker-subnet-ocid>"}]' \
+  --kubernetes-version v1.35.2
 ```
 
-### 2. Get kubeconfig for each environment
-**Dev:**
+> **Note:** OKE images are NOT in your compartment's `oci compute image list` — get the OCID for your region from [Oracle's image documentation](https://docs.oracle.com/en-us/iaas/images/oke-worker-node-oracle-linux-8x/). The x86 image is compatible with Intel shapes (`VM.Standard2.x`, `VM.Standard3.Flex`). ARM shapes (`VM.Standard.A1.Flex`) require the aarch64 OKE image. Free shapes (`VM.Standard.E2.1.Micro`) are often too small for OKE (1 GB RAM).
+
+### 2. Get kubeconfig
+
+Generate and store kubeconfigs for each environment. Since we use namespace-based isolation on a single cluster, you need three base64-encoded copies:
+
 ```bash
-oci ce cluster create-kubeconfig \
-  --cluster-id <cluster-ocid> \
-  --file ~/.kube/oscar-dev-config \
-  --region <region>
-base64 -w0 ~/.kube/oscar-dev-config | pbcopy
-# Paste into GitHub: Settings → Environments → dev → Secrets → KUBECONFIG_DEV
+oci ce cluster create-kubeconfig --cluster-id <cluster-ocid> \
+  --file ~/.kube/oscar-config --region mx-queretaro-1
+
+# After generation, update the kubeconfig to use full path to oci:
+# Linux/macOS:
+sed -i 's|command: oci|command: /usr/local/bin/oci|' ~/.kube/oscar-config
+# Windows PowerShell:
+(Get-Content ~\.kube\oscar-config) -replace 'command: oci', 'command: C:\oci\Scripts\oci.exe' | Set-Content ~\.kube\oscar-config
+
+# Base64-encode for GitHub secrets
+# macOS:
+base64 -w0 ~/.kube/oscar-config | pbcopy
+# Linux:
+base64 -w0 ~/.kube/oscar-config
+# Windows PowerShell:
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content ~\.kube\oscar-config -Raw)))
+
+# Paste into GitHub: Settings → Environments → dev/staging/prod → KUBECONFIG_DEV / _STAGING / _PROD
 ```
 
-**Staging & Production:** Repeat with separate clusters or namespaces.
+> **Note:** The kubeconfig uses an `exec` credential plugin that calls `oci` to generate tokens. Ensure `oci` is in the runner's PATH or update the kubeconfig `command` to use the full binary path.
 
 ### 3. Create ghcr.io image pull secret
-OKE free tier does not support OIDC. You need a static pull secret:
+OKE free tier does not support OIDC. You need a static pull secret in each namespace:
 
 ```bash
-kubectl create secret docker-registry ghcr-pull \
-  --docker-server=ghcr.io \
-  --docker-username=<your-github-username> \
-  --docker-password=<ghcr-token> \
-  -n oscar-dev
-kubectl create secret docker-registry ghcr-pull \
-  --docker-server=ghcr.io \
-  --docker-username=<your-github-username> \
-  --docker-password=<ghcr-token> \
-  -n oscar-staging
-kubectl create secret docker-registry ghcr-pull \
-  --docker-server=ghcr.io \
-  --docker-username=<your-github-username> \
-  --docker-password=<ghcr-token> \
-  -n oscar-production
+for ns in oscar-dev oscar-staging oscar-production; do
+  kubectl create secret docker-registry ghcr-pull \
+    --docker-server=ghcr.io \
+    --docker-username=<your-github-username> \
+    --docker-password=<ghcr-pat> \
+    -n $ns
+done
 ```
 
-The Helm chart already references `imagePullSecrets: [{name: ghcr-pull}]` in `values.yaml`.
+The Helm chart references `imagePullSecrets: [{name: ghcr-pull}]` in `values.yaml`.
 
 ### 4. Install nginx-ingress + cert-manager
-```bash
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm install nginx-ingress ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx --create-namespace
 
+**Important:** The OCI Cloud Controller Manager is not installed in this OKE cluster (OKE managed control planes may not include it for all shapes/versions). Without the CCM, `type: LoadBalancer` services never get an external IP. The workaround is to use `hostNetwork` mode on the ingress controller:
+
+```bash
+# Add repos
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo add jetstack https://charts.jetstack.io
+helm repo update
+
+# Install cert-manager
 helm install cert-manager jetstack/cert-manager \
   --namespace cert-manager --create-namespace \
-  --set installCRDs=true
+  --set crds.enabled=true
+
+# Install nginx-ingress with hostNetwork (no LoadBalancer)
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --set controller.hostNetwork=true \
+  --set controller.dnsPolicy=ClusterFirstWithHostNet \
+  --set controller.service.type=ClusterIP
 ```
 
-### 5. Configure DNS
-Point `oscar-crm.cc`, `dev.oscar-crm.cc`, `staging.oscar-crm.cc` to the nginx-ingress LoadBalancer external IP:
+The ingress controller will bind directly to the node's network ports (80/443). Update the VCN security list to allow inbound TCP 80 and 443 from `0.0.0.0/0`:
+
 ```bash
-kubectl get svc -n ingress-nginx nginx-ingress-ingress-nginx-controller \
-  -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+oci network security-list update --security-list-id <security-list-ocid> \
+  --ingress-security-rules '[
+    {"source":"0.0.0.0/0","protocol":"6","tcp-options":{"destination-port-range":{"min":80,"max":80}}},
+    {"source":"0.0.0.0/0","protocol":"6","tcp-options":{"destination-port-range":{"min":443,"max":443}}},
+    {"source":"0.0.0.0/0","protocol":"6","tcp-options":{"destination-port-range":{"min":22,"max":22}}},
+    {"source":"0.0.0.0/0","protocol":"1","icmp-options":{"type":3,"code":4}},
+    {"source":"10.0.0.0/16","protocol":"1","icmp-options":{"type":3}}
+  ]' --force
 ```
+
+> **Note:** On Windows PowerShell, use `--%` to bypass PowerShell's JSON mangling, or write the JSON to a file and use `--from-json file://path/to/file`.
+
+### 5. Create Let's Encrypt ClusterIssuer
+```bash
+# Run from repository root (e.g. ~/Documents/GitHub/oscar/)
+kubectl apply -f deploy/cluster-issuer.yaml
+```
+
+This creates two ClusterIssuers:
+- `letsencrypt-staging` — for testing (rate limits: 50 certs/week)
+- `letsencrypt-prod` — for production (rate limits: 5 certs/week)
+
+The Helm chart ingress annotations already reference `letsencrypt-prod`.
+
+### 6. Configure DNS
+Point all subdomains to the node's public IP:
+
+| Domain | Target |
+|---|---|
+| `oscar-crm.cc` | `159.54.137.54` (production) |
+| `dev.oscar-crm.cc` | `159.54.137.54` (dev) |
+| `staging.oscar-crm.cc` | `159.54.137.54` (staging) |
+
+Create A records on Cloudflare (or your DNS provider). All three point to the same node IP since we use namespace-based isolation.
 
 ---
 
 ## Provider Migration Guide
+
+When migrating, the key change is that the target cluster should have a functioning Cloud Controller Manager (CCM) so `type: LoadBalancer` services work correctly. On OKE, the CCM may not be present (workaround: `hostNetwork`). On DOKS, GKE, AKS, or EKS, CCM is built-in and LoadBalancer works out of the box.
 
 ### OKE → DigitalOcean (DOKS)
 
@@ -223,7 +308,8 @@ kubectl get svc -n ingress-nginx nginx-ingress-ingress-nginx-controller \
    ```
 2. Base64-encode the new kubeconfig and replace the three GitHub Environment secrets.
 3. **Optional** — Delete the `imagePullSecrets` block from `values.yaml` if you enable DOKS OIDC.
-4. Run `CD` workflow — deploys to the new cluster with zero code changes.
+4. Update `ingress-nginx` to use `type: LoadBalancer` (remove `hostNetwork`).
+5. Run `CD` workflow — deploys to the new cluster with zero code changes.
 
 ### OKE → GKE / AKS / EKS
 
@@ -245,11 +331,15 @@ az aks create --resource-group oscar --name oscar --enable-oidc-issuer
 | Secret | Scope | Source |
 |---|---|---|
 | `KUBECONFIG_DEV` | Env: dev | Base64 kubeconfig from `oci ce cluster create-kubeconfig` |
-| `KUBECONFIG_STAGING` | Env: staging | Same, for staging cluster |
-| `KUBECONFIG_PROD` | Env: production | Same, for production cluster |
+| `KUBECONFIG_STAGING` | Env: staging | Same kubeconfig (namespace-based isolation) |
+| `KUBECONFIG_PROD` | Env: production | Same kubeconfig (namespace-based isolation) |
 | `GITHUB_TOKEN` | Repo (auto) | Used by Actions to push to ghcr.io |
 
 No cloud API keys are stored — only kubeconfigs (which contain short-lived certs).
+
+> **Setup:** All three kubeconfig secrets currently contain the same `oscar-cluster` kubeconfig. Deployments target different namespaces (`oscar-dev`, `oscar-staging`, `oscar-production`) via `helm --namespace <ns>`.
+>
+> **⚠ Single-cluster risk:** Namespace isolation reduces blast radius for most failure modes (e.g. a bad deploy in `oscar-dev` won't affect `oscar-production`), but a cluster-wide failure (control plane outage, node failure, CVE in kubelet) takes down all three environments simultaneously. To eliminate this shared-fate risk, migrate to separate clusters per environment. This is particularly important when moving past MVP.
 
 ---
 
