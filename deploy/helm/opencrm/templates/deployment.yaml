@@ -57,6 +57,11 @@ spec:
               value: {{ .Values.env.APP_PORT | quote }}
             - name: APP_BASE_URL
               value: {{ .Values.env.APP_BASE_URL | quote }}
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oscar-app-secret
+                  key: app-secret
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
