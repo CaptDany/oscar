@@ -110,6 +110,10 @@ jobs:
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
+      - name: Debug kubeconfig
+        run: |
+          echo "Checking kubeconfig auth method..."
+          grep -E '^\s+(exec:|token:|command:)' ~/.kube/config || echo "No exec/token found"
       - name: Verify cluster access
         run: |
           kubectl version --client
