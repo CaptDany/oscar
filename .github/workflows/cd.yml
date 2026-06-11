@@ -108,8 +108,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install OCI CLI
         run: |
-          curl -sL https://raw.githubusercontent.com/oracle/oci-cli/main/scripts/install/install.sh | bash -s -- --accept-all-defaults
-          echo "/home/runner/bin" >> "$GITHUB_PATH"
+          pip install oci-cli
       - name: Configure kubectl (provider-agnostic via kubeconfig secret)
         run: |
           mkdir -p ~/.kube
@@ -145,8 +144,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install OCI CLI
         run: |
-          curl -sL https://raw.githubusercontent.com/oracle/oci-cli/main/scripts/install/install.sh | bash -s -- --accept-all-defaults
-          echo "/home/runner/bin" >> "$GITHUB_PATH"
+          pip install oci-cli
       - name: Configure kubectl
         run: |
           mkdir -p ~/.kube
@@ -183,8 +181,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install OCI CLI
         run: |
-          curl -sL https://raw.githubusercontent.com/oracle/oci-cli/main/scripts/install/install.sh | bash -s -- --accept-all-defaults
-          echo "/home/runner/bin" >> "$GITHUB_PATH"
+          pip install oci-cli
       - name: Configure kubectl
         run: |
           mkdir -p ~/.kube
