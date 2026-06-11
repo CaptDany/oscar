@@ -106,14 +106,24 @@ jobs:
       url: ${{ steps.deploy-url.outputs.url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Configure kubectl (provider-agnostic via kubeconfig secret)
+      - name: Configure kubectl (provider-agnostic via SA token)
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
+          mkdir -p /home/runner/.kube
+          echo "${{ secrets.KUBECONFIG_DEV }}" > /tmp/kubeconfig.b64
+          # Keep only the base64 content (strip any newlines)
+          tr -d '\n\r' < /tmp/kubeconfig.b64 > /tmp/kubeconfig_clean.b64
+          base64 -d /tmp/kubeconfig_clean.b64 > /home/runner/.kube/config
+          echo "KUBECONFIG=/home/runner/.kube/config" >> "$GITHUB_ENV"
       - name: Debug kubeconfig
         run: |
-          echo "Checking kubeconfig auth method..."
-          grep -E '^\s+(exec:|token:|command:)' ~/.kube/config || echo "No exec/token found"
+          echo "=== File stats ==="
+          ls -la /home/runner/.kube/config
+          wc -c /home/runner/.kube/config
+          echo "=== First 80 chars ==="
+          head -c 80 /home/runner/.kube/config
+          echo ""
+          echo "=== Auth method ==="
+          grep -E 'exec:|token:' /home/runner/.kube/config || echo "NO MATCH"
       - name: Verify cluster access
         run: |
           kubectl version --client
