@@ -154,7 +154,7 @@ jobs:
       - name: Deploy Helm chart
         run: |
           helm upgrade --install oscar deploy/helm/opencrm \
-            --namespace oscar-dev --create-namespace \
+            --namespace oscar-dev \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ needs.version.outputs.semver }} \
             --set image.pullPolicy=Always \
@@ -213,7 +213,7 @@ jobs:
       - name: Deploy Helm chart
         run: |
           helm upgrade --install oscar deploy/helm/opencrm \
-            --namespace oscar-staging --create-namespace \
+            --namespace oscar-staging \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ needs.version.outputs.semver }} \
             --set image.pullPolicy=Always \
@@ -269,7 +269,7 @@ jobs:
       - name: Deploy Helm chart
         run: |
           helm upgrade --install oscar deploy/helm/opencrm \
-            --namespace oscar-production --create-namespace \
+            --namespace oscar-production \
             --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
             --set image.tag=${{ needs.version.outputs.semver }} \
             --set image.pullPolicy=Always \
