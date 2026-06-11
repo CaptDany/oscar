@@ -106,6 +106,10 @@ jobs:
       url: ${{ steps.deploy-url.outputs.url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install OCI CLI
+        run: |
+          curl -sL https://raw.githubusercontent.com/oracle/oci-cli/main/scripts/install/install.sh | bash -s -- --accept-all-defaults
+          echo "/home/runner/bin" >> "$GITHUB_PATH"
       - name: Configure kubectl (provider-agnostic via kubeconfig secret)
         run: |
           mkdir -p ~/.kube
@@ -139,6 +143,10 @@ jobs:
       url: ${{ steps.deploy-url.outputs.url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install OCI CLI
+        run: |
+          curl -sL https://raw.githubusercontent.com/oracle/oci-cli/main/scripts/install/install.sh | bash -s -- --accept-all-defaults
+          echo "/home/runner/bin" >> "$GITHUB_PATH"
       - name: Configure kubectl
         run: |
           mkdir -p ~/.kube
@@ -173,6 +181,10 @@ jobs:
       url: ${{ steps.deploy-url.outputs.url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install OCI CLI
+        run: |
+          curl -sL https://raw.githubusercontent.com/oracle/oci-cli/main/scripts/install/install.sh | bash -s -- --accept-all-defaults
+          echo "/home/runner/bin" >> "$GITHUB_PATH"
       - name: Configure kubectl
         run: |
           mkdir -p ~/.kube
