@@ -68,8 +68,16 @@ async function refreshAccessToken(): Promise<string | null> {
   isRefreshing = true;
 
   try {
-    const stored = localStorage.getItem('oscar_auth');
-    const refreshToken = stored ? (JSON.parse(stored).refreshToken || null) : null;
+    let refreshToken: string | null = null;
+    try {
+      const stored = localStorage.getItem('oscar_auth');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        refreshToken = parsed.refreshToken || null;
+      }
+    } catch {
+      // corrupted localStorage, ignore
+    }
 
     const res = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
