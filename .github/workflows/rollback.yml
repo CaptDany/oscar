@@ -61,7 +61,7 @@ jobs:
           curl -sf --retry 10 --retry-delay 5 --retry-connrefused "https://$ENV_DOMAIN/health" || exit 1
 
       - name: Record incident
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             await github.rest.issues.create({
