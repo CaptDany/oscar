@@ -186,7 +186,7 @@ func main() {
 	log.Println("Shutting down server...")
 
 	if redisClient != nil {
-		redisClient.Close()
+		_ = redisClient.Close()
 	}
 
 	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)

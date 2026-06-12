@@ -114,7 +114,7 @@ func (h *Hub) SendToUser(userID string, event string, payload interface{}) {
 func (c *Client) ReadPump() {
 	defer func() {
 		c.Hub.Unregister(c)
-		c.Conn.Close()
+		_ = c.Conn.Close()
 	}()
 
 	for {
@@ -138,7 +138,7 @@ func (c *Client) ReadPump() {
 }
 
 func (c *Client) WritePump() {
-	defer c.Conn.Close()
+	defer func() { _ = c.Conn.Close() }()
 
 	for message := range c.Send {
 		if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {

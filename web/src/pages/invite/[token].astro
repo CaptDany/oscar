@@ -192,8 +192,15 @@ if (user) {
           throw new Error(data.error?.message || data.error?.code || 'Registration failed');
         }
 
+        document.cookie = `oscar_token=${data.access_token}; path=/; max-age=${15 * 60}; SameSite=Lax`;
+        if (data.refresh_token) {
+          document.cookie = `oscar_refresh_token=${data.refresh_token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        }
+        document.cookie = `oscar_user=${JSON.stringify(data.user)}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+
         localStorage.setItem('oscar_auth', JSON.stringify({
-          token: data.token,
+          token: data.access_token,
+          refreshToken: data.refresh_token,
           user: data.user,
         }));
 
