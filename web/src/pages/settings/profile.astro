@@ -207,8 +207,8 @@ async function registerPasskey() {
     var credential = await navigator.credentials.create({
       publicKey: {
         challenge: challenge,
-        rp: { name: 'Oscar CRM', id: window.location.hostname },
-        user: { id: new TextEncoder().encode(token), name: 'user@oscar', displayName: 'Oscar User' },
+        rp: { name: 'oscar', id: window.location.hostname },
+        user: { id: new TextEncoder().encode(token), name: 'user@oscar', displayName: 'oscar User' },
         pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
         authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
         timeout: 60000,

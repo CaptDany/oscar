@@ -1,0 +1,22 @@
+; oscar-crm.cc zone file for Cloudflare DNS import
+; Node IP: 159.54.137.54 (OKE cluster, mx-queretaro-1)
+; Generated: 2026-06-11
+;
+; Usage: Import this file in Cloudflare Dashboard → DNS → Import
+;
+
+$ORIGIN oscar-crm.cc.
+$TTL 300
+
+; SOA record
+@       300     IN      SOA     ns.cloudflare.com. dns.cloudflare.com. 1 7200 900 1209600 86400
+
+; NS records (Cloudflare manages these)
+@       86400   IN      NS      ns.cloudflare.com.
+@       86400   IN      NS      ns2.cloudflare.com.
+
+; A records — all point to OKE node IP
+@       300     IN      A       159.54.137.54
+dev     300     IN      A       159.54.137.54
+staging 300     IN      A       159.54.137.54
+www     300     IN      A       159.54.137.54

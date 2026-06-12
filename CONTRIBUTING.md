@@ -1,5 +1,10 @@
 # Contributing to Oscar
 
+## Documentation
+
+See the [Documentation Index](docs/README.md) for the full set of project docs,
+including architecture, API reference, CI/CD pipeline, and project management artifacts.
+
 ## Development Setup
 
 ### Prerequisites

@@ -1,0 +1,49 @@
+name: Sync GitHub Wiki
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/PROJECT_CHARTER.md'
+      - '.github/RISK_REGISTER.md'
+      - 'docs/CI-CD.md'
+      - 'docs/README.md'
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone wiki
+        run: |
+          git clone https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git wiki-repo || {
+            echo "Wiki not initialized. Visit https://github.com/${{ github.repository }}/wiki to initialize."
+            exit 0
+          }
+
+      - name: Sync docs to wiki
+        if: success()
+        working-directory: wiki-repo
+        run: |
+          # Copy docs to wiki (these are the wiki-suitable pages)
+          cp ../.github/PROJECT_CHARTER.md ./Project-Charter.md 2>/dev/null || true
+          cp ../.github/RISK_REGISTER.md ./Risk-Register.md 2>/dev/null || true
+          cp ../docs/CI-CD.md ./CI-CD-Strategy.md 2>/dev/null || true
+          cp ../docs/README.md ./Home.md 2>/dev/null || true
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "Sync docs from main repo [skip ci]"
+            git push
+          fi

@@ -27,6 +27,8 @@ type Handlers struct {
 	CustomField  *handlers.CustomFieldHandler
 	LineItem     *handlers.LineItemHandler
 	AuditLog     *handlers.AuditLogHandler
+	APIKey       *handlers.APIKeyHandler
+	Attachment   *handlers.AttachmentHandler
 }
 
 func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
@@ -168,6 +170,16 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	customFields.PATCH("/:id", h.CustomField.Update, RequirePermission("custom_fields", "edit"))
 	customFields.DELETE("/:id", h.CustomField.Delete, RequirePermission("custom_fields", "edit"))
 
+	apiKeys := tenantScoped.Group("/api-keys")
+	apiKeys.GET("", h.APIKey.List, RequirePermission("api_keys", "view"))
+	apiKeys.POST("", h.APIKey.Create, RequirePermission("api_keys", "edit"))
+	apiKeys.DELETE("/:id", h.APIKey.Delete, RequirePermission("api_keys", "edit"))
+
+	attachments := tenantScoped.Group("/attachments")
+	attachments.POST("/presigned", h.Attachment.GetPresignedURL, RequirePermission("attachments", "edit"))
+	attachments.GET("/:entity_type/:entity_id", h.Attachment.ListByEntity, RequirePermission("attachments", "view"))
+	attachments.DELETE("/:id", h.Attachment.Delete, RequirePermission("attachments", "edit"))
+
 	auditLogs := tenantScoped.Group("/audit-logs")
 	auditLogs.GET("", h.AuditLog.List, RequirePermission("audit_logs", "view"))
 	auditLogs.GET("/:id", h.AuditLog.Get, RequirePermission("audit_logs", "view"))
@@ -230,6 +242,8 @@ func hasPermission(role, resource, action string) bool {
 			"users":         "all",
 			"custom_fields": "all",
 			"audit_logs":    "all",
+			"api_keys":      "all",
+			"attachments":   "all",
 		},
 		"Admin": {
 			"persons":       "all",
@@ -240,6 +254,8 @@ func hasPermission(role, resource, action string) bool {
 			"users":         "all",
 			"custom_fields": "all",
 			"audit_logs":    "all",
+			"api_keys":      "all",
+			"attachments":   "all",
 		},
 		"Manager": {
 			"persons":       "team",
@@ -248,6 +264,8 @@ func hasPermission(role, resource, action string) bool {
 			"activities":    "team",
 			"custom_fields": "all",
 			"audit_logs":    "team",
+			"api_keys":      "none",
+			"attachments":   "all",
 		},
 		"Sales Rep": {
 			"persons":       "own",
@@ -256,6 +274,8 @@ func hasPermission(role, resource, action string) bool {
 			"activities":    "own",
 			"custom_fields": "own",
 			"audit_logs":    "own",
+			"api_keys":      "none",
+			"attachments":   "own",
 		},
 		"Read Only": {
 			"persons":       "team",
@@ -264,6 +284,8 @@ func hasPermission(role, resource, action string) bool {
 			"activities":    "team",
 			"custom_fields": "team",
 			"audit_logs":    "team",
+			"api_keys":      "none",
+			"attachments":   "team",
 		},
 	}
 

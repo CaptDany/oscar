@@ -1,32 +1,33 @@
-{{- template "common.yaml" . }}
-{{- define "common.yaml" }}
-{{- $fullName := include "oscar.fullname" . -}}
-{{- $releaseName := .Release.Name -}}
-{{- $chartName := .Chart.Name -}}
-{{- $imageRepository := .Values.image.repository -}}
-{{- $imageTag := .Values.image.tag | default .Chart.AppVersion -}}
-{{- $imagePullPolicy := .Values.image.pullPolicy -}}
-{{- $servicePort := .Values.service.port -}}
-{{- $replicaCount := .Values.replicaCount -}}
-{{- end }}
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "oscar.fullname" . }}
+  name: {{ include "oscar.fullname" . }}-backend
   labels:
     {{- include "oscar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+  annotations:
+    oscar.dev/ci-build: "{{ .Values.ci.buildNumber | default "manual" }}"
+    oscar.dev/ci-commit: "{{ .Values.ci.commitSha | default "unknown" }}"
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       {{- include "oscar.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
   template:
     metadata:
       annotations:
         {{- toYaml .Values.podAnnotations | nindent 8 }}
+        rollme: {{ randAlphaNum 5 | quote }}
       labels:
         {{- include "oscar.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -35,11 +36,12 @@ spec:
       serviceAccountName: {{ include "oscar.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
@@ -56,6 +58,13 @@ spec:
               value: {{ .Values.env.APP_ENV | quote }}
             - name: APP_PORT
               value: {{ .Values.env.APP_PORT | quote }}
+            - name: APP_BASE_URL
+              value: {{ .Values.env.APP_BASE_URL | quote }}
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: oscar-app-secret
+                  key: app-secret
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -96,9 +105,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "oscar.fullname" . }}
+  name: {{ include "oscar.fullname" . }}-api
   labels:
     {{- include "oscar.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -108,6 +118,7 @@ spec:
       name: http
   selector:
     {{- include "oscar.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
 ---
 {{- if .Values.secret.enabled }}
 apiVersion: v1

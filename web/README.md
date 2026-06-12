@@ -2,6 +2,9 @@
 
 A modern CRM frontend built with Astro and React, following the Islands Architecture pattern.
 
+For the full project documentation (architecture, API, CI/CD, project management),
+see the [Documentation Index](../docs/README.md).
+
 ## Tech Stack
 
 - **Astro 6** — Meta-framework for SSR, routing, and layouts
