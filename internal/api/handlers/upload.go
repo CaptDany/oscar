@@ -135,7 +135,7 @@ func (h *UploadHandler) ConfirmAvatarUpload(c echo.Context) error {
 	if err != nil {
 		return errs.BadRequest("Failed to download uploaded file").HTTPError(c)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	processedImage, err := storage.CropAndResizeToSquare(reader, storage.AvatarSize)
 	if err != nil {
@@ -261,7 +261,7 @@ func (h *UploadHandler) GetBrandingAsset(c echo.Context) error {
 	if err != nil {
 		return errs.NotFound("Asset not found").HTTPError(c)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	data, err := io.ReadAll(reader)
 	if err != nil {
