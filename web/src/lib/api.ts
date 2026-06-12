@@ -68,9 +68,13 @@ async function refreshAccessToken(): Promise<string | null> {
   isRefreshing = true;
 
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const stored = localStorage.getItem('oscar_auth');
+    const refreshToken = stored ? (JSON.parse(stored).refreshToken || null) : null;
+
+    const res = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
-      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
     if (!res.ok) {
@@ -81,10 +85,11 @@ async function refreshAccessToken(): Promise<string | null> {
 
     const data = await res.json();
     
-    if (data.success && data.token) {
-      updateStoredToken(data.token);
-      onTokenRefreshed(data.token);
-      return data.token;
+    if (data.access_token) {
+      updateStoredToken(data.access_token);
+      document.cookie = `oscar_token=${data.access_token}; path=/; max-age=${15 * 60}; SameSite=Lax`;
+      onTokenRefreshed(data.access_token);
+      return data.access_token;
     }
 
     clearStoredSession();

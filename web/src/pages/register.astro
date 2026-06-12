@@ -141,7 +141,7 @@ if (user) {
       const tenantName = formData.get('tenant_name') as string;
 
       try {
-        const res = await fetch('/api/auth/register', {
+        const res = await fetch('/api/v1/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -156,11 +156,21 @@ if (user) {
         const data = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.error?.message || data.error?.details?.[0]?.message || 'Registration failed');
+          const err = data.error || data;
+          throw new Error(err.message || err.details?.[0]?.message || 'Registration failed');
         }
 
+        const maxAge = 15 * 60;
+        const refreshMaxAge = 7 * 24 * 60 * 60;
+        document.cookie = `oscar_token=${data.access_token}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        if (data.refresh_token) {
+          document.cookie = `oscar_refresh_token=${data.refresh_token}; path=/; max-age=${refreshMaxAge}; SameSite=Lax`;
+        }
+        document.cookie = `oscar_user=${JSON.stringify(data.user)}; path=/; max-age=${refreshMaxAge}; SameSite=Lax`;
+
         localStorage.setItem('oscar_auth', JSON.stringify({
-          token: data.token,
+          token: data.access_token,
+          refreshToken: data.refresh_token,
           user: data.user,
         }));
 
