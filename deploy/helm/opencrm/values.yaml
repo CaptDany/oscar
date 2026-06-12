@@ -136,6 +136,10 @@ affinity:
                   - oscar
           topologyKey: kubernetes.io/hostname
 
+ci:
+  buildNumber: ""
+  commitSha: ""
+
 env:
   APP_ENV: production
   APP_PORT: "8080"
