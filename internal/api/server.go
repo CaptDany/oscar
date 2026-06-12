@@ -168,11 +168,12 @@ func minimalLogger() echo.MiddlewareFunc {
 			}
 
 			methodColor := cyan
-			if method == "POST" {
+			switch method {
+			case "POST":
 				methodColor = green
-			} else if method == "PUT" || method == "PATCH" {
+			case "PUT", "PATCH":
 				methodColor = yellow
-			} else if method == "DELETE" {
+			case "DELETE":
 				methodColor = red
 			}
 

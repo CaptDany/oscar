@@ -204,7 +204,7 @@ func (h *OAuthHandler) exchangeGoogleToken(code string) (*googleTokenResponse, e
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
@@ -228,7 +228,7 @@ func (h *OAuthHandler) getGoogleUserInfo(accessToken string) (*OAuthUserInfo, er
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
@@ -265,7 +265,7 @@ func (h *OAuthHandler) exchangeAppleToken(code string) (map[string]interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
