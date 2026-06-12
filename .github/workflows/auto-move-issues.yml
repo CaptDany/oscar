@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Extract issue references from PR
         id: extract
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           result-encoding: string
           script: |
@@ -36,7 +36,7 @@ jobs:
 
       - name: Add done label and comment
         if: steps.extract.outputs.result != ''
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             const issueNumber = parseInt('${{ steps.extract.outputs.result }}');
