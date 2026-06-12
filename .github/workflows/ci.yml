@@ -78,7 +78,7 @@ jobs:
       - name: Run unit tests with coverage
         run: go test -v -short -count=1 -coverprofile=coverage.out -covermode=atomic ./...
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-out
           path: coverage.out
@@ -98,7 +98,7 @@ jobs:
       - name: Cross-compile Linux binary
         run: GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o bin/oscar-linux ./cmd/server
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: oscar-linux-amd64
           path: bin/oscar-linux
