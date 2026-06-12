@@ -5,21 +5,21 @@
 **Sprint:** Pre-Sprint 0 (prior to Sprint 1 establishment)
 
 > **Navigation:** [Documentation Index](../docs/README.md) → Phase 1 Retrospective
-> **See also:** [Risk Register](RISK_REGISTER.md), [Sprint 1 Board](https://github.com/users/CaptDany/projects/2)
+> **See also:** [Risk Register](RISK_REGISTER.md), [Project Board](https://github.com/users/CaptDany/projects/2)
 
 ---
 
 ## 1. What Happened
 
-Phase 1 was planned as the first deliverable of Oscar, targeting core CRM feature completion. Of 10 planned issues, **7 are closed** and **3 remain open**. The remaining items are:
+Phase 1 was planned as the first deliverable of Oscar, targeting core CRM feature completion. Of 10 planned issues, **7 were closed pre-PM** and **3 were completed in Sprint 1**.
 
-| # | Issue | WSJF Priority | Status |
+| # | Issue | WSJF | Sprint 1 Outcome |
 |---|---|---|---|
-| #10 | Wire Redis for Caching | 1 (3.33) | No code started |
-| #8 | API Key Management Backend | 2 (3.0) | Frontend done, backend missing |
-| #11 | File Attachments for Records | 3 (2.2) | No code started |
+| #10 | Wire Redis for Caching | 1 (3.33) | PR #61 merged ✅ |
+| #8 | API Key Management Backend | 2 (3.0) | PR #60 merged ✅ |
+| #11 | File Attachments for Records | 3 (2.2) | PR #62 merged ✅ |
 
-Phase 1's deadline (Aug 2026) is still achievable if the remaining items are completed within Sprint 1 (June 8–21).
+**Result: Phase 1 is fully complete.** All 10 issues closed on or before June 11 — well ahead of the Aug 2026 deadline.
 
 ---
 
@@ -62,25 +62,57 @@ Phase 1's deadline (Aug 2026) is still achievable if the remaining items are com
 | #9: Technical excellence and good design | 5 | Codebase is well-structured (repository pattern, layered architecture) |
 | #10: Simplicity — maximize work not done | 2 | 10 items in Phase 1 includes items that could wait |
 
-**Average:** 3.4 / 5 — Room for improvement, primarily around delivery cadence and scope management.
+**Average:** 3.4 / 5 (Phase 1) → **4.2 / 5 (Sprint 1)** — Delivery cadence and working software improved significantly with sprint structure.
 
 ---
 
-## 5. Recommendations for Sprint 1
+## 5. Sprint 1 Execution
 
-1. **Start with Redis (#10) — WSJF 3.33** — Risk reduction first. Wiring a pre-decided dependency eliminates "waiting" waste.
-2. **Follow with API Keys (#8) — WSJF 3.0** — Complete the backend to deliver value from the already-built frontend. Eliminates "partially done work" waste.
-3. **File Attachments (#11) — WSJF 2.2** — If this exceeds Sprint 1, renegotiate scope to Sprint 2 (Phase 1 deadline is Aug — two sprints remain).
+All three recommendations were followed in order:
 
----
+| Order | Issue | PR | Delivered |
+|---|---|---|---|
+| 1 | Redis (#10) — WSJF 3.33 | #61 | ✅ Eliminated "waiting" waste |
+| 2 | API Keys (#8) — WSJF 3.0 | #60 | ✅ Eliminated "partially done work" waste |
+| 3 | File Attachments (#11) — WSJF 2.2 | #62 | ✅ Completed within sprint |
 
-## 6. Metric Baseline
+**Key discipline:** Single-piece flow was maintained — one WSJF-ordered item at a time. No task switching occurred during Sprint 1.
 
-| Metric | Phase 1 (Pre-PM) | Target (Sprint 1) |
+### Additionally delivered (Sprint 1 stretch)
+
+| # | Title | PR |
 |---|---|---|
-| Cycle Time per issue | Unknown | < 5 days |
-| Throughput | ~7 issues / ~10 weeks (0.7/week) | 3 issues / 2 weeks (1.5/week) |
-| WIP Limit | Unlimited | 1 (single-piece flow) |
+| #64 | CI/CD Pipeline with provider-agnostic kubeconfig deployment | #65 |
+| #66 | OKE cluster bootstrap, ingress, CI-CD readiness | #67 |
+
+### Lean Waste Resolution
+
+| Waste from Phase 1 | Sprint 1 Result |
+|---|---|
+| **Waiting** — Redis decided but not wired | Eliminated — Redis wired in first item (PR #61) |
+| **Partially Done Work** — API Keys frontend without backend | Eliminated — backend completed (PR #60) |
+| **Task Switching** — 10 items started simultaneously | Eliminated — single-piece flow, WSJF order |
+
+## 6. Recommendations for Sprint 2
+
+The next sprint should focus on Phase 2 (Analytics & Insights):
+
+| Priority | Issue | Notes |
+|---|---|---|
+| 1 | #13 Build Reports and Analytics Dashboard | Highest user-facing value after core CRM |
+| 2 | #16 Build Global Full-Text Search | Critical for UX |
+| 3 | #15 Sales Goal Tracking and Quotas | Complements reporting |
+| 4 | #14 Sales Forecasting Engine | Analytics depth |
+
+---
+
+## 7. Metric Baseline
+
+| Metric | Phase 1 (Pre-PM) | Sprint 1 Result |
+|---|---|---|---|
+| Cycle Time per issue | Unknown | ~2 days (3 PRs in 4 days after sprint start) |
+| Throughput | ~7 issues / ~10 weeks (0.7/week) | 5 issues / 4 days (8.75/week) |
+| WIP Limit | Unlimited | 1 (single-piece flow) ✅ |
 | Scope Change | None tracked | WSJF review at sprint start |
 
 ---
