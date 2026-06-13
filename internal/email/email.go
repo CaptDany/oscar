@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/smtp"
+	"strings"
 
 	"github.com/oscar/oscar/internal/config"
 )
@@ -27,7 +28,16 @@ func NewEmailClient(cfg *config.EmailConfig) *EmailClient {
 	}
 }
 
+func sanitizeHeader(s string) string {
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\n", "")
+	return s
+}
+
 func (c *EmailClient) Send(to, subject, body string) error {
+	to = sanitizeHeader(to)
+	subject = sanitizeHeader(subject)
+
 	msg := fmt.Sprintf("From: %s\r\n"+
 		"To: %s\r\n"+
 		"Subject: %s\r\n"+

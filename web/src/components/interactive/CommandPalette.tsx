@@ -17,7 +17,7 @@ interface SearchResult {
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [recent, setRecent] = useState<RecentItem[]>([]);
+  const [_recent, setRecent] = useState<RecentItem[]>([]);
   const [results, setResults] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
