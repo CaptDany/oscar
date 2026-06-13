@@ -157,6 +157,8 @@ func main() {
 	lineItemHandler := handlers.NewLineItemHandler(lineItemRepo, dealRepo)
 	auditLogHandler := handlers.NewAuditLogHandler(auditLogRepo)
 	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeyRepo)
+	searchRepo := repositories.NewSearchRepository(pool)
+	searchHandler := handlers.NewSearchHandler(searchRepo)
 
 	server.SetupRoutes(&api.Handlers{
 		Auth:         authHandler,
@@ -178,6 +180,7 @@ func main() {
 		AuditLog:     auditLogHandler,
 		APIKey:       apiKeyHandler,
 		Attachment:   attachmentHandler,
+		Search:       searchHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
