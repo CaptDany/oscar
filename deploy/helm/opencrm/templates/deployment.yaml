@@ -95,6 +95,38 @@ spec:
               value: {{ .Values.env.R2_BUCKET | quote }}
             - name: R2_PUBLIC_URL
               value: {{ .Values.env.R2_PUBLIC_URL | quote }}
+            - name: APP_FRONTEND_URL
+              value: {{ .Values.env.APP_FRONTEND_URL | quote }}
+            - name: OAUTH_GOOGLE_CLIENT_ID
+              value: {{ .Values.env.OAUTH_GOOGLE_CLIENT_ID | quote }}
+            - name: OAUTH_GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "oscar.fullname" . }}-secret
+                  key: oauth-google-client-secret
+                  optional: true
+            - name: OAUTH_APPLE_CLIENT_ID
+              value: {{ .Values.env.OAUTH_APPLE_CLIENT_ID | quote }}
+            - name: OAUTH_APPLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "oscar.fullname" . }}-secret
+                  key: oauth-apple-client-secret
+                  optional: true
+            - name: OAUTH_DISCORD_CLIENT_ID
+              value: {{ .Values.env.OAUTH_DISCORD_CLIENT_ID | quote }}
+            - name: OAUTH_DISCORD_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "oscar.fullname" . }}-secret
+                  key: oauth-discord-client-secret
+                  optional: true
+            - name: DISCORD_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "oscar.fullname" . }}-secret
+                  key: discord-bot-token
+                  optional: true
           volumeMounts:
             - name: tmp
               mountPath: /tmp

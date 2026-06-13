@@ -144,6 +144,7 @@ env:
   APP_ENV: production
   APP_PORT: "8080"
   APP_BASE_URL: "https://oscar-crm.cc"
+  APP_FRONTEND_URL: "https://oscar-crm.cc"
   DATABASE_URL: ""
   REDIS_URL: ""
   R2_ACCOUNT_ID: ""
@@ -151,6 +152,13 @@ env:
   R2_SECRET_KEY: ""
   R2_BUCKET: oscar
   R2_PUBLIC_URL: ""
+  OAUTH_GOOGLE_CLIENT_ID: ""
+  OAUTH_GOOGLE_CLIENT_SECRET: ""
+  OAUTH_APPLE_CLIENT_ID: ""
+  OAUTH_APPLE_CLIENT_SECRET: ""
+  OAUTH_DISCORD_CLIENT_ID: ""
+  OAUTH_DISCORD_CLIENT_SECRET: ""
+  DISCORD_BOT_TOKEN: ""
 
 secret:
   enabled: true

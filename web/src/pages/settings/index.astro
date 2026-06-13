@@ -618,7 +618,7 @@ const isAdmin = user.roles?.includes('Owner') || user.roles?.includes('Admin');
   function getAssetURL(objectKey: string): string {
     const cached = getCachedAsset(objectKey);
     if (cached) return cached;
-    return `/api/upload/branding/asset?key=${encodeURIComponent(objectKey)}`;
+    return `/api/v1/upload/branding/asset?key=${encodeURIComponent(objectKey)}`;
   }
 
   function updatePreviewLogo(objectKey: string | null) {

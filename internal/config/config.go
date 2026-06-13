@@ -202,6 +202,16 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if c.OAuth.GoogleClientID != "" && c.OAuth.GoogleClientSecret == "" {
+		return errors.New("OAUTH_GOOGLE_CLIENT_ID is set but OAUTH_GOOGLE_CLIENT_SECRET is empty")
+	}
+	if c.OAuth.AppleClientID != "" && c.OAuth.AppleClientSecret == "" {
+		return errors.New("OAUTH_APPLE_CLIENT_ID is set but OAUTH_APPLE_CLIENT_SECRET is empty")
+	}
+	if c.OAuth.DiscordClientID != "" && c.OAuth.DiscordClientSecret == "" {
+		return errors.New("OAUTH_DISCORD_CLIENT_ID is set but OAUTH_DISCORD_CLIENT_SECRET is empty")
+	}
+
 	return nil
 }
 
