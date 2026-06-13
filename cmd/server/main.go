@@ -115,6 +115,16 @@ func main() {
 	authHandler := handlers.NewAuthHandlerWithInvitations(userRepo, tenantRepo, roleRepo, invitationRepo, cryptoSvc, tokenManager, emailClient, cfg.App.BaseURL, cfg.App.FrontendURL)
 	oauthHandler := handlers.NewOAuthHandler(userRepo, tenantRepo, roleRepo, cryptoSvc, tokenManager, nil, cfg.App.BaseURL, &cfg.OAuth)
 
+	if cfg.OAuth.GoogleClientID == "" {
+		log.Println("[OAuth] Google OAuth is not configured (OAUTH_GOOGLE_CLIENT_ID not set)")
+	}
+	if cfg.OAuth.AppleClientID == "" {
+		log.Println("[OAuth] Apple OAuth is not configured (OAUTH_APPLE_CLIENT_ID not set)")
+	}
+	if cfg.OAuth.DiscordClientID == "" {
+		log.Println("[OAuth] Discord OAuth is not configured (OAUTH_DISCORD_CLIENT_ID not set)")
+	}
+
 	r2Client, err := storage.NewR2Client(&cfg.R2)
 	if err != nil {
 		log.Printf("Warning: Failed to create R2 client: %v (upload features disabled)", err)
@@ -147,6 +157,9 @@ func main() {
 	lineItemHandler := handlers.NewLineItemHandler(lineItemRepo, dealRepo)
 	auditLogHandler := handlers.NewAuditLogHandler(auditLogRepo)
 	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeyRepo)
+	searchRepo := repositories.NewSearchRepository(pool)
+	searchHandler := handlers.NewSearchHandler(searchRepo)
+	reportsHandler := handlers.NewReportsHandler(activityRepo)
 
 	server.SetupRoutes(&api.Handlers{
 		Auth:         authHandler,
@@ -168,6 +181,8 @@ func main() {
 		AuditLog:     auditLogHandler,
 		APIKey:       apiKeyHandler,
 		Attachment:   attachmentHandler,
+		Search:       searchHandler,
+		Reports:      reportsHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)

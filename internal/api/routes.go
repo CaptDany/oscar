@@ -29,6 +29,8 @@ type Handlers struct {
 	AuditLog     *handlers.AuditLogHandler
 	APIKey       *handlers.APIKeyHandler
 	Attachment   *handlers.AttachmentHandler
+	Search       *handlers.SearchHandler
+	Reports      *handlers.ReportsHandler
 }
 
 func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
@@ -44,6 +46,8 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	api.GET("/auth/oauth/google/callback", h.OAuth.GoogleCallback)
 	api.GET("/auth/oauth/apple", h.OAuth.AppleLogin)
 	api.GET("/auth/oauth/apple/callback", h.OAuth.AppleCallback)
+	api.GET("/auth/oauth/discord", h.OAuth.DiscordLogin)
+	api.GET("/auth/oauth/discord/callback", h.OAuth.DiscordCallback)
 
 	api.GET("/invitations/:token/validate", h.Invitation.Validate)
 
@@ -68,6 +72,11 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	settings := tenantScoped.Group("/settings")
 	settings.GET("", h.Settings.GetSettings)
 	settings.PATCH("", h.Settings.UpdateSettings)
+
+	tenantScoped.GET("/search", h.Search.GlobalSearch)
+
+	reports := tenantScoped.Group("/reports")
+	reports.GET("/activities", h.Reports.ActivityReport)
 
 	persons := tenantScoped.Group("/persons")
 	persons.GET("", h.Person.List)

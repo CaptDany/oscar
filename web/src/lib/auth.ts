@@ -154,9 +154,10 @@ export async function refreshAccessToken(): Promise<string | null> {
   isRefreshing = true;
 
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const res = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
-      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: auth.refreshToken }),
     });
 
     if (!res.ok) {
@@ -167,10 +168,11 @@ export async function refreshAccessToken(): Promise<string | null> {
 
     const data = await res.json();
     
-    if (data.success && data.token) {
-      auth.updateToken(data.token);
-      onTokenRefreshed(data.token);
-      return data.token;
+    if (data.access_token) {
+      auth.updateToken(data.access_token);
+      document.cookie = `oscar_token=${data.access_token}; path=/; max-age=${15 * 60}; SameSite=Lax`;
+      onTokenRefreshed(data.access_token);
+      return data.access_token;
     }
 
     clearSession();

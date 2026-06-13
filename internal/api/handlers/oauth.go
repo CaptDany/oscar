@@ -36,8 +36,9 @@ type OAuthHandler struct {
 type OAuthProvider string
 
 const (
-	ProviderGoogle OAuthProvider = "google"
-	ProviderApple  OAuthProvider = "apple"
+	ProviderGoogle  OAuthProvider = "google"
+	ProviderApple   OAuthProvider = "apple"
+	ProviderDiscord OAuthProvider = "discord"
 )
 
 type OAuthUserInfo struct {
@@ -69,6 +70,10 @@ func NewOAuthHandler(
 }
 
 func (h *OAuthHandler) GoogleLogin(c echo.Context) error {
+	if h.oauthConfig.GoogleClientID == "" {
+		return errs.BadRequest("Google OAuth is not configured (OAUTH_GOOGLE_CLIENT_ID not set)").HTTPError(c)
+	}
+
 	state, err := generateState()
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
@@ -91,7 +96,10 @@ func (h *OAuthHandler) GoogleLogin(c echo.Context) error {
 		state,
 	)
 
-	return c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+	if err := c.Redirect(http.StatusTemporaryRedirect, redirectURL); err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+	return nil
 }
 
 func (h *OAuthHandler) GoogleCallback(c echo.Context) error {
@@ -126,6 +134,10 @@ func (h *OAuthHandler) GoogleCallback(c echo.Context) error {
 }
 
 func (h *OAuthHandler) AppleLogin(c echo.Context) error {
+	if h.oauthConfig.AppleClientID == "" {
+		return errs.BadRequest("Apple OAuth is not configured (OAUTH_APPLE_CLIENT_ID not set)").HTTPError(c)
+	}
+
 	state, err := generateState()
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
@@ -148,7 +160,10 @@ func (h *OAuthHandler) AppleLogin(c echo.Context) error {
 		state,
 	)
 
-	return c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+	if err := c.Redirect(http.StatusTemporaryRedirect, redirectURL); err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+	return nil
 }
 
 func (h *OAuthHandler) AppleCallback(c echo.Context) error {
@@ -182,6 +197,148 @@ func (h *OAuthHandler) AppleCallback(c echo.Context) error {
 	}
 
 	return h.handleOAuthLogin(c, ProviderApple, userInfo)
+}
+
+func (h *OAuthHandler) DiscordLogin(c echo.Context) error {
+	if h.oauthConfig.DiscordClientID == "" {
+		return errs.BadRequest("Discord OAuth is not configured (OAUTH_DISCORD_CLIENT_ID not set)").HTTPError(c)
+	}
+
+	state, err := generateState()
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	c.SetCookie(&http.Cookie{
+		Name:     "oauth_state",
+		Value:    state,
+		Path:     "/",
+		MaxAge:   600,
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	redirectURL := fmt.Sprintf(
+		"https://discord.com/api/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=identify%%20email&state=%s",
+		h.oauthConfig.DiscordClientID,
+		url.QueryEscape(fmt.Sprintf("%s/api/v1/auth/oauth/discord/callback", h.baseURL)),
+		state,
+	)
+
+	if err := c.Redirect(http.StatusTemporaryRedirect, redirectURL); err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+	return nil
+}
+
+func (h *OAuthHandler) DiscordCallback(c echo.Context) error {
+	code := c.QueryParam("code")
+	state := c.QueryParam("state")
+	storedState, _ := c.Cookie("oauth_state")
+
+	if storedState == nil || storedState.Value != state {
+		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"error": "Invalid state parameter",
+		})
+	}
+
+	c.SetCookie(&http.Cookie{
+		Name:   "oauth_state",
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+
+	tokenRes, err := h.exchangeDiscordToken(code)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	userInfo, err := h.getDiscordUserInfo(tokenRes.AccessToken)
+	if err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+
+	return h.handleOAuthLogin(c, ProviderDiscord, userInfo)
+}
+
+type discordTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
+	Scope        string `json:"scope"`
+}
+
+func (h *OAuthHandler) exchangeDiscordToken(code string) (*discordTokenResponse, error) {
+	data := url.Values{}
+	data.Set("client_id", h.oauthConfig.DiscordClientID)
+	data.Set("client_secret", h.oauthConfig.DiscordClientSecret)
+	data.Set("grant_type", "authorization_code")
+	data.Set("code", code)
+	data.Set("redirect_uri", fmt.Sprintf("%s/api/v1/auth/oauth/discord/callback", h.baseURL))
+
+	req, _ := http.NewRequest("POST", "https://discord.com/api/oauth2/token", strings.NewReader(data.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("discord token exchange failed: %s", string(body))
+	}
+
+	var tokenRes discordTokenResponse
+	if err := json.Unmarshal(body, &tokenRes); err != nil {
+		return nil, err
+	}
+
+	return &tokenRes, nil
+}
+
+func (h *OAuthHandler) getDiscordUserInfo(accessToken string) (*OAuthUserInfo, error) {
+	req, _ := http.NewRequest("GET", "https://discord.com/api/users/@me", nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("discord userinfo failed: %s", string(body))
+	}
+
+	var userInfo struct {
+		ID         string `json:"id"`
+		Username   string `json:"username"`
+		GlobalName string `json:"global_name"`
+		Email      string `json:"email"`
+		Verified   bool   `json:"verified"`
+	}
+	if err := json.Unmarshal(body, &userInfo); err != nil {
+		return nil, err
+	}
+
+	name := userInfo.GlobalName
+	if name == "" {
+		name = userInfo.Username
+	}
+
+	return &OAuthUserInfo{
+		Email: userInfo.Email,
+		Name:  name,
+		Sub:   userInfo.ID,
+	}, nil
 }
 
 type googleTokenResponse struct {
@@ -446,7 +603,7 @@ func (h *OAuthHandler) handleNewOAuthUser(ctx context.Context, provider OAuthPro
 
 	_ = h.roleRepo.AssignToUser(ctx, u.ID, []uuid.UUID{defaultRole.ID})
 
-	if provider == ProviderGoogle || provider == ProviderApple {
+	if provider == ProviderGoogle || provider == ProviderApple || provider == ProviderDiscord {
 		_ = h.userRepo.VerifyEmail(ctx, u.ID)
 	}
 

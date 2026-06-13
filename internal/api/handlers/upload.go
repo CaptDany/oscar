@@ -86,7 +86,7 @@ type ConfirmAvatarRequest struct {
 }
 
 func (h *UploadHandler) GetAvatarURL(c echo.Context) error {
-	fmt.Printf("GetAvatarURL: called for path %s\n", c.Request().URL.Path)
+	fmt.Printf("GetAvatarURL: called for user_id param\n")
 	userIDParam := c.Param("user_id")
 
 	userID, err := uuid.Parse(userIDParam)
@@ -239,7 +239,7 @@ func (h *UploadHandler) ConfirmBrandingAssetUpload(c echo.Context) error {
 		return errs.ValidationFailed().HTTPError(c)
 	}
 
-	log.Printf("Branding asset uploaded: type=%s, key=%s", req.AssetType, req.ObjectKey)
+	log.Printf("Branding asset uploaded: type=%s", req.AssetType)
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"asset_type": req.AssetType,
@@ -295,7 +295,7 @@ func (h *UploadHandler) DeleteBrandingAsset(c echo.Context) error {
 		return errs.Internal(err).HTTPError(c)
 	}
 
-	log.Printf("Branding asset deleted: key=%s", req.ObjectKey)
+	log.Printf("Branding asset deleted")
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "Asset deleted successfully",

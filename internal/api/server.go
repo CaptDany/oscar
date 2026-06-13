@@ -178,11 +178,13 @@ func minimalLogger() echo.MiddlewareFunc {
 			}
 
 			statusStr := fmt.Sprintf("%s%d%s", statusColor, status, reset)
+			safePath := strings.ReplaceAll(path, "\n", "")
+			safePath = strings.ReplaceAll(safePath, "\r", "")
 			fmt.Printf("%s[%s]%s %s%-7s%s %s  %s%s  %s\n",
 				dim, timestamp,
 				reset, methodColor, method,
 				reset, statusIcon,
-				purple, path,
+				purple, safePath,
 				statusStr,
 			)
 

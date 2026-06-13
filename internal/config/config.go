@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -81,13 +82,15 @@ type SMSConfig struct {
 }
 
 type OAuthConfig struct {
-	GoogleClientID     string
-	GoogleClientSecret string
-	AppleClientID      string
-	AppleClientSecret  string
-	AppleTeamID        string
-	AppleKeyID         string
-	ApplePrivateKey    string
+	GoogleClientID       string
+	GoogleClientSecret   string
+	AppleClientID        string
+	AppleClientSecret    string
+	AppleTeamID          string
+	AppleKeyID           string
+	ApplePrivateKey      string
+	DiscordClientID      string
+	DiscordClientSecret  string
 }
 
 type TelemetryConfig struct {
@@ -118,9 +121,9 @@ func Load() (*Config, error) {
 		},
 		Database: DatabaseConfig{
 			URL:      getEnv("DATABASE_URL", ""),
-			MaxConns: int32(getEnvInt("DATABASE_MAX_CONNS", 25)),
-			MaxIdle:  int32(getEnvInt("DATABASE_MAX_IDLE", 5)),
-			MinConns: int32(getEnvInt("DATABASE_MIN_CONNS", 5)),
+			MaxConns: safeInt32(getEnvInt("DATABASE_MAX_CONNS", 25)),
+			MaxIdle:  safeInt32(getEnvInt("DATABASE_MAX_IDLE", 5)),
+			MinConns: safeInt32(getEnvInt("DATABASE_MIN_CONNS", 5)),
 			ConnTTL:  getEnvDuration("DATABASE_CONN_TTL", 30*time.Minute),
 		},
 		Redis: RedisConfig{
@@ -159,13 +162,15 @@ func Load() (*Config, error) {
 			APIKeys:   getEnvBool("FEATURE_API_KEYS", true),
 		},
 		OAuth: OAuthConfig{
-			GoogleClientID:     getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
-			GoogleClientSecret: getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
-			AppleClientID:      getEnv("OAUTH_APPLE_CLIENT_ID", ""),
-			AppleClientSecret:  getEnv("OAUTH_APPLE_CLIENT_SECRET", ""),
-			AppleTeamID:        getEnv("OAUTH_APPLE_TEAM_ID", ""),
-			AppleKeyID:         getEnv("OAUTH_APPLE_KEY_ID", ""),
-			ApplePrivateKey:    getEnv("OAUTH_APPLE_PRIVATE_KEY", ""),
+			GoogleClientID:       getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
+			GoogleClientSecret:   getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			AppleClientID:        getEnv("OAUTH_APPLE_CLIENT_ID", ""),
+			AppleClientSecret:    getEnv("OAUTH_APPLE_CLIENT_SECRET", ""),
+			AppleTeamID:          getEnv("OAUTH_APPLE_TEAM_ID", ""),
+			AppleKeyID:           getEnv("OAUTH_APPLE_KEY_ID", ""),
+			ApplePrivateKey:      getEnv("OAUTH_APPLE_PRIVATE_KEY", ""),
+			DiscordClientID:      getEnv("OAUTH_DISCORD_CLIENT_ID", ""),
+			DiscordClientSecret:  getEnv("OAUTH_DISCORD_CLIENT_SECRET", ""),
 		},
 	}
 
@@ -205,6 +210,16 @@ func getEnv(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+func safeInt32(n int) int32 {
+	if n > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if n < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(n)
 }
 
 func getEnvInt(key string, defaultVal int) int {

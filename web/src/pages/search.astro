@@ -1,0 +1,168 @@
+---
+export const prerender = false;
+import AppLayout from '../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+
+const query = Astro.url.searchParams.get('q') || '';
+---
+
+<AppLayout title="Search | oscar">
+  <main class="pt-10 px-8 pb-20">
+    <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+        <form method="GET" action="/search" class="flex gap-3">
+          <div class="relative flex-1">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+            <input
+              type="text"
+              name="q"
+              value={query}
+              placeholder="Search persons, companies, deals..."
+              class="w-full pl-10 pr-4 py-3 bg-surface-container-low border border-outline-variant rounded-lg text-on-background placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+              autofocus
+            />
+          </div>
+          <button type="submit" class="px-6 py-3 bg-primary text-on-primary rounded-lg hover:opacity-90 transition-colors font-medium text-sm">
+            Search
+          </button>
+        </form>
+      </div>
+
+      {query && (
+        <div id="search-results" class="space-y-2">
+          <p class="text-sm text-on-surface-variant font-mono mb-4">Searching for &quot;<span class="text-on-background">{query}</span>&quot;...</p>
+        </div>
+      )}
+
+      {!query && (
+        <div class="text-center py-20">
+          <span class="material-symbols-outlined text-6xl text-on-surface-variant mb-4">search</span>
+          <h2 class="text-xl font-headline font-semibold text-on-background mb-2">Global Search</h2>
+          <p class="text-on-surface-variant font-mono text-sm">Search across persons, companies, and deals</p>
+        </div>
+      )}
+    </div>
+  </main>
+</AppLayout>
+
+<script>
+async function getToken() {
+  const stored = localStorage.getItem('oscar_auth');
+  if (stored) {
+    try {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    } catch {}
+  }
+  const cookies = Object.fromEntries(document.cookie.split('; ').map(c => c.split('=')));
+  return cookies['oscar_token'] || null;
+}
+
+function getEntityLink(result) {
+  switch (result.entity_type) {
+    case 'person': return `/contacts/${result.id}`;
+    case 'company': return `/companies/${result.id}`;
+    case 'deal': return `/deals/${result.id}`;
+    default: return '#';
+  }
+}
+
+function getEntityIcon(type) {
+  switch (type) {
+    case 'person': return 'person';
+    case 'company': return 'domain';
+    case 'deal': return 'account_tree';
+    default: return 'search';
+  }
+}
+
+function getEntityLabel(type) {
+  switch (type) {
+    case 'person': return 'Person';
+    case 'company': return 'Company';
+    case 'deal': return 'Deal';
+    default: return type;
+  }
+}
+
+async function performSearch(query) {
+  const container = document.getElementById('search-results');
+  if (!container) return;
+
+  const token = await getToken();
+  if (!token) {
+    container.innerHTML = '<p class="text-error text-sm">Session expired. Please log in again.</p>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=20`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        container.innerHTML = '<p class="text-error text-sm">Session expired. Please refresh the page.</p>';
+        return;
+      }
+      container.innerHTML = `<p class="text-error text-sm">Search failed (${res.status})</p>`;
+      return;
+    }
+
+    const data = await res.json();
+    const results = data.data || [];
+    const meta = data.meta || {};
+
+    if (results.length === 0) {
+      container.innerHTML = `<p class="text-sm text-on-surface-variant font-mono">No results found for &quot;<span class="text-on-background">${query}</span>&quot;</p>`;
+      return;
+    }
+
+    const grouped = {};
+    for (const r of results) {
+      if (!grouped[r.entity_type]) grouped[r.entity_type] = [];
+      grouped[r.entity_type].push(r);
+    }
+
+    let html = `<p class="text-sm text-on-surface-variant font-mono mb-4">Found ${results.length} result${results.length !== 1 ? 's' : ''} for &quot;<span class="text-on-background">${query}</span>&quot;</p>`;
+
+    const typeOrder = ['person', 'company', 'deal'];
+    for (const type of typeOrder) {
+      const items = grouped[type];
+      if (!items) continue;
+
+      html += `<div class="mb-4">
+        <h3 class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-sm">${getEntityIcon(type)}</span>
+          ${getEntityLabel(type)}s
+          <span class="text-xs font-mono text-gray-500">(${items.length})</span>
+        </h3>
+        <div class="space-y-1">`;
+
+      for (const item of items) {
+        html += `<a href="${getEntityLink(item)}" class="flex items-center justify-between p-3 bg-surface-container-low hover:bg-surface-container rounded-lg transition-colors group">
+          <div>
+            <p class="text-sm font-medium text-on-background group-hover:text-primary transition-colors">${item.title}</p>
+            ${item.subtitle ? `<p class="text-xs text-on-surface-variant font-mono mt-0.5">${item.subtitle}</p>` : ''}
+          </div>
+          <span class="text-xs text-on-surface-variant font-mono">${item.rank ? Math.round(item.rank * 100) + '%' : ''}</span>
+        </a>`;
+      }
+
+      html += '</div></div>';
+    }
+
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = `<p class="text-error text-sm">Search failed: ${err.message}</p>`;
+  }
+}
+
+const params = new URLSearchParams(window.location.search);
+const query = params.get('q');
+if (query) {
+  performSearch(query);
+}
+</script>

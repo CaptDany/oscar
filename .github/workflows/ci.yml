@@ -10,6 +10,8 @@ on:
   push:
     branches: [main, dev]
 
+permissions: read-all
+
 env:
   GO_VERSION: "1.25"
   NODE_VERSION: "22"
@@ -24,8 +26,8 @@ jobs:
       docker: ${{ steps.filter.outputs.docker }}
       workflows: ${{ steps.filter.outputs.workflows }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4
         id: filter
         with:
           filters: |
@@ -51,13 +53,13 @@ jobs:
     if: ${{ needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@9fae48acfc02a90574d7c304a1758ef9895495fa # v7
         with:
           version: v2.12.2
           args: --timeout=5m
@@ -68,8 +70,8 @@ jobs:
     if: ${{ needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -78,7 +80,7 @@ jobs:
       - name: Run unit tests with coverage
         run: go test -v -short -count=1 -coverprofile=coverage.out -covermode=atomic ./...
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-out
           path: coverage.out
@@ -90,15 +92,15 @@ jobs:
     if: ${{ needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.docker == 'true' || needs.detect-changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - name: Cross-compile Linux binary
         run: GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o bin/oscar-linux ./cmd/server
       - name: Upload build artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: oscar-linux-amd64
           path: bin/oscar-linux
@@ -110,8 +112,8 @@ jobs:
     if: ${{ needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Install dependencies
@@ -127,8 +129,8 @@ jobs:
     if: ${{ needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -146,7 +148,7 @@ jobs:
             echo "No vulnerabilities found."
             echo "has_vulns=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/github-script@v9
+      - uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         continue-on-error: true
         if: steps.vuln-parse.outputs.has_vulns == 'true' && github.event_name == 'pull_request'
         with:
@@ -170,11 +172,11 @@ jobs:
     if: ${{ needs.detect-changes.outputs.docker == 'true' || needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.workflows == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
       - name: Build image (no push)
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           file: docker/Dockerfile
@@ -189,8 +191,8 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/dependency-review-action@v5
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         continue-on-error: true
         with:
           fail-on-severity: critical
@@ -208,7 +210,7 @@ jobs:
       - dependency-review
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v9
+      - uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         with:
           script: |
             const results = ${{ toJSON(needs) }};

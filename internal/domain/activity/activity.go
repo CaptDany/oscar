@@ -127,6 +127,7 @@ type Repository interface {
 	GetPendingReminders(ctx context.Context, tenantID uuid.UUID) ([]*Activity, error)
 	Count(ctx context.Context, tenantID uuid.UUID, filter *ListActivitiesFilter) (int, error)
 	CountByType(ctx context.Context, tenantID uuid.UUID) (map[ActivityType]int, error)
+	GetActivityReport(ctx context.Context, tenantID uuid.UUID, filter *ActivityReportFilter) (*ActivityReport, error)
 }
 
 type AssociationRepository interface {

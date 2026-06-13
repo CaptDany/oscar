@@ -6,6 +6,14 @@ export type { ApiError };
 import type { CustomFieldDefinition } from '../types/custom_field';
 import type { AuditLogEntry, ListAuditLogsParams, ListAuditLogsResponse } from '../types/audit_log';
 
+export interface SearchResultItem {
+  id: string;
+  entity_type: 'person' | 'company' | 'deal';
+  title: string;
+  subtitle?: string;
+  rank: number;
+}
+
 interface ApiError {
   code: string;
   message: string;
@@ -68,9 +76,21 @@ async function refreshAccessToken(): Promise<string | null> {
   isRefreshing = true;
 
   try {
-    const res = await fetch('/api/auth/refresh', {
+    let refreshToken: string | null = null;
+    try {
+      const stored = localStorage.getItem('oscar_auth');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        refreshToken = parsed.refreshToken || null;
+      }
+    } catch {
+      // corrupted localStorage, ignore
+    }
+
+    const res = await fetch('/api/v1/auth/refresh', {
       method: 'POST',
-      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
     if (!res.ok) {
@@ -81,10 +101,11 @@ async function refreshAccessToken(): Promise<string | null> {
 
     const data = await res.json();
     
-    if (data.success && data.token) {
-      updateStoredToken(data.token);
-      onTokenRefreshed(data.token);
-      return data.token;
+    if (data.access_token) {
+      updateStoredToken(data.access_token);
+      document.cookie = `oscar_token=${data.access_token}; path=/; max-age=${15 * 60}; SameSite=Lax`;
+      onTokenRefreshed(data.access_token);
+      return data.access_token;
     }
 
     clearStoredSession();
@@ -464,6 +485,25 @@ export const api = {
     },
     get: (token: string, id: string) =>
       apiFetch<{ data: AuditLogEntry }>(`/audit-logs/${id}`, { token }),
+  },
+
+  search: {
+    global: (token: string, q: string, types?: string[]) => {
+      const params = new URLSearchParams({ q });
+      if (types?.length) params.set('type', types.join(','));
+      return apiFetch<{ data: SearchResultItem[]; meta: { total: number; query: string } }>(`/search?${params.toString()}`, { token });
+    },
+  },
+
+  reports: {
+    activities: (token: string, params?: { start?: string; end?: string; types?: string }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.start) searchParams.set('start', params.start);
+      if (params?.end) searchParams.set('end', params.end);
+      if (params?.types) searchParams.set('types', params.types);
+      const query = searchParams.toString();
+      return apiFetch<{ data: any }>(`/reports/activities${query ? `?${query}` : ''}`, { token });
+    },
   },
 };
 
