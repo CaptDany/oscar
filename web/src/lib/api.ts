@@ -6,6 +6,14 @@ export type { ApiError };
 import type { CustomFieldDefinition } from '../types/custom_field';
 import type { AuditLogEntry, ListAuditLogsParams, ListAuditLogsResponse } from '../types/audit_log';
 
+export interface SearchResultItem {
+  id: string;
+  entity_type: 'person' | 'company' | 'deal';
+  title: string;
+  subtitle?: string;
+  rank: number;
+}
+
 interface ApiError {
   code: string;
   message: string;
@@ -477,6 +485,14 @@ export const api = {
     },
     get: (token: string, id: string) =>
       apiFetch<{ data: AuditLogEntry }>(`/audit-logs/${id}`, { token }),
+  },
+
+  search: {
+    global: (token: string, q: string, types?: string[]) => {
+      const params = new URLSearchParams({ q });
+      if (types?.length) params.set('type', types.join(','));
+      return apiFetch<{ data: SearchResultItem[]; meta: { total: number; query: string } }>(`/search?${params.toString()}`, { token });
+    },
   },
 };
 

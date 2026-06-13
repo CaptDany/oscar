@@ -61,42 +61,20 @@ export function CommandPalette() {
       if (!token) return;
 
       try {
-        const [dealsRes, contactsRes, companiesRes] = await Promise.all([
-          fetch(`/api/v1/deals?search=${encodeURIComponent(query)}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          fetch(`/api/v1/persons?search=${encodeURIComponent(query)}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          fetch(`/api/v1/companies?search=${encodeURIComponent(query)}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-        ]);
+        const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=10`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-        const [deals, contacts, companies] = await Promise.all([
-          dealsRes.json(),
-          contactsRes.json(),
-          companiesRes.json(),
-        ]);
+        if (!res.ok) return;
 
-        const searchResults: SearchResult[] = [
-          ...(deals.data || []).map((d: any) => ({
-            type: 'Deal' as const,
-            name: d.name,
-            href: '/deals',
-            value: d.value
-          })),
-          ...(contacts.data || []).map((c: any) => ({
-            type: 'Contact' as const,
-            name: `${c.first_name} ${c.last_name}`,
-            href: '/contacts',
-          })),
-          ...(companies.data || []).map((c: any) => ({
-            type: 'Company' as const,
-            name: c.name,
-            href: '/companies',
-          })),
-        ];
+        const data = await res.json();
+
+        const searchResults: SearchResult[] = (data.data || []).map((r: any) => ({
+          type: (r.entity_type === 'person' ? 'Contact' : r.entity_type === 'deal' ? 'Deal' : 'Company') as 'Deal' | 'Contact' | 'Company',
+          name: r.title,
+          href: r.entity_type === 'person' ? `/contacts/${r.id}` : r.entity_type === 'company' ? `/companies/${r.id}` : `/deals/${r.id}`,
+          value: r.entity_type === 'deal' ? undefined : undefined,
+        }));
 
         setResults(searchResults.slice(0, 10));
       } catch (err) {
