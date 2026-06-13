@@ -94,8 +94,7 @@ func (r *SearchRepository) Search(ctx context.Context, tenantID uuid.UUID, filte
 	}
 
 	unionQuery := strings.Join(queries, " ")
-	sql := unionQuery + fmt.Sprintf(`) sub
-		WHERE rank > 0
+	sql := unionQuery + fmt.Sprintf(`
 		ORDER BY rank DESC, created_at DESC
 		LIMIT $%d`, argIdx+2)
 

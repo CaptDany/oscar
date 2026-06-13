@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ func (h *SearchHandler) GlobalSearch(c echo.Context) error {
 
 	limit := 20
 	if l := c.QueryParam("limit"); l != "" {
-		if parsed, err := parseInt(l); err == nil && parsed > 0 && parsed <= 50 {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 50 {
 			limit = parsed
 		}
 	}
@@ -62,13 +63,4 @@ func (h *SearchHandler) GlobalSearch(c echo.Context) error {
 	})
 }
 
-func parseInt(s string) (int, error) {
-	var n int
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, errs.BadRequest("invalid number: %s", s)
-		}
-		n = n*10 + int(c-'0')
-	}
-	return n, nil
-}
+
