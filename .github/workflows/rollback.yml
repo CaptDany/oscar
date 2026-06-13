@@ -1,5 +1,7 @@
 name: Rollback
 
+permissions: read-all
+
 on:
   workflow_dispatch:
     inputs:
@@ -27,7 +29,7 @@ jobs:
     environment:
       name: ${{ github.event.inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Configure kubectl (provider-agnostic via kubeconfig secret)
         run: |
@@ -61,7 +63,7 @@ jobs:
           curl -sf --retry 10 --retry-delay 5 --retry-connrefused "https://$ENV_DOMAIN/health" || exit 1
 
       - name: Record incident
-        uses: actions/github-script@v9
+        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
         with:
           script: |
             await github.rest.issues.create({

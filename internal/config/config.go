@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -120,9 +121,9 @@ func Load() (*Config, error) {
 		},
 		Database: DatabaseConfig{
 			URL:      getEnv("DATABASE_URL", ""),
-			MaxConns: int32(getEnvInt("DATABASE_MAX_CONNS", 25)),
-			MaxIdle:  int32(getEnvInt("DATABASE_MAX_IDLE", 5)),
-			MinConns: int32(getEnvInt("DATABASE_MIN_CONNS", 5)),
+			MaxConns: safeInt32(getEnvInt("DATABASE_MAX_CONNS", 25)),
+			MaxIdle:  safeInt32(getEnvInt("DATABASE_MAX_IDLE", 5)),
+			MinConns: safeInt32(getEnvInt("DATABASE_MIN_CONNS", 5)),
 			ConnTTL:  getEnvDuration("DATABASE_CONN_TTL", 30*time.Minute),
 		},
 		Redis: RedisConfig{
@@ -209,6 +210,16 @@ func getEnv(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+func safeInt32(n int) int32 {
+	if n > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if n < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(n)
 }
 
 func getEnvInt(key string, defaultVal int) int {
