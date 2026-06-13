@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -103,7 +104,7 @@ func (h *ReportsHandler) exportActivityCSV(c echo.Context, report *activity.Acti
 	sb.WriteString("section,label,count\n")
 
 	sb.WriteString("overall,total,")
-	sb.WriteString(itoa(report.Total))
+	sb.WriteString(strconv.Itoa(report.Total))
 	sb.WriteString("\n\n")
 
 	sb.WriteString("by_type,type,count\n")
@@ -111,7 +112,7 @@ func (h *ReportsHandler) exportActivityCSV(c echo.Context, report *activity.Acti
 		sb.WriteString("by_type,")
 		sb.WriteString(string(item.Type))
 		sb.WriteString(",")
-		sb.WriteString(itoa(item.Count))
+		sb.WriteString(strconv.Itoa(item.Count))
 		sb.WriteString("\n")
 	}
 	sb.WriteString("\n")
@@ -123,7 +124,7 @@ func (h *ReportsHandler) exportActivityCSV(c echo.Context, report *activity.Acti
 		sb.WriteString(" ")
 		sb.WriteString(item.LastName)
 		sb.WriteString(",")
-		sb.WriteString(itoa(item.Count))
+		sb.WriteString(strconv.Itoa(item.Count))
 		sb.WriteString("\n")
 	}
 	sb.WriteString("\n")
@@ -133,28 +134,11 @@ func (h *ReportsHandler) exportActivityCSV(c echo.Context, report *activity.Acti
 		sb.WriteString("by_day,")
 		sb.WriteString(item.Date)
 		sb.WriteString(",")
-		sb.WriteString(itoa(item.Count))
+		sb.WriteString(strconv.Itoa(item.Count))
 		sb.WriteString("\n")
 	}
 
 	return c.String(http.StatusOK, sb.String())
 }
 
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	if neg {
-		digits = append([]byte{'-'}, digits...)
-	}
-	return string(digits)
-}
+

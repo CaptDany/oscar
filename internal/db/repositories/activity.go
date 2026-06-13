@@ -340,7 +340,6 @@ func (r *ActivityRepository) GetActivityReport(ctx context.Context, tenantID uui
 
 	baseWhere += fmt.Sprintf(" AND a.status = $%d", argIdx)
 	args = append(args, activity.ActivityStatusCompleted)
-	argIdx++
 
 	totalQuery := `SELECT COUNT(*) FROM activities a ` + baseWhere
 	if err := r.pool.QueryRow(ctx, totalQuery, args...).Scan(&report.Total); err != nil {
