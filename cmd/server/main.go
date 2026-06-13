@@ -157,6 +157,8 @@ func main() {
 	lineItemHandler := handlers.NewLineItemHandler(lineItemRepo, dealRepo)
 	auditLogHandler := handlers.NewAuditLogHandler(auditLogRepo)
 	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeyRepo)
+	searchRepo := repositories.NewSearchRepository(pool)
+	searchHandler := handlers.NewSearchHandler(searchRepo)
 	reportsHandler := handlers.NewReportsHandler(activityRepo)
 
 	server.SetupRoutes(&api.Handlers{
@@ -179,6 +181,7 @@ func main() {
 		AuditLog:     auditLogHandler,
 		APIKey:       apiKeyHandler,
 		Attachment:   attachmentHandler,
+		Search:       searchHandler,
 		Reports:      reportsHandler,
 	}, authMw, tenantMw, rateLimiter)
 

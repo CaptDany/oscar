@@ -29,6 +29,7 @@ type Handlers struct {
 	AuditLog     *handlers.AuditLogHandler
 	APIKey       *handlers.APIKeyHandler
 	Attachment   *handlers.AttachmentHandler
+	Search       *handlers.SearchHandler
 	Reports      *handlers.ReportsHandler
 }
 
@@ -71,6 +72,8 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	settings := tenantScoped.Group("/settings")
 	settings.GET("", h.Settings.GetSettings)
 	settings.PATCH("", h.Settings.UpdateSettings)
+
+	tenantScoped.GET("/search", h.Search.GlobalSearch)
 
 	reports := tenantScoped.Group("/reports")
 	reports.GET("/activities", h.Reports.ActivityReport)
