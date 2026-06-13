@@ -44,6 +44,8 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	api.GET("/auth/oauth/google/callback", h.OAuth.GoogleCallback)
 	api.GET("/auth/oauth/apple", h.OAuth.AppleLogin)
 	api.GET("/auth/oauth/apple/callback", h.OAuth.AppleCallback)
+	api.GET("/auth/oauth/discord", h.OAuth.DiscordLogin)
+	api.GET("/auth/oauth/discord/callback", h.OAuth.DiscordCallback)
 
 	api.GET("/invitations/:token/validate", h.Invitation.Validate)
 

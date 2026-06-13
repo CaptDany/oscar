@@ -121,6 +121,9 @@ func main() {
 	if cfg.OAuth.AppleClientID == "" {
 		log.Println("[OAuth] Apple OAuth is not configured (OAUTH_APPLE_CLIENT_ID not set)")
 	}
+	if cfg.OAuth.DiscordClientID == "" {
+		log.Println("[OAuth] Discord OAuth is not configured (OAUTH_DISCORD_CLIENT_ID not set)")
+	}
 
 	r2Client, err := storage.NewR2Client(&cfg.R2)
 	if err != nil {

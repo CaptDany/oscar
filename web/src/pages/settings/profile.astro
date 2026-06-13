@@ -90,6 +90,20 @@ if (!user) return Astro.redirect('/login');
               </div>
               <div class="flex items-center justify-between p-4 bg-surface-container rounded-lg">
                 <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded bg-[#000000] flex items-center justify-center">
+                    <span class="text-white text-sm font-bold">A</span>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Apple</p>
+                    <p id="apple-status" class="text-xs text-gray-500">Not connected</p>
+                  </div>
+                </div>
+                <button onclick="connectApple()" class="px-4 py-1.5 bg-surface-container-highest text-sm rounded hover:bg-surface-container-high transition-colors">
+                  Connect
+                </button>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-surface-container rounded-lg">
+                <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded bg-[#5865F2] flex items-center justify-center">
                     <span class="text-white text-sm font-bold">D</span>
                   </div>
@@ -185,11 +199,15 @@ var getToken = function() {
 }
 
 async function connectGoogle() {
-  window.location.href = '/api/v1/oauth/google';
+  window.location.href = '/api/v1/auth/oauth/google';
+}
+
+async function connectApple() {
+  window.location.href = '/api/v1/auth/oauth/apple';
 }
 
 async function connectDiscord() {
-  window.location.href = '/api/v1/oauth/discord';
+  window.location.href = '/api/v1/auth/oauth/discord';
 }
 
 async function registerPasskey() {

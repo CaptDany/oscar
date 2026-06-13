@@ -81,13 +81,15 @@ type SMSConfig struct {
 }
 
 type OAuthConfig struct {
-	GoogleClientID     string
-	GoogleClientSecret string
-	AppleClientID      string
-	AppleClientSecret  string
-	AppleTeamID        string
-	AppleKeyID         string
-	ApplePrivateKey    string
+	GoogleClientID       string
+	GoogleClientSecret   string
+	AppleClientID        string
+	AppleClientSecret    string
+	AppleTeamID          string
+	AppleKeyID           string
+	ApplePrivateKey      string
+	DiscordClientID      string
+	DiscordClientSecret  string
 }
 
 type TelemetryConfig struct {
@@ -159,13 +161,15 @@ func Load() (*Config, error) {
 			APIKeys:   getEnvBool("FEATURE_API_KEYS", true),
 		},
 		OAuth: OAuthConfig{
-			GoogleClientID:     getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
-			GoogleClientSecret: getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
-			AppleClientID:      getEnv("OAUTH_APPLE_CLIENT_ID", ""),
-			AppleClientSecret:  getEnv("OAUTH_APPLE_CLIENT_SECRET", ""),
-			AppleTeamID:        getEnv("OAUTH_APPLE_TEAM_ID", ""),
-			AppleKeyID:         getEnv("OAUTH_APPLE_KEY_ID", ""),
-			ApplePrivateKey:    getEnv("OAUTH_APPLE_PRIVATE_KEY", ""),
+			GoogleClientID:       getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
+			GoogleClientSecret:   getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			AppleClientID:        getEnv("OAUTH_APPLE_CLIENT_ID", ""),
+			AppleClientSecret:    getEnv("OAUTH_APPLE_CLIENT_SECRET", ""),
+			AppleTeamID:          getEnv("OAUTH_APPLE_TEAM_ID", ""),
+			AppleKeyID:           getEnv("OAUTH_APPLE_KEY_ID", ""),
+			ApplePrivateKey:      getEnv("OAUTH_APPLE_PRIVATE_KEY", ""),
+			DiscordClientID:      getEnv("OAUTH_DISCORD_CLIENT_ID", ""),
+			DiscordClientSecret:  getEnv("OAUTH_DISCORD_CLIENT_SECRET", ""),
 		},
 	}
 
