@@ -157,6 +157,7 @@ func main() {
 	lineItemHandler := handlers.NewLineItemHandler(lineItemRepo, dealRepo)
 	auditLogHandler := handlers.NewAuditLogHandler(auditLogRepo)
 	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeyRepo)
+	reportsHandler := handlers.NewReportsHandler(activityRepo)
 
 	server.SetupRoutes(&api.Handlers{
 		Auth:         authHandler,
@@ -178,6 +179,7 @@ func main() {
 		AuditLog:     auditLogHandler,
 		APIKey:       apiKeyHandler,
 		Attachment:   attachmentHandler,
+		Reports:      reportsHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)

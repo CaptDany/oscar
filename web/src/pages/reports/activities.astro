@@ -1,0 +1,235 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Activity Report | oscar">
+  <main class="pt-10 px-8 pb-20">
+    <div class="max-w-5xl mx-auto">
+      <div class="mb-8">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight">Activity Report</h2>
+          <button id="export-csv" class="px-4 py-2 bg-surface-container-highest text-sm rounded hover:bg-surface-container-high transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm">download</span>
+            Export CSV
+          </button>
+        </div>
+        <p class="text-on-surface-variant font-mono text-sm">Completed activity counts by type, user, and day</p>
+      </div>
+
+      <div class="bg-surface-container-low p-4 rounded-lg mb-6">
+        <div class="flex flex-wrap gap-4 items-end">
+          <div>
+            <label class="block text-xs font-mono text-on-surface-variant mb-1">Start Date</label>
+            <input type="date" id="start-date" class="px-3 py-2 bg-surface-container border border-outline-variant rounded text-sm text-on-background" />
+          </div>
+          <div>
+            <label class="block text-xs font-mono text-on-surface-variant mb-1">End Date</label>
+            <input type="date" id="end-date" class="px-3 py-2 bg-surface-container border border-outline-variant rounded text-sm text-on-background" />
+          </div>
+          <div>
+            <label class="block text-xs font-mono text-on-surface-variant mb-1">Activity Type</label>
+            <select id="type-filter" class="px-3 py-2 bg-surface-container border border-outline-variant rounded text-sm text-on-background">
+              <option value="">All Types</option>
+              <option value="call">Call</option>
+              <option value="email">Email</option>
+              <option value="meeting">Meeting</option>
+              <option value="task">Task</option>
+              <option value="note">Note</option>
+            </select>
+          </div>
+          <button id="apply-filter" class="px-4 py-2 bg-primary text-on-primary rounded hover:opacity-90 transition-colors text-sm">
+            Apply
+          </button>
+        </div>
+      </div>
+
+      <div id="report-content">
+        <div class="text-center py-20">
+          <span class="material-symbols-outlined text-6xl text-on-surface-variant mb-4">bar_chart</span>
+          <p class="text-on-surface-variant font-mono text-sm">Select a date range and click Apply to load the report</p>
+        </div>
+      </div>
+
+      <div id="report-data" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div class="bg-surface-container-low p-4 rounded-lg">
+            <p class="text-xs font-mono text-on-surface-variant mb-1">Total Activities</p>
+            <p id="total-count" class="text-3xl font-bold text-on-background">0</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <section class="bg-surface-container-low p-4 rounded-lg">
+            <h3 class="font-semibold mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">pie_chart</span>
+              By Type
+            </h3>
+            <div id="by-type-chart" class="space-y-2"></div>
+          </section>
+
+          <section class="bg-surface-container-low p-4 rounded-lg">
+            <h3 class="font-semibold mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">group</span>
+              By User
+            </h3>
+            <div id="by-user-chart" class="space-y-2"></div>
+          </section>
+        </div>
+
+        <section class="bg-surface-container-low p-4 rounded-lg">
+          <h3 class="font-semibold mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">calendar_month</span>
+            By Day
+          </h3>
+          <div id="by-day-chart" class="space-y-1"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</AppLayout>
+
+<script>
+function setDateInput(id, date) {
+  const el = document.getElementById(id);
+  if (el) el.value = date;
+}
+
+const now = new Date();
+const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+const today = now.toISOString().split('T')[0];
+const firstDay = firstOfMonth.toISOString().split('T')[0];
+
+setDateInput('start-date', firstDay);
+setDateInput('end-date', today);
+
+async function getToken() {
+  const stored = localStorage.getItem('oscar_auth');
+  if (stored) {
+    try {
+      const { token } = JSON.parse(stored);
+      if (token) return token;
+    } catch {}
+  }
+  const cookies = Object.fromEntries(document.cookie.split('; ').map(c => c.split('=')));
+  return cookies['oscar_token'] || null;
+}
+
+async function loadReport() {
+  const token = await getToken();
+  if (!token) {
+    document.getElementById('report-content').innerHTML = '<p class="text-error text-sm">Session expired. Please log in again.</p>';
+    return;
+  }
+
+  const start = document.getElementById('start-date').value;
+  const end = document.getElementById('end-date').value;
+  const type = document.getElementById('type-filter').value;
+
+  if (!start || !end) return;
+
+  let url = `/api/v1/reports/activities?start=${start}&end=${end}`;
+  if (type) url += `&types=${type}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      document.getElementById('report-content').innerHTML = `<p class="text-error text-sm">Failed to load report (${res.status})</p>`;
+      return;
+    }
+
+    const json = await res.json();
+    const data = json.data;
+
+    document.getElementById('report-content').classList.add('hidden');
+    document.getElementById('report-data').classList.remove('hidden');
+
+    document.getElementById('total-count').textContent = data.total.toLocaleString();
+
+    const byType = document.getElementById('by-type-chart');
+    byType.innerHTML = '';
+    const maxType = Math.max(...data.by_type.map(t => t.count), 1);
+    for (const item of data.by_type) {
+      const pct = Math.round((item.count / maxType) * 100);
+      byType.innerHTML += `<div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-on-background font-medium capitalize">${item.type}</span>
+          <span class="text-on-surface-variant font-mono">${item.count}</span>
+        </div>
+        <div class="h-2 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-primary rounded-full transition-all" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }
+
+    const byUser = document.getElementById('by-user-chart');
+    byUser.innerHTML = '';
+    const maxUser = Math.max(...data.by_user.map(u => u.count), 1);
+    for (const item of data.by_user) {
+      const pct = Math.round((item.count / maxUser) * 100);
+      byUser.innerHTML += `<div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-on-background font-medium">${item.first_name} ${item.last_name}</span>
+          <span class="text-on-surface-variant font-mono">${item.count}</span>
+        </div>
+        <div class="h-2 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-secondary rounded-full transition-all" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }
+
+    const byDay = document.getElementById('by-day-chart');
+    byDay.innerHTML = '';
+    const maxDay = Math.max(...data.by_day.map(d => d.count), 1);
+    for (const item of data.by_day) {
+      const pct = Math.round((item.count / maxDay) * 100);
+      byDay.innerHTML += `<div>
+        <div class="flex justify-between text-sm mb-1">
+          <span class="text-on-background font-mono text-xs">${item.date}</span>
+          <span class="text-on-surface-variant font-mono text-xs">${item.count}</span>
+        </div>
+        <div class="h-1.5 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-tertiary rounded-full transition-all" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }
+  } catch (err) {
+    document.getElementById('report-content').innerHTML = `<p class="text-error text-sm">Error: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('apply-filter').addEventListener('click', loadReport);
+
+document.getElementById('export-csv').addEventListener('click', async () => {
+  const token = await getToken();
+  if (!token) return;
+
+  const start = document.getElementById('start-date').value;
+  const end = document.getElementById('end-date').value;
+  const type = document.getElementById('type-filter').value;
+
+  let url = `/api/v1/reports/activities?start=${start}&end=${end}&format=csv`;
+  if (type) url += `&types=${type}`;
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) return;
+
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `activity-report-${start}-to-${end}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+loadReport();
+</script>

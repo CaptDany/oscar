@@ -29,6 +29,7 @@ type Handlers struct {
 	AuditLog     *handlers.AuditLogHandler
 	APIKey       *handlers.APIKeyHandler
 	Attachment   *handlers.AttachmentHandler
+	Reports      *handlers.ReportsHandler
 }
 
 func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, authMiddlewareWithTenant echo.MiddlewareFunc, rateLimiter *middleware.InMemoryRateLimiter) {
@@ -70,6 +71,9 @@ func (s *Server) SetupRoutes(h *Handlers, authMiddleware echo.MiddlewareFunc, au
 	settings := tenantScoped.Group("/settings")
 	settings.GET("", h.Settings.GetSettings)
 	settings.PATCH("", h.Settings.UpdateSettings)
+
+	reports := tenantScoped.Group("/reports")
+	reports.GET("/activities", h.Reports.ActivityReport)
 
 	persons := tenantScoped.Group("/persons")
 	persons.GET("", h.Person.List)

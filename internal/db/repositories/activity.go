@@ -316,6 +316,89 @@ func (r *ActivityRepository) CountByType(ctx context.Context, tenantID uuid.UUID
 	return result, nil
 }
 
+func (r *ActivityRepository) GetActivityReport(ctx context.Context, tenantID uuid.UUID, filter *activity.ActivityReportFilter) (*activity.ActivityReport, error) {
+	report := &activity.ActivityReport{
+		PeriodStart: filter.StartAt,
+		PeriodEnd:   filter.EndAt,
+	}
+
+	baseWhere := `WHERE a.tenant_id = $1 AND a.deleted_at IS NULL AND a.created_at >= $2 AND a.created_at < $3`
+	args := []interface{}{tenantID, filter.StartAt, filter.EndAt}
+	argIdx := 4
+
+	if len(filter.Types) > 0 {
+		baseWhere += fmt.Sprintf(" AND a.type = ANY($%d)", argIdx)
+		args = append(args, filter.Types)
+		argIdx++
+	}
+
+	if len(filter.UserIDs) > 0 {
+		baseWhere += fmt.Sprintf(" AND (a.owner_id = ANY($%d) OR a.created_by = ANY($%d))", argIdx, argIdx)
+		args = append(args, filter.UserIDs)
+		argIdx++
+	}
+
+	baseWhere += fmt.Sprintf(" AND a.status = $%d", argIdx)
+	args = append(args, activity.ActivityStatusCompleted)
+	argIdx++
+
+	totalQuery := `SELECT COUNT(*) FROM activities a ` + baseWhere
+	if err := r.pool.QueryRow(ctx, totalQuery, args...).Scan(&report.Total); err != nil {
+		return nil, fmt.Errorf("activity.GetActivityReport total: %w", err)
+	}
+
+	byTypeQuery := `SELECT a.type, COUNT(*) as count FROM activities a ` + baseWhere + ` GROUP BY a.type ORDER BY count DESC`
+	rows, err := r.pool.Query(ctx, byTypeQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("activity.GetActivityReport by_type: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var item activity.ActivityCountByType
+		if err := rows.Scan(&item.Type, &item.Count); err != nil {
+			return nil, fmt.Errorf("activity.GetActivityReport by_type scan: %w", err)
+		}
+		report.ByType = append(report.ByType, item)
+	}
+
+	byUserQuery := `SELECT COALESCE(u.id, '00000000-0000-0000-0000-000000000000'), COALESCE(u.first_name, 'Deleted'), COALESCE(u.last_name, 'User'), COUNT(*) as count
+		FROM activities a
+		LEFT JOIN users u ON u.id = COALESCE(a.owner_id, a.created_by)
+		` + baseWhere + ` GROUP BY u.id, u.first_name, u.last_name ORDER BY count DESC`
+	rows2, err := r.pool.Query(ctx, byUserQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("activity.GetActivityReport by_user: %w", err)
+	}
+	defer rows2.Close()
+	for rows2.Next() {
+		var item activity.ActivityCountByUser
+		if err := rows2.Scan(&item.UserID, &item.FirstName, &item.LastName, &item.Count); err != nil {
+			return nil, fmt.Errorf("activity.GetActivityReport by_user scan: %w", err)
+		}
+		report.ByUser = append(report.ByUser, item)
+	}
+
+	byDayQuery := `SELECT DATE(a.created_at) as date, COUNT(*) as count FROM activities a ` + baseWhere + ` GROUP BY DATE(a.created_at) ORDER BY date ASC`
+	rows3, err := r.pool.Query(ctx, byDayQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("activity.GetActivityReport by_day: %w", err)
+	}
+	defer rows3.Close()
+	for rows3.Next() {
+		var date pgtype.Date
+		var item activity.ActivityCountByDay
+		if err := rows3.Scan(&date, &item.Count); err != nil {
+			return nil, fmt.Errorf("activity.GetActivityReport by_day scan: %w", err)
+		}
+		if date.Valid {
+			item.Date = date.Time.Format("2006-01-02")
+		}
+		report.ByDay = append(report.ByDay, item)
+	}
+
+	return report, nil
+}
+
 func mapActivityRowToDomain(row *generated.Activity) *activity.Activity {
 	dir := activity.ActivityDirection(row.Direction.ActivityDirection)
 	return &activity.Activity{
