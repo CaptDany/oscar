@@ -1,0 +1,26 @@
+---
+export const prerender = false;
+import AppLayout from '../../layouts/AppLayout.astro';
+
+const { user } = Astro.locals;
+if (!user) return Astro.redirect('/login');
+---
+
+<AppLayout title="Reports | oscar">
+  <main class="pt-10 px-8 pb-20">
+    <div class="max-w-4xl mx-auto">
+      <div class="mb-8">
+        <h2 class="text-3xl font-headline font-bold text-on-background tracking-tight mb-2">Reports</h2>
+        <p class="text-on-surface-variant font-mono text-sm">Analytics and insights for your business</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="/reports/activities" class="bg-surface-container-low p-6 rounded-lg hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-3xl text-primary mb-3">bar_chart</span>
+          <h3 class="font-semibold mb-2">Activity Report</h3>
+          <p class="text-sm text-gray-400">Activity counts by type, user, and day with date range filtering</p>
+        </a>
+      </div>
+    </div>
+  </main>
+</AppLayout>

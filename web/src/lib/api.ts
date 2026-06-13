@@ -494,6 +494,17 @@ export const api = {
       return apiFetch<{ data: SearchResultItem[]; meta: { total: number; query: string } }>(`/search?${params.toString()}`, { token });
     },
   },
+
+  reports: {
+    activities: (token: string, params?: { start?: string; end?: string; types?: string }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.start) searchParams.set('start', params.start);
+      if (params?.end) searchParams.set('end', params.end);
+      if (params?.types) searchParams.set('types', params.types);
+      const query = searchParams.toString();
+      return apiFetch<{ data: any }>(`/reports/activities${query ? `?${query}` : ''}`, { token });
+    },
+  },
 };
 
 export type { ApiError };

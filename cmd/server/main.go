@@ -159,6 +159,7 @@ func main() {
 	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeyRepo)
 	searchRepo := repositories.NewSearchRepository(pool)
 	searchHandler := handlers.NewSearchHandler(searchRepo)
+	reportsHandler := handlers.NewReportsHandler(activityRepo)
 
 	server.SetupRoutes(&api.Handlers{
 		Auth:         authHandler,
@@ -181,6 +182,7 @@ func main() {
 		APIKey:       apiKeyHandler,
 		Attachment:   attachmentHandler,
 		Search:       searchHandler,
+		Reports:      reportsHandler,
 	}, authMw, tenantMw, rateLimiter)
 
 	addr := fmt.Sprintf("%s:%s", cfg.App.Host, cfg.App.Port)
