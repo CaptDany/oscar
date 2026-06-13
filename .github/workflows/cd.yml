@@ -185,6 +185,7 @@ jobs:
 
   deploy-staging:
     name: Deploy to Staging
+    if: github.ref == 'refs/heads/main'
     needs: [version, build-and-push, deploy-dev]
     runs-on: ubuntu-latest
     environment:
@@ -241,6 +242,7 @@ jobs:
 
   deploy-production:
     name: Deploy to Production
+    if: github.ref == 'refs/heads/main'
     needs: [version, build-and-push, deploy-staging]
     runs-on: ubuntu-latest
     permissions:
