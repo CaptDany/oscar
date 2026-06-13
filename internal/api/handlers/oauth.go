@@ -69,6 +69,10 @@ func NewOAuthHandler(
 }
 
 func (h *OAuthHandler) GoogleLogin(c echo.Context) error {
+	if h.oauthConfig.GoogleClientID == "" {
+		return errs.BadRequest("Google OAuth is not configured (OAUTH_GOOGLE_CLIENT_ID not set)").HTTPError(c)
+	}
+
 	state, err := generateState()
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
@@ -91,7 +95,10 @@ func (h *OAuthHandler) GoogleLogin(c echo.Context) error {
 		state,
 	)
 
-	return c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+	if err := c.Redirect(http.StatusTemporaryRedirect, redirectURL); err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+	return nil
 }
 
 func (h *OAuthHandler) GoogleCallback(c echo.Context) error {
@@ -126,6 +133,10 @@ func (h *OAuthHandler) GoogleCallback(c echo.Context) error {
 }
 
 func (h *OAuthHandler) AppleLogin(c echo.Context) error {
+	if h.oauthConfig.AppleClientID == "" {
+		return errs.BadRequest("Apple OAuth is not configured (OAUTH_APPLE_CLIENT_ID not set)").HTTPError(c)
+	}
+
 	state, err := generateState()
 	if err != nil {
 		return errs.Internal(err).HTTPError(c)
@@ -148,7 +159,10 @@ func (h *OAuthHandler) AppleLogin(c echo.Context) error {
 		state,
 	)
 
-	return c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+	if err := c.Redirect(http.StatusTemporaryRedirect, redirectURL); err != nil {
+		return errs.Internal(err).HTTPError(c)
+	}
+	return nil
 }
 
 func (h *OAuthHandler) AppleCallback(c echo.Context) error {

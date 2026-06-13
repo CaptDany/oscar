@@ -115,6 +115,13 @@ func main() {
 	authHandler := handlers.NewAuthHandlerWithInvitations(userRepo, tenantRepo, roleRepo, invitationRepo, cryptoSvc, tokenManager, emailClient, cfg.App.BaseURL, cfg.App.FrontendURL)
 	oauthHandler := handlers.NewOAuthHandler(userRepo, tenantRepo, roleRepo, cryptoSvc, tokenManager, nil, cfg.App.BaseURL, &cfg.OAuth)
 
+	if cfg.OAuth.GoogleClientID == "" {
+		log.Println("[OAuth] Google OAuth is not configured (OAUTH_GOOGLE_CLIENT_ID not set)")
+	}
+	if cfg.OAuth.AppleClientID == "" {
+		log.Println("[OAuth] Apple OAuth is not configured (OAUTH_APPLE_CLIENT_ID not set)")
+	}
+
 	r2Client, err := storage.NewR2Client(&cfg.R2)
 	if err != nil {
 		log.Printf("Warning: Failed to create R2 client: %v (upload features disabled)", err)
