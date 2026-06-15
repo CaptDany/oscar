@@ -18,7 +18,7 @@
     "astro": "^6.4.6",
     "postcss": "^8.5.0",
     "cropperjs": "^2.1.1",
-    "lucide-react": "^1.8.0",
+    "lucide-react": "^1.18.0",
     "nanostores": "^1.2.0",
     "preact": "^10.29.1",
     "tailwindcss": "^4.3.0"
