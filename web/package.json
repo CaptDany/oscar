@@ -20,7 +20,7 @@
     "cropperjs": "^2.1.1",
     "lucide-react": "^1.8.0",
     "nanostores": "^1.2.0",
-    "preact": "^10.29.1",
+    "preact": "^10.29.7",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
