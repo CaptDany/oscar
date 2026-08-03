@@ -19,7 +19,7 @@
     "postcss": "^8.5.0",
     "cropperjs": "^2.1.1",
     "lucide-react": "^1.8.0",
-    "nanostores": "^1.2.0",
+    "nanostores": "^1.4.2",
     "preact": "^10.29.1",
     "tailwindcss": "^4.3.0"
   },
